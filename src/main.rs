@@ -6,19 +6,19 @@ use rapier2d::prelude::*;
 use std::time::{Duration};
 use std::thread::sleep;
 use device_query::{DeviceQuery, DeviceState, Keycode};
+use std::fs;
 
 use crate::camera::{camera_position};
-use crate::graphics_utils::{draw_cuboid_collider, PhysicsVector, ScreenVector};
-use crate::load_map::{COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL};
+use crate::graphics_utils::{draw_cuboid_collider};
+use crate::load_map::{deser_map, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL};
+use crate::units::{PhysicsVector, ScreenVector};
 
 mod controls;
 mod load_map;
 mod graphics_utils;
 mod camera;
-
-mod assets {
-    pub mod map1;
-}
+mod entity;
+mod units;
 
 const TARGET_FPS: f32 = 60.0;
 const MIN_FRAME_TIME: f32 = 1.0 / TARGET_FPS;
@@ -30,25 +30,17 @@ async fn main() {
     let mut rigid_body_set = RigidBodySet::new();
     let mut collider_set = ColliderSet::new();
 
-
     /* Load objects from the map */
-    let map_components = load_map::map_to_components(
-        &assets::map1::MAP_1,
-        vector![assets::map1::MAP_1_WIDTH, assets::map1::MAP_1_HEIGHT]
-    );
+    let map_read_path = "/home/jack/projects/github/game/src/assets/maps/map1.json";
 
-    map_components.for_each(|map_component| {
-        match map_component {
-            load_map::MapComponent::Empty => {},
-            load_map::MapComponent::Wall(collider) => {
-                collider_set.insert(collider);
-            }
-            load_map::MapComponent::Player(player) => {
-                let handle = rigid_body_set.insert(player.rigid_body);
-                collider_set.insert_with_parent(player.collider, handle, &mut rigid_body_set);
-            }
+    let map = load_map::load(map_read_path).unwrap();
+
+    let map_tile_hooks: Vec<ColliderHandle> = map.colliders.iter().map(|map_tile| 
+        match map_tile {
+            load_map::MapTile::Wall(wall) => 
+                collider_set.insert(wall.collider.clone())
         }
-    });
+    ).collect();
 
     /* Create the bouncing ball. */
     let rigid_body = RigidBodyBuilder::dynamic()
@@ -73,7 +65,7 @@ async fn main() {
     let physics_hooks = ();
     let event_handler = ();
 
-    let mut camera_translation = ScreenVector(vector![0.0, 0.0]);
+    let mut camera_translation = ScreenVector::new(vector![0.0, 0.0]);
 
     /* Run the game loop, stepping the simulation once per frame. */
     loop {
@@ -107,9 +99,9 @@ async fn main() {
 
         // camera
 
-        println!("{}, {}", camera_translation.0.x, camera_translation.0.y);
+        //println!("{}, {}", camera_translation.x, camera_translation.y);
 
-        camera_translation = camera_position(camera_translation, PhysicsVector(*player_body.translation()).into_screen_pos() );
+        camera_translation = camera_position(ScreenVector::new(vector![0.0, 0.0]), PhysicsVector::new(*player_body.translation()).into_screen_pos());
 
         // graphics
 
