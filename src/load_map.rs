@@ -69,9 +69,9 @@ pub enum MapComponent {
 }
 
 impl Object {
-    pub fn into(&self) -> MapComponent {
+    pub fn into(&self, camera_position: Vector2<f32>) -> MapComponent {
         let rigid_body = RigidBodyBuilder::dynamic()
-            .translation(*MapVector::new(vector![self.x, self.y]).into_physics_pos())
+            .translation(*MapVector::new(vector![self.x, self.y]).into_physics_pos(camera_position))
             .build();
         let ball_collider = ColliderBuilder::ball(0.5).restitution(0.7)
             .collision_groups(InteractionGroups { memberships: COLLISION_GROUP_PLAYER, filter: COLLISION_GROUP_WALL })
@@ -97,8 +97,8 @@ impl Object {
 }
 
 impl ObjectLayer {
-    pub fn into(&self) -> Vec<MapComponent> {
-        return self.objects.iter().map(Object::into).collect();
+    pub fn into(&self, camera_position: Vector2<f32>) -> Vec<MapComponent> {
+        return self.objects.iter().map(|object| object.into(camera_position)).collect();
     }
 }
 
@@ -145,7 +145,7 @@ pub struct Map {
 }
 
 impl RawMap {
-    pub fn into(&self) -> Option<Map> {
+    pub fn into(&self, camera_position: Vector2<f32>) -> Option<Map> {
         let entities = match self.layers.iter().find(|&layer| match layer {
                 Layer::ObjectLayer(object_layer) => 
                     match object_layer.name {
@@ -154,7 +154,7 @@ impl RawMap {
                 Layer::TileLayer(_) => false
             }) {
             Some(found_layer) => match found_layer {
-                Layer::ObjectLayer(object_layer) => Some(object_layer.into()),
+                Layer::ObjectLayer(object_layer) => Some(object_layer.into(camera_position)),
                 Layer::TileLayer(_) => None
             },
             None => None,
@@ -187,8 +187,8 @@ impl RawMap {
     }
 }
 
-pub fn load(file_path: &str) -> Option<Map> {
+pub fn load(file_path: &str, camera_position: Vector2<f32>) -> Option<Map> {
     let map_file_raw = fs::read_to_string(file_path).unwrap();
 
-    return (&deser_map(&map_file_raw)).into();
+    return (&deser_map(&map_file_raw)).into(camera_position);
 }

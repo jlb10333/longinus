@@ -1,10 +1,16 @@
 use std::ops::Deref;
 
-use macroquad::window::screen_height;
-use rapier2d::prelude::*;
+use derive_more::{Add, Sub};
+use macroquad::{window::screen_height};
+use rapier2d::{na::Vector2, prelude::*};
 
+#[derive(Sub, Add)]
 pub struct ScreenVector(Vector<f32>);
+
+#[derive(Sub, Add)]
 pub struct PhysicsVector(Vector<f32>);
+
+#[derive(Sub, Add)]
 pub struct MapVector(Vector<f32>);
 
 
@@ -22,8 +28,8 @@ impl ScreenVector {
   }
 
   /* Used for internal physics engine positions, flipping vertically */
-  pub fn into_physics_pos(self) -> PhysicsVector {
-    return PhysicsVector(vector![self.x, screen_height() - self.y].scale(0.02))
+  pub fn into_physics_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
+    return PhysicsVector(vector![self.x, screen_height() - self.y].scale(0.02)) + PhysicsVector(camera_position);
   }
 
   pub fn new(vector: Vector<f32>) -> ScreenVector {
@@ -45,8 +51,8 @@ impl PhysicsVector {
   }
 
   /* Used for screen (pixel) positions, flipping vertically */
-  pub fn into_screen_pos(self) -> ScreenVector {
-    return ScreenVector(vector![self.x, (screen_height() * 0.02) - self.y].scale(50.0))
+  pub fn into_screen_pos(self, camera_position: Vector2<f32>) -> ScreenVector {
+    return ScreenVector(vector![self.x, (screen_height() * 0.02) - self.y].scale(50.0)) - ScreenVector(camera_position)
   }
   
   pub fn new(vector: Vector<f32>) -> PhysicsVector {
@@ -62,16 +68,16 @@ impl Deref for MapVector {
 }
 
 impl MapVector {
-  pub fn into_screen(self) -> ScreenVector {
-    return ScreenVector(self.scale(0.125))
+  pub fn into_screen(self, camera_position: Vector2<f32>) -> ScreenVector {
+    return ScreenVector(self.scale(0.125)) + ScreenVector(camera_position);
   }
 
-  pub fn into_physics(self) -> PhysicsVector {
-    return self.into_screen().into_physics();
+  pub fn into_physics(self, camera_position: Vector2<f32>) -> PhysicsVector {
+    return self.into_screen(camera_position).into_physics();
   }
 
-  pub fn into_physics_pos(self) -> PhysicsVector {
-    return self.into_screen().into_physics_pos();
+  pub fn into_physics_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
+    return self.into_screen(camera_position).into_physics_pos(camera_position);
   }
 
   pub fn new(vector: Vector<f32>) -> MapVector {

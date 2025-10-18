@@ -33,7 +33,9 @@ async fn main() {
     /* Load objects from the map */
     let map_read_path = "/home/jack/projects/github/game/src/assets/maps/map1.json";
 
-    let map = load_map::load(map_read_path).unwrap();
+    let mut camera_translation = vector![0.0, 0.0];
+
+    let map = load_map::load(map_read_path, camera_translation).unwrap();
 
     let map_tile_hooks: Vec<ColliderHandle> = map.colliders.iter().map(|map_tile| 
         match map_tile {
@@ -44,7 +46,7 @@ async fn main() {
 
     /* Create the bouncing ball. */
     let rigid_body = RigidBodyBuilder::dynamic()
-        .translation(vector![0.0, 0.0])
+        .translation(vector![10.0, 10.0])
         .build();
     let ball_collider = ColliderBuilder::ball(0.5).restitution(0.7)
         .collision_groups(InteractionGroups { memberships: COLLISION_GROUP_PLAYER, filter: COLLISION_GROUP_WALL })
@@ -64,8 +66,6 @@ async fn main() {
     let mut ccd_solver = CCDSolver::new();
     let physics_hooks = ();
     let event_handler = ();
-
-    let mut camera_translation = ScreenVector::new(vector![0.0, 0.0]);
 
     /* Run the game loop, stepping the simulation once per frame. */
     loop {
@@ -99,19 +99,19 @@ async fn main() {
 
         // camera
 
-        //println!("{}, {}", camera_translation.x, camera_translation.y);
-
-        camera_translation = camera_position(ScreenVector::new(vector![0.0, 0.0]), PhysicsVector::new(*player_body.translation()).into_screen_pos());
+        camera_translation += camera_position(PhysicsVector::new(*player_body.translation()).into_screen_pos(camera_translation));
 
         // graphics
 
         clear_background(RED);
 
         if SHOW_COLLIDERS {
-            collider_set.iter().for_each(|(_, collider)| { draw_cuboid_collider(collider) });
+            collider_set.iter().for_each(|(_, collider)| { draw_cuboid_collider(collider, camera_translation) });
         }
 
-        draw_circle(player_body.translation().x * 50.0, screen_height() - (player_body.translation().y * 50.0), 10.0, GREEN);
+        let player_screen_pos = PhysicsVector::new(*player_body.translation()).into_screen_pos(camera_translation);
+
+        draw_circle(player_screen_pos.x, player_screen_pos.y, 10.0, GREEN);
 
         let frame_time = get_frame_time();
 
