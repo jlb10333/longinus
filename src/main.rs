@@ -1,30 +1,22 @@
-use device_query::{DeviceQuery, DeviceState, Keycode};
-use macroquad::color::{GREEN, RED};
-use macroquad::shapes::draw_circle;
-use macroquad::time::get_frame_time;
-use macroquad::window::{clear_background, next_frame};
+use macroquad::window::next_frame;
 use rapier2d::prelude::*;
-use std::thread::sleep;
-use std::time::Duration;
 
 use crate::camera::camera_position;
-use crate::graphics_utils::draw_cuboid_collider;
+use crate::controls::ControlsSystem;
+use crate::graphics::{GraphicsDeps, run_graphics};
 use crate::load_map::{COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL};
+use crate::system::System;
 use crate::units::PhysicsVector;
 
 mod camera;
 mod combat;
 mod controls;
 mod entity;
-mod game;
+mod graphics;
 mod graphics_utils;
 mod load_map;
+mod system;
 mod units;
-
-const TARGET_FPS: f32 = 60.0;
-const MIN_FRAME_TIME: f32 = 1.0 / TARGET_FPS;
-
-const SHOW_COLLIDERS: bool = true;
 
 #[macroquad::main("MyGame")]
 async fn main() {
@@ -38,13 +30,11 @@ async fn main() {
 
   let map = load_map::load(map_read_path, camera_translation).unwrap();
 
-  let map_tile_hooks: Vec<ColliderHandle> = map
-    .colliders
-    .iter()
-    .map(|map_tile| match map_tile {
+  map.colliders.iter().for_each(|map_tile| {
+    match map_tile {
       load_map::MapTile::Wall(wall) => collider_set.insert(wall.collider.clone()),
-    })
-    .collect();
+    };
+  });
 
   /* Create the bouncing ball. */
   let rigid_body = RigidBodyBuilder::dynamic()
@@ -73,6 +63,8 @@ async fn main() {
   let physics_hooks = ();
   let event_handler = ();
 
+  let mut controls_system = ControlsSystem::start();
+
   /* Run the game loop, stepping the simulation once per frame. */
   loop {
     // physics
@@ -96,12 +88,9 @@ async fn main() {
 
     // input
 
-    let device_state = DeviceState::new();
-    let keys: Vec<Keycode> = device_state.get_keys();
+    controls_system = controls_system.run(&());
 
-    let input_force = controls::handle_movement_input(keys);
-
-    player_body.apply_impulse(input_force, true);
+    player_body.apply_impulse(controls_system.movement_direction, true);
 
     // camera
 
@@ -111,25 +100,11 @@ async fn main() {
 
     // graphics
 
-    clear_background(RED);
-
-    if SHOW_COLLIDERS {
-      collider_set
-        .iter()
-        .for_each(|(_, collider)| draw_cuboid_collider(collider, camera_translation));
-    }
-
-    let player_screen_pos =
-      PhysicsVector::new(*player_body.translation()).into_screen_pos(camera_translation);
-
-    draw_circle(player_screen_pos.x, player_screen_pos.y, 12.5, GREEN);
-
-    let frame_time = get_frame_time();
-
-    if frame_time < MIN_FRAME_TIME {
-      let time_to_sleep = (MIN_FRAME_TIME - frame_time) * 1000.0; // Calculate sleep time in ms
-      sleep(Duration::from_millis(time_to_sleep as u64)); // Sleep
-    }
+    run_graphics(GraphicsDeps {
+      camera_translation,
+      collider_set: &collider_set,
+      player_translation: *player_body.translation(),
+    });
 
     next_frame().await;
   }
