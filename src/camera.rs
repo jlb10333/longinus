@@ -20,9 +20,5 @@ pub fn camera_position(player_translation: ScreenVector) -> Vector2<f32> {
   let bounds_offset_up = (player_translation.y - (camera_screen_bounds().y + camera_screen_bounds().h)).max(0.0);
   let bounds_offset_total = vector![bounds_offset_left + bounds_offset_right, bounds_offset_up + bounds_offset_down];
 
-  println!("{}, {}", bounds_offset_total.x, bounds_offset_total.y);
-
   return if bounds_offset_total.magnitude() > 0.0 { bounds_offset_total } else { vector![0.0, 0.0] }
 }
-
-// x < 
