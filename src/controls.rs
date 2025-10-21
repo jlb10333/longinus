@@ -3,7 +3,10 @@ use std::rc::Rc;
 use device_query::{DeviceQuery, DeviceState, Keycode};
 use rapier2d::{na::Vector2, prelude::*};
 
-use crate::system::{Context, System};
+use crate::{
+  system::{Context, System},
+  units::PhysicsVector,
+};
 
 const INPUT_FORCE: f32 = 0.1;
 const EMPTY_VECTOR: Vector2<f32> = vector![0.0, 0.0];
@@ -55,14 +58,14 @@ fn reticle_angle_change(keys: &Vec<Keycode>) -> f32 {
 }
 
 pub struct ControlsSystem {
-  pub movement_direction: Vector2<f32>,
+  pub movement_direction: PhysicsVector,
   pub reticle_angle: f32,
 }
 
 impl System for ControlsSystem {
   fn start(_: Context) -> Rc<dyn System> {
     return Rc::new(Self {
-      movement_direction: vector![0.0, 0.0],
+      movement_direction: PhysicsVector::new(vector![0.0, 0.0]),
       reticle_angle: 0.0,
     });
   }
@@ -72,30 +75,8 @@ impl System for ControlsSystem {
     let keys: Vec<Keycode> = device_state.get_keys();
 
     return Rc::new(Self {
-      movement_direction: handle_movement_input(&keys),
+      movement_direction: PhysicsVector::new(handle_movement_input(&keys)),
       reticle_angle: self.reticle_angle + reticle_angle_change(&keys),
     });
-  }
-}
-
-pub struct DebugSystem;
-
-impl System for DebugSystem {
-  fn start(_: Context) -> Rc<dyn System>
-  where
-    Self: Sized,
-  {
-    return Rc::new(Self);
-  }
-
-  fn run(&self, ctx: &Context) -> Rc<dyn System> {
-    let controls_system = ctx.get::<ControlsSystem>().unwrap();
-
-    println!(
-      "{}, {}",
-      controls_system.movement_direction.x, controls_system.movement_direction.y
-    );
-
-    return Rc::new(Self);
   }
 }
