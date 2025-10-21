@@ -1,18 +1,17 @@
 use std::ops::Deref;
 
 use derive_more::{Add, Sub};
-use macroquad::{window::screen_height};
+use macroquad::window::screen_height;
 use rapier2d::{na::Vector2, prelude::*};
 
-#[derive(Sub, Add)]
+#[derive(Sub, Add, Clone, Copy)]
 pub struct ScreenVector(Vector<f32>);
 
-#[derive(Sub, Add)]
+#[derive(Sub, Add, Clone, Copy)]
 pub struct PhysicsVector(Vector<f32>);
 
-#[derive(Sub, Add)]
+#[derive(Sub, Add, Clone, Copy)]
 pub struct MapVector(Vector<f32>);
-
 
 impl Deref for ScreenVector {
   type Target = Vector<f32>;
@@ -29,7 +28,8 @@ impl ScreenVector {
 
   /* Used for internal physics engine positions, flipping vertically */
   pub fn into_physics_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
-    return PhysicsVector(vector![self.x, screen_height() - self.y].scale(0.02)) + PhysicsVector(camera_position);
+    return PhysicsVector(vector![self.x, screen_height() - self.y].scale(0.02))
+      + PhysicsVector(camera_position);
   }
 
   pub fn new(vector: Vector<f32>) -> ScreenVector {
@@ -52,9 +52,10 @@ impl PhysicsVector {
 
   /* Used for screen (pixel) positions, flipping vertically */
   pub fn into_screen_pos(self, camera_position: Vector2<f32>) -> ScreenVector {
-    return ScreenVector(vector![self.x, (screen_height() * 0.02) - self.y].scale(50.0)) - ScreenVector(camera_position)
+    return ScreenVector(vector![self.x, (screen_height() * 0.02) - self.y].scale(50.0))
+      - ScreenVector(camera_position);
   }
-  
+
   pub fn new(vector: Vector<f32>) -> PhysicsVector {
     return PhysicsVector(vector);
   }
@@ -77,11 +78,12 @@ impl MapVector {
   }
 
   pub fn into_physics_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
-    return self.into_screen(camera_position).into_physics_pos(camera_position);
+    return self
+      .into_screen(camera_position)
+      .into_physics_pos(camera_position);
   }
 
   pub fn new(vector: Vector<f32>) -> MapVector {
     return MapVector(vector);
   }
 }
-

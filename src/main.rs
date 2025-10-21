@@ -2,10 +2,11 @@ use macroquad::window::next_frame;
 use rapier2d::prelude::*;
 
 use crate::camera::camera_position;
-use crate::controls::ControlsSystem;
+use crate::combat::{get_reticle_pos, get_slot_positions};
+use crate::controls::{ControlsSystem, DebugSystem};
 use crate::graphics::{GraphicsDeps, run_graphics};
 use crate::load_map::{COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL};
-use crate::system::System;
+use crate::system::{Game, System};
 use crate::units::PhysicsVector;
 
 mod camera;
@@ -18,8 +19,18 @@ mod load_map;
 mod system;
 mod units;
 
+async fn game_loop() {
+  Game::new()
+    .add_system(ControlsSystem::start)
+    .add_system(DebugSystem::start)
+    .run()
+    .await;
+}
+
 #[macroquad::main("MyGame")]
 async fn main() {
+  game_loop().await;
+
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
 
@@ -63,7 +74,7 @@ async fn main() {
   let physics_hooks = ();
   let event_handler = ();
 
-  let mut controls_system = ControlsSystem::start();
+  // let mut controls_system = ControlsSystem::start();
 
   /* Run the game loop, stepping the simulation once per frame. */
   loop {
@@ -88,9 +99,15 @@ async fn main() {
 
     // input
 
-    controls_system = controls_system.run(&());
+    // controls_system = controls_system.run(&());
 
-    player_body.apply_impulse(controls_system.movement_direction, true);
+    // player_body.apply_impulse(controls_system.movement_direction, true);
+
+    // let reticle_pos = get_reticle_pos(controls_system.reticle_angle);
+    let reticle_pos = get_reticle_pos(0.0);
+
+    // let slot_positions = get_slot_positions(controls_system.reticle_angle);
+    let slot_positions = get_slot_positions(0.0);
 
     // camera
 
@@ -104,6 +121,8 @@ async fn main() {
       camera_translation,
       collider_set: &collider_set,
       player_translation: *player_body.translation(),
+      reticle_pos,
+      slot_positions,
     });
 
     next_frame().await;
