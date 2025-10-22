@@ -1,4 +1,5 @@
 use crate::camera::CameraSystem;
+use crate::combat::CombatSystem;
 use crate::controls::ControlsSystem;
 use crate::graphics::GraphicsSystem;
 use crate::load_map::MapSystem;
@@ -19,6 +20,7 @@ mod units;
 #[macroquad::main("MyGame")]
 async fn main() {
   Game::new()
+    .add_system(CombatSystem::start)
     .add_system(MapSystem::start)
     .add_system(PhysicsSystem::start)
     .add_system(CameraSystem::start)

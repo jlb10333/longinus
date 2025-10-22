@@ -68,7 +68,7 @@ impl System for GraphicsSystem {
     /* DEBUG - Draw slots */
     if SHOW_SLOTS {
       let slot_positions = get_slot_positions(controls_system.reticle_angle);
-      slot_positions.iter().for_each(|slot| {
+      slot_positions.iter().for_each(|(_, slot)| {
         let slot_screen_pos = player_screen_pos + slot.offset.into_screen();
         let slot_next_screen_pos =
           slot_screen_pos + ScreenVector::new(distance_projection(slot.angle, 7.0));

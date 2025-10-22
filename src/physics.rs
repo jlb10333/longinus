@@ -2,6 +2,7 @@ use rapier2d::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
+  combat::{CombatSystem, Projectile, get_slot_positions},
   controls::ControlsSystem,
   load_map::{COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL, MapSystem, MapTile},
   system::System,
@@ -98,13 +99,35 @@ impl System for PhysicsSystem {
     let mut impulse_joint_set = self.impulse_joint_set.clone();
     let mut multibody_joint_set = self.multibody_joint_set.clone();
     let mut ccd_solver = self.ccd_solver.clone();
-    let mut rigid_body_set = self.rigid_body_set.clone();
+    let mut rigid_body_set = &mut self.rigid_body_set.clone();
     let mut collider_set = self.collider_set.clone();
 
     /* Move the player */
     let controls_system = ctx.get::<ControlsSystem>().unwrap();
 
     rigid_body_set[self.player_handle].apply_impulse(*controls_system.movement_direction, true);
+
+    /* Fire all weapons */
+    let combat_system = ctx.get::<CombatSystem>().unwrap();
+
+    let new_projectiles: Vec<Projectile> = combat_system
+      .current_weapons
+      .iter()
+      .flat_map(|weapon| weapon.fire_if_ready(get_slot_positions(controls_system.reticle_angle)))
+      .collect();
+
+    if (new_projectiles.len() > 0) {
+      println!("firing {}", new_projectiles.len());
+    }
+
+    new_projectiles.iter().for_each(|projectile| {
+      let handle = rigid_body_set.insert(
+        RigidBodyBuilder::dynamic()
+          .translation(*rigid_body_set[self.player_handle].translation() + *projectile.offset),
+      );
+      rigid_body_set[handle].apply_impulse(*projectile.initial_force, true);
+      collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
+    });
 
     /* Step physics */
     physics_pipeline.step(
@@ -123,7 +146,7 @@ impl System for PhysicsSystem {
     );
 
     return Rc::new(Self {
-      rigid_body_set: rigid_body_set,
+      rigid_body_set: rigid_body_set.clone(),
       collider_set: collider_set,
       integration_parameters: self.integration_parameters,
       physics_pipeline: Rc::clone(&self.physics_pipeline),

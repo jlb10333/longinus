@@ -4,6 +4,10 @@ use derive_more::{Add, Sub};
 use macroquad::window::screen_height;
 use rapier2d::{na::Vector2, prelude::*};
 
+pub fn vec_zero() -> Vector2<f32> {
+  return vector![0.0, 0.0];
+}
+
 #[derive(Sub, Add, Clone, Copy)]
 pub struct ScreenVector(Vector<f32>);
 
@@ -35,6 +39,10 @@ impl ScreenVector {
   pub fn new(vector: Vector<f32>) -> ScreenVector {
     return ScreenVector(vector);
   }
+
+  pub fn zero() -> ScreenVector {
+    return ScreenVector(vec_zero());
+  }
 }
 
 impl Deref for PhysicsVector {
@@ -58,6 +66,10 @@ impl PhysicsVector {
 
   pub fn new(vector: Vector<f32>) -> PhysicsVector {
     return PhysicsVector(vector);
+  }
+
+  pub fn zero() -> PhysicsVector {
+    return PhysicsVector(vec_zero());
   }
 }
 

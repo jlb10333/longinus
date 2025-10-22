@@ -106,8 +106,8 @@ impl ObjectLayer {
   }
 }
 
-const TILE_WIDTH: f32 = 0.3;
-const TILE_HEIGHT: f32 = 0.3;
+const TILE_WIDTH: f32 = 0.8;
+const TILE_HEIGHT: f32 = 0.8;
 
 const EMPTY: i32 = 0;
 const WALL_COLLIDER: i32 = 1;
