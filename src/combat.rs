@@ -6,19 +6,27 @@ use std::{
 };
 
 use crate::{
+  controls::ControlsSystem,
   system::System,
   units::{PhysicsVector, ScreenVector},
 };
 use rapier2d::{na::Vector2, prelude::*};
 
-pub fn distance_projection(angle: f32, distance: f32) -> Vector2<f32> {
-  return vector![angle.cos() * distance, angle.sin() * distance];
+pub fn distance_projection_physics(angle: f32, distance: f32) -> PhysicsVector {
+  return PhysicsVector::new(vector![
+    angle.cos() * distance,
+    -1.0 * angle.sin() * distance
+  ]);
+}
+
+pub fn distance_projection_screen(angle: f32, distance: f32) -> ScreenVector {
+  return ScreenVector::new(vector![angle.cos() * distance, angle.sin() * distance]);
 }
 
 const RETICLE_DISTANCE_SCREEN: f32 = 20.0;
 
 pub fn get_reticle_pos(angle: f32) -> ScreenVector {
-  return ScreenVector::new(distance_projection(angle, RETICLE_DISTANCE_SCREEN));
+  return distance_projection_screen(angle, RETICLE_DISTANCE_SCREEN);
 }
 
 pub struct Slot {
@@ -26,7 +34,7 @@ pub struct Slot {
   pub angle: f32,
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum SlotPosition {
   FrontAhead,
   FrontDoubleLeft,
@@ -44,15 +52,15 @@ pub enum SlotPosition {
 
 pub type ProjectileSlots = HashMap<SlotPosition, Slot>; // 12
 
-const SLOT_DISTANCE_PHYSICS: f32 = 0.2;
+const SLOT_DISTANCE_PHYSICS: f32 = 1.0;
 
 pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
   let slot = |position_angle_offset: f32, shoot_direction_angle_offset: f32| {
     return Slot {
-      offset: PhysicsVector::new(distance_projection(
+      offset: distance_projection_physics(
         reticle_angle + position_angle_offset,
         SLOT_DISTANCE_PHYSICS,
-      )),
+      ),
       angle: reticle_angle + shoot_direction_angle_offset,
     };
   };
@@ -89,17 +97,18 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
     (SlotPosition::Front45Left, front_45_left),
     (SlotPosition::Front45Right, front_45_right),
     (SlotPosition::SideLeft, side_left),
-    (SlotPosition::SideRight, side_right),
-    (SlotPosition::BackAhead, back_ahead),
-    (SlotPosition::BackDoubleLeft, back_double_left),
-    (SlotPosition::BackDoubleRight, back_double_right),
-    (SlotPosition::Back45Left, back_45_left),
-    (SlotPosition::Back45Right, back_45_right),
+    // (SlotPosition::SideRight, side_right),
+    // (SlotPosition::BackAhead, back_ahead),
+    // (SlotPosition::BackDoubleLeft, back_double_left),
+    // (SlotPosition::BackDoubleRight, back_double_right),
+    // (SlotPosition::Back45Left, back_45_left),
+    // (SlotPosition::Back45Right, back_45_right),
   ]);
 
   /*  */
 }
 
+#[derive(Clone)]
 pub struct Projectile {
   pub collider: Collider,
   pub offset: PhysicsVector,
@@ -142,9 +151,9 @@ impl Weapon {
     };
   }
 
-  pub fn fire_if_ready(&self, available_slots: ProjectileSlots) -> Vec<Projectile> {
+  pub fn fire_if_ready(&self, available_slots: ProjectileSlots) -> (Self, Vec<Projectile>) {
     if self.current_cooldown > 0.0 {
-      return Vec::new();
+      return (self.clone(), Vec::new());
     }
 
     let slot_positions = if self.slot_positions.len() == 0 {
@@ -153,45 +162,51 @@ impl Weapon {
       &self.slot_positions
     };
 
-    return slot_positions
-      .iter()
-      .map(|slot_position| {
-        let base_projectile = base_projectile_from_weapon_type(self.projectile_type);
+    let mut new_weapon = self.clone();
+    new_weapon.current_cooldown = new_weapon.max_cooldown;
 
-        let slot_position = available_slots.get(slot_position).unwrap();
+    return (
+      new_weapon,
+      slot_positions
+        .iter()
+        .map(|slot_position| {
+          let base_projectile = base_projectile_from_weapon_type(self.projectile_type);
 
-        let initial_force = PhysicsVector::new(distance_projection(
-          slot_position.angle,
-          base_speed_from_projectile_type(self.projectile_type) * self.velocity_mod,
-        ));
+          let slot = available_slots.get(slot_position).unwrap();
 
-        return Projectile {
-          collider: base_projectile.collider,
-          damage: base_projectile.damage * self.damage_mod,
-          offset: slot_position.offset,
-          initial_force,
-        };
-      })
-      .collect();
+          let initial_force = distance_projection_physics(
+            slot.angle,
+            base_speed_from_projectile_type(self.projectile_type) * self.velocity_mod,
+          );
+
+          return Projectile {
+            collider: base_projectile.collider,
+            damage: base_projectile.damage * self.damage_mod,
+            offset: slot.offset,
+            initial_force,
+          };
+        })
+        .collect(),
+    );
   }
 }
 
 fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projectile {
   return match projectile_type {
     ProjectileType::Plasma => Projectile {
-      collider: ColliderBuilder::ball(0.05).build(),
+      collider: ColliderBuilder::ball(0.15).build(),
       damage: 10.0,
       initial_force: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
     },
     ProjectileType::Missle => Projectile {
-      collider: ColliderBuilder::ball(0.05).build(),
+      collider: ColliderBuilder::ball(0.15).build(),
       damage: 10.0,
       initial_force: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
     },
     ProjectileType::Laser => Projectile {
-      collider: ColliderBuilder::ball(0.05).build(),
+      collider: ColliderBuilder::ball(0.15).build(),
       damage: 10.0,
       initial_force: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
@@ -239,8 +254,8 @@ fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> W
     max_cooldown,
     slot_positions: HashSet::from([]),
     current_cooldown: max_cooldown,
-    damage_mod: 0.0,
-    velocity_mod: 0.0,
+    damage_mod: 1.0,
+    velocity_mod: 1.0,
   };
 }
 
@@ -285,6 +300,7 @@ impl WeaponModulator for DoubleDamageWeaponModulator {
 pub struct CombatSystem {
   pub inventory: Rc<WeaponInventory>,
   pub current_weapons: Vec<Weapon>,
+  pub new_projectiles: Vec<Projectile>,
 }
 
 impl System for CombatSystem {
@@ -293,25 +309,54 @@ impl System for CombatSystem {
     Self: Sized,
   {
     /* Initialize default inventory */
-    let inventory = &Rc::new(WeaponInventory::Generator(Rc::new(PlasmaWeaponGenerator)));
+    let inventory = &Rc::new(WeaponInventory::Modulator(
+      Rc::new(FrontTwoSlotWeaponModulator),
+      Rc::new(WeaponInventory::Generator(Rc::new(PlasmaWeaponGenerator))),
+    ));
 
     return Rc::new(Self {
       inventory: Rc::clone(inventory),
       current_weapons: inventory.build(),
+      new_projectiles: Vec::new(),
     });
   }
 
-  fn run(&self, _: &crate::system::Context) -> Rc<dyn System> {
+  fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
     /* Decrement cooldown for active weapons */
-    let new_weapons: Vec<Weapon> = self
+    let reduced_cooldown_weapons: Vec<Weapon> = self
       .current_weapons
       .iter()
       .map(Weapon::reduce_cooldown)
       .collect();
 
+    let controls_system = ctx.get::<ControlsSystem>().unwrap();
+
+    let weapons_firing: Vec<(Weapon, Vec<Projectile>)> = if controls_system.firing {
+      reduced_cooldown_weapons
+        .iter()
+        .map(|weapon| weapon.fire_if_ready(get_slot_positions(controls_system.reticle_angle)))
+        .collect()
+    } else {
+      reduced_cooldown_weapons
+        .iter()
+        .map(|weapon| (weapon.clone(), Vec::new()))
+        .collect()
+    };
+
+    let new_weapons = weapons_firing
+      .iter()
+      .map(|(weapon, _)| weapon.clone())
+      .collect();
+
+    let new_projectiles = weapons_firing
+      .iter()
+      .flat_map(|(_, projectiles)| projectiles.clone())
+      .collect();
+
     return Rc::new(Self {
       inventory: Rc::clone(&self.inventory),
       current_weapons: new_weapons,
+      new_projectiles,
     });
   }
 }

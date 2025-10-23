@@ -9,6 +9,7 @@ use crate::system::{Game, System};
 mod camera;
 mod combat;
 mod controls;
+mod ecs;
 mod entity;
 mod graphics;
 mod graphics_utils;

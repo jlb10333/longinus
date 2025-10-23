@@ -24,7 +24,14 @@ pub fn draw_cuboid_collider(collider: &Collider, camera_position: Vector2<f32>) 
 
   match collider.shape().as_ball() {
     Some(ball) => {
-      draw_circle(translation.x, translation.y, 20.0, BLUE);
+      draw_circle(
+        translation.x,
+        translation.y,
+        PhysicsVector::new(vector![ball.radius, 0.0])
+          .into_screen()
+          .x,
+        BLUE,
+      );
     }
     None => {}
   }

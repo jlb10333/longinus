@@ -60,6 +60,7 @@ fn reticle_angle_change(keys: &Vec<Keycode>) -> f32 {
 pub struct ControlsSystem {
   pub movement_direction: PhysicsVector,
   pub reticle_angle: f32,
+  pub firing: bool,
 }
 
 impl System for ControlsSystem {
@@ -67,6 +68,7 @@ impl System for ControlsSystem {
     return Rc::new(Self {
       movement_direction: PhysicsVector::new(vector![0.0, 0.0]),
       reticle_angle: 0.0,
+      firing: false,
     });
   }
 
@@ -77,6 +79,7 @@ impl System for ControlsSystem {
     return Rc::new(Self {
       movement_direction: PhysicsVector::new(handle_movement_input(&keys)),
       reticle_angle: self.reticle_angle + reticle_angle_change(&keys),
+      firing: keys.contains(&Keycode::Space),
     });
   }
 }

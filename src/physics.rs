@@ -2,24 +2,12 @@ use rapier2d::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-  combat::{CombatSystem, Projectile, get_slot_positions},
+  combat::CombatSystem,
   controls::ControlsSystem,
+  ecs::{ComponentSet, Damageable, DestroyOnCollision, Entity},
   load_map::{COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL, MapSystem, MapTile},
   system::System,
 };
-
-// pub struct PhysicsSystem {
-//   rigid_body_set: Rc<RigidBodySet>,
-//   collider_set: Rc<ColliderSet>,
-//   integration_parameters: Rc<IntegrationParameters>,
-//   physics_pipeline: Rc<PhysicsPipeline>,
-//   island_manager: Rc<IslandManager>,
-//   broad_phase: Rc<DefaultBroadPhase>,
-//   narrow_phase: Rc<NarrowPhase>,
-//   impulse_joint_set: Rc<ImpulseJointSet>,
-//   multibody_joint_set: Rc<MultibodyJointSet>,
-//   ccd_solver: Rc<CCDSolver>,
-// }
 
 pub struct PhysicsSystem {
   pub rigid_body_set: RigidBodySet,
@@ -33,6 +21,7 @@ pub struct PhysicsSystem {
   pub multibody_joint_set: MultibodyJointSet,
   pub ccd_solver: CCDSolver,
   pub player_handle: RigidBodyHandle,
+  pub entities: Vec<Entity>,
 }
 
 impl System for PhysicsSystem {
@@ -57,6 +46,11 @@ impl System for PhysicsSystem {
     let player_handle = rigid_body_set.insert(player_rigid_body);
     collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
 
+    let player = Entity {
+      handle: player_handle,
+      components: ComponentSet::new().insert(Damageable { health: 100 }),
+    };
+
     /* Create the map colliders. */
     let map_system = ctx.get::<MapSystem>().unwrap();
 
@@ -74,7 +68,8 @@ impl System for PhysicsSystem {
     let narrow_phase = NarrowPhase::new();
     let impulse_joint_set = ImpulseJointSet::new();
     let multibody_joint_set = MultibodyJointSet::new();
-    let ccd_solver = CCDSolver::new();
+    let ccd_solver: CCDSolver = CCDSolver::new();
+    let entities = Vec::from([player]);
 
     return Rc::new(Self {
       rigid_body_set,
@@ -88,10 +83,13 @@ impl System for PhysicsSystem {
       multibody_joint_set,
       ccd_solver,
       player_handle,
+      entities,
     });
   }
 
   fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
+    println!("{}", self.entities.len());
+
     let mut physics_pipeline = self.physics_pipeline.as_ref().borrow_mut();
     let mut island_manager = self.island_manager.clone();
     let mut broad_phase = self.broad_phase.clone();
@@ -110,24 +108,67 @@ impl System for PhysicsSystem {
     /* Fire all weapons */
     let combat_system = ctx.get::<CombatSystem>().unwrap();
 
-    let new_projectiles: Vec<Projectile> = combat_system
-      .current_weapons
+    let new_projectiles: Vec<Entity> = combat_system
+      .new_projectiles
       .iter()
-      .flat_map(|weapon| weapon.fire_if_ready(get_slot_positions(controls_system.reticle_angle)))
+      .map(|projectile| {
+        let handle = rigid_body_set.insert(
+          RigidBodyBuilder::dynamic()
+            .translation(*rigid_body_set[self.player_handle].translation() + *projectile.offset),
+        );
+        collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
+
+        let rbs_clone = rigid_body_set.clone();
+        let player_velocity = rbs_clone[self.player_handle].linvel();
+        rigid_body_set[handle].set_linvel(*player_velocity, true);
+
+        rigid_body_set[handle].apply_impulse(*projectile.initial_force, true);
+
+        return Entity {
+          handle,
+          components: ComponentSet::new().insert(DestroyOnCollision),
+        };
+      })
       .collect();
 
-    if (new_projectiles.len() > 0) {
-      println!("firing {}", new_projectiles.len());
-    }
+    let entities: Vec<Entity> = self
+      .entities
+      .iter()
+      .cloned()
+      .chain(new_projectiles)
+      .collect();
 
-    new_projectiles.iter().for_each(|projectile| {
-      let handle = rigid_body_set.insert(
-        RigidBodyBuilder::dynamic()
-          .translation(*rigid_body_set[self.player_handle].translation() + *projectile.offset),
-      );
-      rigid_body_set[handle].apply_impulse(*projectile.initial_force, true);
-      collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
-    });
+    /* Remove colliding entities marked as destroy on collision */
+    let entities = entities
+      .iter()
+      .cloned()
+      .filter(|entity| {
+        let entity_destroyed = !(entity
+          .clone()
+          .components
+          .get::<DestroyOnCollision>()
+          .is_none()
+          || rigid_body_set[entity.handle]
+            .colliders()
+            .iter()
+            .cloned()
+            .flat_map(|collider| narrow_phase.contact_pairs_with(collider))
+            .count()
+            == 0);
+
+        if entity_destroyed {
+          rigid_body_set.remove(
+            entity.handle,
+            &mut island_manager,
+            &mut collider_set,
+            &mut impulse_joint_set,
+            &mut multibody_joint_set,
+            true,
+          );
+        }
+        return !entity_destroyed;
+      })
+      .collect();
 
     /* Step physics */
     physics_pipeline.step(
@@ -157,6 +198,7 @@ impl System for PhysicsSystem {
       multibody_joint_set: multibody_joint_set,
       ccd_solver: ccd_solver,
       player_handle: self.player_handle,
+      entities,
     });
   }
 }

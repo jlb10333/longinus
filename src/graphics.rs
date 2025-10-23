@@ -4,7 +4,7 @@ use macroquad::prelude::*;
 
 use crate::{
   camera::CameraSystem,
-  combat::{distance_projection, get_reticle_pos, get_slot_positions},
+  combat::{distance_projection_screen, get_reticle_pos, get_slot_positions},
   controls::ControlsSystem,
   graphics_utils::draw_cuboid_collider,
   physics::PhysicsSystem,
@@ -69,9 +69,12 @@ impl System for GraphicsSystem {
     if SHOW_SLOTS {
       let slot_positions = get_slot_positions(controls_system.reticle_angle);
       slot_positions.iter().for_each(|(_, slot)| {
-        let slot_screen_pos = player_screen_pos + slot.offset.into_screen();
-        let slot_next_screen_pos =
-          slot_screen_pos + ScreenVector::new(distance_projection(slot.angle, 7.0));
+        let mut slot_screen_offset = *slot.offset.into_screen();
+        slot_screen_offset.y *= -1.0;
+
+        let slot_screen_pos = player_screen_pos + ScreenVector::new(slot_screen_offset);
+
+        let slot_next_screen_pos = slot_screen_pos + distance_projection_screen(slot.angle, 7.0);
 
         draw_circle(slot_screen_pos.x, slot_screen_pos.y, 2.0, BLUE);
         draw_circle(slot_next_screen_pos.x, slot_next_screen_pos.y, 2.0, WHITE);
