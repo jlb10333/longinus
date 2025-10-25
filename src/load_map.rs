@@ -6,7 +6,7 @@ use serde::Deserialize;
 use crate::{
   entity::{Enemy, Entity, Player, Wall},
   system::System,
-  units::MapVector,
+  units::{MapVector, UnitConvert2},
 };
 
 #[derive(Clone, Debug, Deserialize)]
@@ -74,8 +74,9 @@ pub enum MapComponent {
 
 impl Object {
   pub fn into(&self, camera_position: Vector2<f32>) -> MapComponent {
+    let map_vector = MapVector::from_vec(vector![self.x, self.y]);
     let rigid_body = RigidBodyBuilder::dynamic()
-      .translation(*MapVector::new(vector![self.x, self.y]).into_physics_pos(camera_position))
+      .translation(map_vector.into_pos(camera_position).into_vec())
       .build();
     let ball_collider = ColliderBuilder::ball(0.5)
       .restitution(0.7)

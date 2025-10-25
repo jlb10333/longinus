@@ -7,6 +7,7 @@ use crate::{
   ecs::{ComponentSet, Damageable, DestroyOnCollision, Entity},
   load_map::{COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL, MapSystem, MapTile},
   system::System,
+  units::UnitConvert2,
 };
 
 pub struct PhysicsSystem {
@@ -103,7 +104,8 @@ impl System for PhysicsSystem {
     /* Move the player */
     let controls_system = ctx.get::<ControlsSystem>().unwrap();
 
-    rigid_body_set[self.player_handle].apply_impulse(*controls_system.movement_direction, true);
+    rigid_body_set[self.player_handle]
+      .apply_impulse(controls_system.movement_direction.into_vec(), true);
 
     /* Fire all weapons */
     let combat_system = ctx.get::<CombatSystem>().unwrap();
@@ -112,17 +114,16 @@ impl System for PhysicsSystem {
       .new_projectiles
       .iter()
       .map(|projectile| {
-        let handle = rigid_body_set.insert(
-          RigidBodyBuilder::dynamic()
-            .translation(*rigid_body_set[self.player_handle].translation() + *projectile.offset),
-        );
+        let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
+          *rigid_body_set[self.player_handle].translation() + projectile.offset.into_vec(),
+        ));
         collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
 
         let rbs_clone = rigid_body_set.clone();
         let player_velocity = rbs_clone[self.player_handle].linvel();
         rigid_body_set[handle].set_linvel(*player_velocity, true);
 
-        rigid_body_set[handle].apply_impulse(*projectile.initial_force, true);
+        rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
 
         return Entity {
           handle,

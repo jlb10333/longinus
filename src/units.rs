@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use derive_more::{Add, Sub};
+use derive_more::{Add, Mul, Sub};
 use macroquad::window::screen_height;
 use rapier2d::{na::Vector2, prelude::*};
 
@@ -8,94 +8,170 @@ pub fn vec_zero() -> Vector2<f32> {
   return vector![0.0, 0.0];
 }
 
-#[derive(Sub, Add, Clone, Copy)]
-pub struct ScreenVector(Vector<f32>);
+pub trait UnitConvert<Other>: Clone + Copy {
+  fn zero() -> Self;
+  fn convert(self) -> Other;
+}
 
-#[derive(Sub, Add, Clone, Copy)]
-pub struct PhysicsVector(Vector<f32>);
+pub trait UnitConvert2<Other>: UnitConvert<Other> {
+  fn into_vec(self) -> Vector2<f32>;
+  fn from_vec(vector: Vector2<f32>) -> Self;
+  fn into_pos(self, camera_position: Vector2<f32>) -> Other;
+  fn x(self) -> f32 {
+    return self.into_vec().x;
+  }
+  fn y(self) -> f32 {
+    return self.into_vec().y;
+  }
+}
 
-#[derive(Sub, Add, Clone, Copy)]
-pub struct MapVector(Vector<f32>);
+/* ScreenScalar */
 
-impl Deref for ScreenVector {
-  type Target = Vector<f32>;
+#[derive(Sub, Add, Mul, Clone, Copy)]
+pub struct ScreenScalar(pub f32);
+
+impl Deref for ScreenScalar {
+  type Target = f32;
   fn deref(&self) -> &Self::Target {
     return &self.0;
   }
 }
 
-impl ScreenVector {
-  /* Used for internal physics engine dimensions */
-  pub fn into_physics(self) -> PhysicsVector {
-    return PhysicsVector(self.scale(0.02));
+impl UnitConvert<PhysicsScalar> for ScreenScalar {
+  fn zero() -> Self {
+    return Self(0.0);
   }
-
-  /* Used for internal physics engine positions, flipping vertically */
-  pub fn into_physics_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
-    return PhysicsVector(vector![self.x, screen_height() - self.y].scale(0.02))
-      + PhysicsVector(camera_position);
-  }
-
-  pub fn new(vector: Vector<f32>) -> ScreenVector {
-    return ScreenVector(vector);
-  }
-
-  pub fn zero() -> ScreenVector {
-    return ScreenVector(vec_zero());
+  fn convert(self) -> PhysicsScalar {
+    return PhysicsScalar(*self * 0.2);
   }
 }
 
-impl Deref for PhysicsVector {
-  type Target = Vector<f32>;
+/* PhysicsScalar */
+
+#[derive(Sub, Add, Mul, Clone, Copy)]
+pub struct PhysicsScalar(pub f32);
+
+impl Deref for PhysicsScalar {
+  type Target = f32;
   fn deref(&self) -> &Self::Target {
     return &self.0;
   }
 }
 
-impl PhysicsVector {
-  /* Used for screen (pixel) dimensions */
-  pub fn into_screen(self) -> ScreenVector {
-    return ScreenVector(self.scale(50.0));
+impl UnitConvert<ScreenScalar> for PhysicsScalar {
+  fn zero() -> Self {
+    return Self(0.0);
   }
-
-  /* Used for screen (pixel) positions, flipping vertically */
-  pub fn into_screen_pos(self, camera_position: Vector2<f32>) -> ScreenVector {
-    return ScreenVector(vector![self.x, (screen_height() * 0.02) - self.y].scale(50.0))
-      - ScreenVector(camera_position);
-  }
-
-  pub fn new(vector: Vector<f32>) -> PhysicsVector {
-    return PhysicsVector(vector);
-  }
-
-  pub fn zero() -> PhysicsVector {
-    return PhysicsVector(vec_zero());
+  fn convert(self) -> ScreenScalar {
+    return ScreenScalar(*self * 50.0);
   }
 }
 
-impl Deref for MapVector {
-  type Target = Vector<f32>;
+/* ScreenVector */
+
+pub type ScreenVector = Vector2<ScreenScalar>;
+
+impl UnitConvert<PhysicsVector> for ScreenVector {
+  fn zero() -> Self {
+    return vector![ScreenScalar::zero(), ScreenScalar::zero()];
+  }
+  fn convert(self) -> PhysicsVector {
+    return PhysicsVector::from_vec(vector![self.into_vec().x, -self.into_vec().y].scale(0.02));
+  }
+}
+
+impl UnitConvert2<PhysicsVector> for ScreenVector {
+  fn into_vec(self) -> Vector2<f32> {
+    let mapped: Vec<f32> = self.iter().map(ScreenScalar::deref).cloned().collect();
+    return vector![mapped[0], mapped[1]];
+  }
+  fn from_vec(vector: Vector2<f32>) -> Self {
+    return vector![ScreenScalar(vector.x), ScreenScalar(vector.y)];
+  }
+  fn into_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
+    return PhysicsVector::from_vec(
+      vector![self.into_vec().x, screen_height() - self.into_vec().y].scale(0.02) + camera_position,
+    );
+  }
+}
+
+/* PhysicsVector */
+
+pub type PhysicsVector = Vector2<PhysicsScalar>;
+
+impl UnitConvert<ScreenVector> for PhysicsVector {
+  fn convert(self) -> ScreenVector {
+    return ScreenVector::from_vec(vector![self.x(), -self.y()].scale(50.0));
+  }
+  fn zero() -> Self {
+    return Self::from_vec(vec_zero());
+  }
+}
+
+impl UnitConvert2<ScreenVector> for PhysicsVector {
+  fn into_vec(self) -> Vector2<f32> {
+    let mapped: Vec<f32> = self.iter().map(PhysicsScalar::deref).cloned().collect();
+    return vector![mapped[0], mapped[1]];
+  }
+  fn from_vec(vector: Vector2<f32>) -> Self {
+    return vector![PhysicsScalar(vector.x), PhysicsScalar(vector.y)];
+  }
+  fn into_pos(self, camera_position: Vector2<f32>) -> Vector<ScreenScalar> {
+    return Vector::<ScreenScalar>::from_vec(
+      vector![
+        self.into_vec().x,
+        (screen_height() * 0.02) - self.into_vec().y
+      ]
+      .scale(50.0)
+        - camera_position,
+    );
+  }
+}
+
+/* MapVector */
+
+#[derive(Sub, Add, Mul, Clone, Copy)]
+pub struct MapScalar(pub f32);
+
+impl Deref for MapScalar {
+  type Target = f32;
   fn deref(&self) -> &Self::Target {
     return &self.0;
   }
 }
 
-impl MapVector {
-  pub fn into_screen(self, camera_position: Vector2<f32>) -> ScreenVector {
-    return ScreenVector(self.scale(0.125)) + ScreenVector(camera_position);
+impl UnitConvert<PhysicsScalar> for MapScalar {
+  fn zero() -> Self {
+    return MapScalar(0.0);
+  }
+  fn convert(self) -> PhysicsScalar {
+    return PhysicsScalar(*self * 0.125 * 0.02);
+  }
+}
+
+pub type MapVector = Vector2<MapScalar>;
+
+impl UnitConvert<PhysicsVector> for MapVector {
+  fn zero() -> Self {
+    return vector![MapScalar::zero(), MapScalar::zero()];
   }
 
-  pub fn into_physics(self, camera_position: Vector2<f32>) -> PhysicsVector {
-    return self.into_screen(camera_position).into_physics();
+  fn convert(self) -> PhysicsVector {
+    let x = self.data.0[0][0];
+    let y = self.data.0[0][1];
+    return vector![x.convert(), y.convert()];
   }
+}
 
-  pub fn into_physics_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
-    return self
-      .into_screen(camera_position)
-      .into_physics_pos(camera_position);
+impl UnitConvert2<PhysicsVector> for MapVector {
+  fn into_vec(self) -> Vector2<f32> {
+    let mapped: Vec<f32> = self.iter().map(MapScalar::deref).cloned().collect();
+    return vector![mapped[0], mapped[1]];
   }
-
-  pub fn new(vector: Vector<f32>) -> MapVector {
-    return MapVector(vector);
+  fn from_vec(vector: Vector2<f32>) -> Self {
+    return vector![MapScalar(vector.x), MapScalar(vector.y)];
+  }
+  fn into_pos(self, _: Vector2<f32>) -> PhysicsVector {
+    return self.convert();
   }
 }

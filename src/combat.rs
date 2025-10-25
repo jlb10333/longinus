@@ -8,19 +8,19 @@ use std::{
 use crate::{
   controls::ControlsSystem,
   system::System,
-  units::{PhysicsVector, ScreenVector},
+  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
-use rapier2d::{na::Vector2, prelude::*};
+use rapier2d::prelude::*;
 
 pub fn distance_projection_physics(angle: f32, distance: f32) -> PhysicsVector {
-  return PhysicsVector::new(vector![
+  return PhysicsVector::from_vec(vector![
     angle.cos() * distance,
     -1.0 * angle.sin() * distance
   ]);
 }
 
 pub fn distance_projection_screen(angle: f32, distance: f32) -> ScreenVector {
-  return ScreenVector::new(vector![angle.cos() * distance, angle.sin() * distance]);
+  return ScreenVector::from_vec(vector![angle.cos() * distance, angle.sin() * distance]);
 }
 
 const RETICLE_DISTANCE_SCREEN: f32 = 20.0;
@@ -97,12 +97,12 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
     (SlotPosition::Front45Left, front_45_left),
     (SlotPosition::Front45Right, front_45_right),
     (SlotPosition::SideLeft, side_left),
-    // (SlotPosition::SideRight, side_right),
-    // (SlotPosition::BackAhead, back_ahead),
-    // (SlotPosition::BackDoubleLeft, back_double_left),
-    // (SlotPosition::BackDoubleRight, back_double_right),
-    // (SlotPosition::Back45Left, back_45_left),
-    // (SlotPosition::Back45Right, back_45_right),
+    (SlotPosition::SideRight, side_right),
+    (SlotPosition::BackAhead, back_ahead),
+    (SlotPosition::BackDoubleLeft, back_double_left),
+    (SlotPosition::BackDoubleRight, back_double_right),
+    (SlotPosition::Back45Left, back_45_left),
+    (SlotPosition::Back45Right, back_45_right),
   ]);
 
   /*  */

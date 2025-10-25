@@ -9,7 +9,7 @@ use crate::{
   graphics_utils::draw_cuboid_collider,
   physics::PhysicsSystem,
   system::System,
-  units::{PhysicsVector, ScreenVector},
+  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 
 const TARGET_FPS: f32 = 60.0;
@@ -48,19 +48,19 @@ impl System for GraphicsSystem {
     }
 
     /* Draw player */
-    let player_screen_pos = PhysicsVector::new(
+    let player_screen_pos = PhysicsVector::from_vec(
       *physics_system.rigid_body_set[physics_system.player_handle].translation(),
     )
-    .into_screen_pos(camera_system.translation);
+    .into_pos(camera_system.translation);
 
-    draw_circle(player_screen_pos.x, player_screen_pos.y, 12.5, GREEN);
+    draw_circle(player_screen_pos.x(), player_screen_pos.y(), 12.5, GREEN);
 
     /* Draw reticle */
     let reticle_pos = get_reticle_pos(controls_system.reticle_angle);
 
     draw_circle(
-      player_screen_pos.x + reticle_pos.x,
-      player_screen_pos.y + reticle_pos.y,
+      player_screen_pos.x() + reticle_pos.x(),
+      player_screen_pos.y() + reticle_pos.y(),
       RETICLE_SIZE,
       BLACK,
     );
@@ -69,15 +69,22 @@ impl System for GraphicsSystem {
     if SHOW_SLOTS {
       let slot_positions = get_slot_positions(controls_system.reticle_angle);
       slot_positions.iter().for_each(|(_, slot)| {
-        let mut slot_screen_offset = *slot.offset.into_screen();
-        slot_screen_offset.y *= -1.0;
+        let slot_screen_offset = slot.offset.convert();
 
-        let slot_screen_pos = player_screen_pos + ScreenVector::new(slot_screen_offset);
+        let slot_screen_pos =
+          ScreenVector::from_vec(player_screen_pos.into_vec() + slot_screen_offset.into_vec());
 
-        let slot_next_screen_pos = slot_screen_pos + distance_projection_screen(slot.angle, 7.0);
+        let slot_next_screen_pos = ScreenVector::from_vec(
+          slot_screen_pos.into_vec() + distance_projection_screen(slot.angle, 7.0).into_vec(),
+        );
 
-        draw_circle(slot_screen_pos.x, slot_screen_pos.y, 2.0, BLUE);
-        draw_circle(slot_next_screen_pos.x, slot_next_screen_pos.y, 2.0, WHITE);
+        draw_circle(slot_screen_pos.x(), slot_screen_pos.y(), 2.0, BLUE);
+        draw_circle(
+          slot_next_screen_pos.x(),
+          slot_next_screen_pos.y(),
+          2.0,
+          WHITE,
+        );
       });
     }
 

@@ -5,7 +5,7 @@ use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
   system::{Context, System},
-  units::PhysicsVector,
+  units::{PhysicsVector, UnitConvert2},
 };
 
 const INPUT_FORCE: f32 = 0.1;
@@ -66,7 +66,7 @@ pub struct ControlsSystem {
 impl System for ControlsSystem {
   fn start(_: Context) -> Rc<dyn System> {
     return Rc::new(Self {
-      movement_direction: PhysicsVector::new(vector![0.0, 0.0]),
+      movement_direction: PhysicsVector::from_vec(vector![0.0, 0.0]),
       reticle_angle: 0.0,
       firing: false,
     });
@@ -77,7 +77,7 @@ impl System for ControlsSystem {
     let keys: Vec<Keycode> = device_state.get_keys();
 
     return Rc::new(Self {
-      movement_direction: PhysicsVector::new(handle_movement_input(&keys)),
+      movement_direction: PhysicsVector::from_vec(handle_movement_input(&keys)),
       reticle_angle: self.reticle_angle + reticle_angle_change(&keys),
       firing: keys.contains(&Keycode::Space),
     });
