@@ -11,6 +11,7 @@ mod combat;
 mod controls;
 mod ecs;
 mod entity;
+mod f;
 mod graphics;
 mod graphics_utils;
 mod load_map;

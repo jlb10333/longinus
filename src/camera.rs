@@ -7,9 +7,10 @@ use macroquad::{
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
+  load_map::MapSystem,
   physics::PhysicsSystem,
   system::System,
-  units::{PhysicsVector, ScreenVector, UnitConvert2},
+  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
 };
 
 const CAMERA_SCREEN_MARGIN: f32 = 0.3;
@@ -46,12 +47,20 @@ pub struct CameraSystem {
 }
 
 impl System for CameraSystem {
-  fn start(_: crate::system::Context) -> Rc<dyn System>
+  fn start(ctx: crate::system::Context) -> Rc<dyn System>
   where
     Self: Sized,
   {
+    let map_system = ctx.get::<MapSystem>().unwrap();
+
     return Rc::new(Self {
-      translation: vector![0.0, 0.0],
+      translation: map_system
+        .map
+        .player_spawn
+        .translation
+        .into_pos(vec_zero())
+        .into_vec()
+        - vector![screen_width() / 2.0, screen_height() / 2.0],
     });
   }
 

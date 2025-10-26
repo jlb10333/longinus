@@ -33,11 +33,13 @@ impl System for PhysicsSystem {
     let mut rigid_body_set = RigidBodySet::new();
     let mut collider_set = ColliderSet::new();
 
+    let map_system = ctx.get::<MapSystem>().unwrap();
+
     /* Create the player. */
     let player_rigid_body = RigidBodyBuilder::dynamic()
-      .translation(vector![0.0, 0.0])
+      .translation(map_system.map.player_spawn.translation.into_vec())
       .build();
-    let player_collider = ColliderBuilder::ball(0.25)
+    let player_collider = &ColliderBuilder::ball(0.25)
       .restitution(0.7)
       .collision_groups(InteractionGroups {
         memberships: COLLISION_GROUP_PLAYER,
@@ -49,12 +51,13 @@ impl System for PhysicsSystem {
 
     let player = Entity {
       handle: player_handle,
-      components: ComponentSet::new().insert(Damageable { health: 100 }),
+      components: ComponentSet::new().insert(Damageable {
+        health: 100,
+        destroy_on_zero_health: false,
+      }),
     };
 
     /* Create the map colliders. */
-    let map_system = ctx.get::<MapSystem>().unwrap();
-
     map_system.map.colliders.iter().for_each(|map_tile| {
       match map_tile {
         MapTile::Wall(wall) => collider_set.insert(wall.collider.clone()),
@@ -89,8 +92,6 @@ impl System for PhysicsSystem {
   }
 
   fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
-    println!("{}", self.entities.len());
-
     let mut physics_pipeline = self.physics_pipeline.as_ref().borrow_mut();
     let mut island_manager = self.island_manager.clone();
     let mut broad_phase = self.broad_phase.clone();

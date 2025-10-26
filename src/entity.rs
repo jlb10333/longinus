@@ -1,18 +1,19 @@
-use rapier2d::prelude::{Collider, RigidBody};
+use rapier2d::prelude::Collider;
 
-pub struct Entity {
-  pub collider: Collider,
-  pub rigid_body: RigidBody,
+use crate::{load_map::EnemyName, units::PhysicsVector};
+
+#[derive(Clone)]
+pub struct EnemySpawn {
+  pub name: EnemyName,
+  pub translation: PhysicsVector,
 }
 
-pub struct Player {
-  pub entity: Entity,
+#[derive(Clone)]
+pub struct PlayerSpawn {
+  pub translation: PhysicsVector,
 }
 
-pub struct Enemy {
-  pub entity: Entity,
-}
-
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
 }

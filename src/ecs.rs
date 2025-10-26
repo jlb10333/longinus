@@ -64,6 +64,7 @@ pub trait Component: Any {}
 
 pub struct Damageable {
   pub health: i32,
+  pub destroy_on_zero_health: bool,
 }
 impl Component for Damageable {}
 

@@ -1,8 +1,10 @@
 use std::ops::Deref;
 
-use derive_more::{Add, Mul, Sub};
+use derive_more::{Add, Div, Mul, Sub};
 use macroquad::window::screen_height;
 use rapier2d::{na::Vector2, prelude::*};
+
+use crate::load_map::TILE_DIMENSION_PHYSICS;
 
 pub fn vec_zero() -> Vector2<f32> {
   return vector![0.0, 0.0];
@@ -48,7 +50,7 @@ impl UnitConvert<PhysicsScalar> for ScreenScalar {
 
 /* PhysicsScalar */
 
-#[derive(Sub, Add, Mul, Clone, Copy)]
+#[derive(Sub, Add, Mul, Div, Clone, Copy)]
 pub struct PhysicsScalar(pub f32);
 
 impl Deref for PhysicsScalar {
@@ -125,53 +127,5 @@ impl UnitConvert2<ScreenVector> for PhysicsVector {
       .scale(50.0)
         - camera_position,
     );
-  }
-}
-
-/* MapVector */
-
-#[derive(Sub, Add, Mul, Clone, Copy)]
-pub struct MapScalar(pub f32);
-
-impl Deref for MapScalar {
-  type Target = f32;
-  fn deref(&self) -> &Self::Target {
-    return &self.0;
-  }
-}
-
-impl UnitConvert<PhysicsScalar> for MapScalar {
-  fn zero() -> Self {
-    return MapScalar(0.0);
-  }
-  fn convert(self) -> PhysicsScalar {
-    return PhysicsScalar(*self * 0.125 * 0.02);
-  }
-}
-
-pub type MapVector = Vector2<MapScalar>;
-
-impl UnitConvert<PhysicsVector> for MapVector {
-  fn zero() -> Self {
-    return vector![MapScalar::zero(), MapScalar::zero()];
-  }
-
-  fn convert(self) -> PhysicsVector {
-    let x = self.data.0[0][0];
-    let y = self.data.0[0][1];
-    return vector![x.convert(), y.convert()];
-  }
-}
-
-impl UnitConvert2<PhysicsVector> for MapVector {
-  fn into_vec(self) -> Vector2<f32> {
-    let mapped: Vec<f32> = self.iter().map(MapScalar::deref).cloned().collect();
-    return vector![mapped[0], mapped[1]];
-  }
-  fn from_vec(vector: Vector2<f32>) -> Self {
-    return vector![MapScalar(vector.x), MapScalar(vector.y)];
-  }
-  fn into_pos(self, _: Vector2<f32>) -> PhysicsVector {
-    return self.convert();
   }
 }
