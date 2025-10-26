@@ -141,8 +141,7 @@ impl System for PhysicsSystem {
     /* Move the player */
     let controls_system = ctx.get::<ControlsSystem>().unwrap();
 
-    rigid_body_set[self.player_handle]
-      .apply_impulse(controls_system.movement_direction.into_vec(), true);
+    rigid_body_set[self.player_handle].apply_impulse(controls_system.left_stick.into_vec(), true);
 
     /* Fire all weapons */
     let combat_system = ctx.get::<CombatSystem>().unwrap();

@@ -6,10 +6,10 @@ use std::{
 };
 
 use crate::{
-  controls::ControlsSystem,
+  controls::{ControlsSystem, angle_from_vec},
   load_map::{COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL},
   system::System,
-  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
+  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
 };
 use rapier2d::prelude::*;
 
@@ -346,7 +346,11 @@ impl System for CombatSystem {
     let weapons_firing: Vec<(Weapon, Vec<Projectile>)> = if controls_system.firing {
       reduced_cooldown_weapons
         .iter()
-        .map(|weapon| weapon.fire_if_ready(get_slot_positions(controls_system.reticle_angle)))
+        .map(|weapon| {
+          weapon.fire_if_ready(get_slot_positions(angle_from_vec(
+            controls_system.right_stick,
+          )))
+        })
         .collect()
     } else {
       reduced_cooldown_weapons

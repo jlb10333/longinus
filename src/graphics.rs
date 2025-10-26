@@ -1,11 +1,12 @@
 use std::{rc::Rc, thread::sleep, time::Duration};
 
 use macroquad::prelude::*;
+use rapier2d::prelude::*;
 
 use crate::{
   camera::CameraSystem,
   combat::{distance_projection_screen, get_reticle_pos, get_slot_positions},
-  controls::ControlsSystem,
+  controls::{ControlsSystem, angle_from_vec},
   graphics_utils::draw_cuboid_collider,
   physics::PhysicsSystem,
   system::System,
@@ -56,7 +57,7 @@ impl System for GraphicsSystem {
     draw_circle(player_screen_pos.x(), player_screen_pos.y(), 12.5, GREEN);
 
     /* Draw reticle */
-    let reticle_pos = get_reticle_pos(controls_system.reticle_angle);
+    let reticle_pos = get_reticle_pos(angle_from_vec(controls_system.right_stick));
 
     draw_circle(
       player_screen_pos.x() + reticle_pos.x(),
@@ -67,7 +68,7 @@ impl System for GraphicsSystem {
 
     /* DEBUG - Draw slots */
     if SHOW_SLOTS {
-      let slot_positions = get_slot_positions(controls_system.reticle_angle);
+      let slot_positions = get_slot_positions(angle_from_vec(controls_system.right_stick));
       slot_positions.iter().for_each(|(_, slot)| {
         let slot_screen_offset = slot.offset.convert();
 
