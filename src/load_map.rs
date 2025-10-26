@@ -4,7 +4,7 @@ use rapier2d::{na::Vector2, prelude::*};
 use serde::Deserialize;
 
 use crate::{
-  entity::{EnemySpawn, PlayerSpawn, Wall},
+  entity::{EnemySpawn, PlayerSpawn, Wall, collider_from_enemy_name},
   f::{Monad, MonadTranslate},
   system::System,
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
@@ -91,6 +91,9 @@ fn deser_map(raw: &str) -> RawMap {
 
 pub const COLLISION_GROUP_WALL: Group = Group::GROUP_1;
 pub const COLLISION_GROUP_PLAYER: Group = Group::GROUP_2;
+pub const COLLISION_GROUP_PLAYER_PROJECTILE: Group = Group::GROUP_3;
+pub const COLLISION_GROUP_ENEMY: Group = Group::GROUP_4;
+pub const COLLISION_GROUP_ENEMY_PROJECTILE: Group = Group::GROUP_5;
 
 pub enum MapComponent {
   Player(PlayerSpawn),
@@ -103,13 +106,21 @@ pub enum MapComponent {
 impl Object {
   pub fn into(&self, map_height: f32) -> MapComponent {
     match self {
-      Object::EnemySpawn(enemy_spawn) => MapComponent::Enemy(EnemySpawn {
-        name: enemy_spawn.name.clone(),
-        translation: PhysicsVector::from_vec(vector![
+      Object::EnemySpawn(enemy_spawn) => {
+        let translation = PhysicsVector::from_vec(vector![
           enemy_spawn.x * 0.125 * TILE_DIMENSION_PHYSICS,
           (map_height - enemy_spawn.y) * 0.125 * TILE_DIMENSION_PHYSICS
-        ]),
-      }),
+        ]);
+        let collider = collider_from_enemy_name(enemy_spawn.name.clone());
+        let rigid_body = RigidBodyBuilder::fixed()
+          .translation(translation.into_vec())
+          .build();
+        MapComponent::Enemy(EnemySpawn {
+          name: enemy_spawn.name.clone(),
+          collider,
+          rigid_body,
+        })
+      }
       Object::PlayerSpawn(player_spawn) => MapComponent::Player(PlayerSpawn {
         translation: PhysicsVector::from_vec(vector![
           player_spawn.x * 0.125 * TILE_DIMENSION_PHYSICS,
@@ -167,7 +178,10 @@ impl TileLayer {
             ))
             .collision_groups(InteractionGroups {
               memberships: COLLISION_GROUP_WALL,
-              filter: COLLISION_GROUP_PLAYER,
+              filter: COLLISION_GROUP_PLAYER
+                .union(COLLISION_GROUP_PLAYER_PROJECTILE)
+                .union(COLLISION_GROUP_ENEMY)
+                .union(COLLISION_GROUP_ENEMY_PROJECTILE),
             })
             .build(),
           }));
@@ -222,8 +236,6 @@ impl RawMap {
         Layer::TileLayer(_) => None,
       })
       .flatten();
-
-    entities_layer.bind(|&layer| println!("{:?}", *layer));
 
     let map_height = tile_layer.bind(|&tile_layer| tile_layer.height as f32 * 8.0);
 

@@ -7,6 +7,7 @@ use std::{
 
 use crate::{
   controls::ControlsSystem,
+  load_map::{COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL},
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -192,26 +193,37 @@ impl Weapon {
 }
 
 fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projectile {
-  return match projectile_type {
+  let collision_groups = InteractionGroups {
+    memberships: COLLISION_GROUP_PLAYER_PROJECTILE,
+    filter: COLLISION_GROUP_ENEMY.union(COLLISION_GROUP_WALL),
+  };
+
+  match projectile_type {
     ProjectileType::Plasma => Projectile {
-      collider: ColliderBuilder::ball(0.15).build(),
+      collider: ColliderBuilder::ball(0.15)
+        .collision_groups(collision_groups)
+        .build(),
       damage: 10.0,
       initial_force: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
     },
     ProjectileType::Missle => Projectile {
-      collider: ColliderBuilder::ball(0.15).build(),
+      collider: ColliderBuilder::ball(0.15)
+        .collision_groups(collision_groups)
+        .build(),
       damage: 10.0,
       initial_force: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
     },
     ProjectileType::Laser => Projectile {
-      collider: ColliderBuilder::ball(0.15).build(),
+      collider: ColliderBuilder::ball(0.15)
+        .collision_groups(collision_groups)
+        .build(),
       damage: 10.0,
       initial_force: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
     },
-  };
+  }
 }
 
 fn base_speed_from_projectile_type(projectile_type: ProjectileType) -> f32 {

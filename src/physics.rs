@@ -1,11 +1,16 @@
 use rapier2d::prelude::*;
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, ops::Deref, rc::Rc};
 
 use crate::{
   combat::CombatSystem,
   controls::ControlsSystem,
-  ecs::{ComponentSet, Damageable, DestroyOnCollision, Entity},
-  load_map::{COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL, MapSystem, MapTile},
+  ecs::{ComponentSet, Damageable, Damager, DestroyOnCollision, Enemy, Entity},
+  enemy::{EnemyDecision, EnemySystem},
+  f::Monad,
+  load_map::{
+    COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
+    COLLISION_GROUP_WALL, MapSystem, MapTile,
+  },
   system::System,
   units::UnitConvert2,
 };
@@ -23,6 +28,7 @@ pub struct PhysicsSystem {
   pub ccd_solver: CCDSolver,
   pub player_handle: RigidBodyHandle,
   pub entities: Vec<Entity>,
+  pub frame_count: i64,
 }
 
 impl System for PhysicsSystem {
@@ -43,7 +49,9 @@ impl System for PhysicsSystem {
       .restitution(0.7)
       .collision_groups(InteractionGroups {
         memberships: COLLISION_GROUP_PLAYER,
-        filter: COLLISION_GROUP_WALL,
+        filter: COLLISION_GROUP_WALL
+          .union(COLLISION_GROUP_ENEMY)
+          .union(COLLISION_GROUP_ENEMY_PROJECTILE),
       })
       .build();
     let player_handle = rigid_body_set.insert(player_rigid_body);
@@ -52,10 +60,37 @@ impl System for PhysicsSystem {
     let player = Entity {
       handle: player_handle,
       components: ComponentSet::new().insert(Damageable {
-        health: 100,
+        health: 100.0,
         destroy_on_zero_health: false,
+        current_hitstun: 0.0,
+        max_hitstun: 30.0,
       }),
     };
+
+    /* Spawn enemies. */
+    let enemies: Vec<_> = map_system
+      .map
+      .enemy_spawns
+      .iter()
+      .map(|enemy_spawn| {
+        let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
+        collider_set.insert_with_parent(enemy_spawn.collider.clone(), handle, &mut rigid_body_set);
+        Entity {
+          handle,
+          components: ComponentSet::new()
+            .insert(Damageable {
+              health: 100.0,
+              destroy_on_zero_health: true,
+              current_hitstun: 0.0,
+              max_hitstun: 0.0,
+            })
+            .insert(Damager { damage: 20.0 })
+            .insert(Enemy {
+              name: enemy_spawn.name.clone(),
+            }),
+        }
+      })
+      .collect();
 
     /* Create the map colliders. */
     map_system.map.colliders.iter().for_each(|map_tile| {
@@ -73,7 +108,7 @@ impl System for PhysicsSystem {
     let impulse_joint_set = ImpulseJointSet::new();
     let multibody_joint_set = MultibodyJointSet::new();
     let ccd_solver: CCDSolver = CCDSolver::new();
-    let entities = Vec::from([player]);
+    let entities: Vec<_> = [player].iter().cloned().chain(enemies).collect();
 
     return Rc::new(Self {
       rigid_body_set,
@@ -88,6 +123,7 @@ impl System for PhysicsSystem {
       ccd_solver,
       player_handle,
       entities,
+      frame_count: 0,
     });
   }
 
@@ -128,7 +164,9 @@ impl System for PhysicsSystem {
 
         return Entity {
           handle,
-          components: ComponentSet::new().insert(DestroyOnCollision),
+          components: ComponentSet::new()
+            .insert(DestroyOnCollision)
+            .insert(Damager { damage: 10.0 }),
         };
       })
       .collect();
@@ -139,6 +177,181 @@ impl System for PhysicsSystem {
       .cloned()
       .chain(new_projectiles)
       .collect();
+
+    /* Carry out enemy behavior */
+    let enemy_system = ctx.get::<EnemySystem>().unwrap();
+
+    let entities = entities
+      .iter()
+      .cloned()
+      .flat_map(|entity: Entity| {
+        let entity = &entity;
+        let relevant_decision = enemy_system
+          .decisions
+          .iter()
+          .find(|&decision| decision.handle == entity.handle)
+          .bind(|&decision| decision);
+        if relevant_decision.is_none() {
+          return Vec::from([entity.clone()]);
+        }
+        let relevant_decision = relevant_decision.unwrap();
+
+        rigid_body_set[entity.handle]
+          .apply_impulse(relevant_decision.movement_force.into_vec(), true);
+
+        [entity.clone()]
+          .iter()
+          .cloned()
+          .chain(
+            relevant_decision
+              .projectiles
+              .iter()
+              .map(|projectile| {
+                let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
+                  *rigid_body_set[entity.handle].translation() + projectile.offset.into_vec(),
+                ));
+                collider_set.insert_with_parent(
+                  projectile.collider.clone(),
+                  handle,
+                  rigid_body_set,
+                );
+
+                let rbs_clone = rigid_body_set.clone();
+                let enemy_velocity = rbs_clone[entity.handle].linvel();
+                rigid_body_set[handle].set_linvel(*enemy_velocity, true);
+
+                rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
+
+                Entity {
+                  handle,
+                  components: ComponentSet::new()
+                    .insert(DestroyOnCollision)
+                    .insert(Damager {
+                      damage: projectile.damage,
+                    }),
+                }
+              })
+              .collect::<Vec<_>>(),
+          )
+          .collect::<Vec<_>>()
+      })
+      .collect::<Vec<_>>();
+
+    /* Damage all entities colliding with damagers */
+    let entities: Vec<_> = entities
+      .iter()
+      .map(|entity| {
+        let damageable = entity.components.get::<Damageable>();
+
+        if damageable.is_none() {
+          return entity.clone();
+        }
+        let damageable = damageable.unwrap();
+
+        if damageable.current_hitstun > 0.0 {
+          return Entity {
+            handle: entity.handle,
+            components: entity.components.with(Damageable {
+              health: damageable.health,
+              destroy_on_zero_health: damageable.destroy_on_zero_health,
+              current_hitstun: damageable.current_hitstun - 1.0,
+              max_hitstun: damageable.max_hitstun,
+            }),
+          };
+        }
+
+        let damagers = rigid_body_set[entity.handle]
+          .colliders()
+          .iter()
+          .cloned()
+          .flat_map(|collider_handle| {
+            narrow_phase
+              .contact_pairs_with(collider_handle)
+              .flat_map(|contact_pairs| {
+                if !contact_pairs.has_any_active_contact {
+                  Vec::new()
+                } else {
+                  [contact_pairs.collider1, contact_pairs.collider2]
+                    .iter()
+                    .cloned()
+                    .filter(|&handle| collider_handle != handle.clone())
+                    .collect::<Vec<_>>()
+                }
+              })
+              .collect::<Vec<_>>()
+          })
+          .map(|collider_handle| {
+            collider_set[collider_handle]
+              .parent()
+              .bind(|rigid_body_handle| {
+                entities
+                  .iter()
+                  .cloned()
+                  .find(|entity| entity.handle == *rigid_body_handle)
+              })
+              .flatten()
+              .bind(|entity| entity.components.get::<Damager>())
+              .flatten()
+          })
+          .flatten();
+
+        let incoming_damage = damagers.fold(0.0, |sum, damager| sum + damager.damage);
+
+        if incoming_damage == 0.0 {
+          return Entity {
+            handle: entity.handle,
+            components: entity.components.with(Damageable {
+              health: damageable.health,
+              destroy_on_zero_health: damageable.destroy_on_zero_health,
+              current_hitstun: if damageable.current_hitstun > 0.0 {
+                damageable.current_hitstun - 1.0
+              } else {
+                0.0
+              },
+              max_hitstun: damageable.max_hitstun,
+            }),
+          };
+        }
+
+        return Entity {
+          handle: entity.handle,
+          components: entity.components.with(Damageable {
+            health: damageable.health - incoming_damage,
+            destroy_on_zero_health: damageable.destroy_on_zero_health,
+            current_hitstun: damageable.max_hitstun,
+            max_hitstun: damageable.max_hitstun,
+          }),
+        };
+      })
+      .collect();
+
+    /* Destroy entities with 0 health marked as destroy on 0 health */
+    let entities = entities
+      .iter()
+      .cloned()
+      .filter(|entity| {
+        let damageable = entity.clone().components.get::<Damageable>();
+        if damageable.is_none() {
+          return true;
+        }
+        let damageable = damageable.unwrap();
+
+        let entity_destroyed = damageable.health <= 0.0 && damageable.destroy_on_zero_health;
+
+        if entity_destroyed {
+          rigid_body_set.remove(
+            entity.handle,
+            &mut island_manager,
+            &mut collider_set,
+            &mut impulse_joint_set,
+            &mut multibody_joint_set,
+            true,
+          );
+        }
+
+        return !entity_destroyed;
+      })
+      .collect::<Vec<_>>();
 
     /* Remove colliding entities marked as destroy on collision */
     let entities = entities
@@ -155,6 +368,7 @@ impl System for PhysicsSystem {
             .iter()
             .cloned()
             .flat_map(|collider| narrow_phase.contact_pairs_with(collider))
+            .filter(|&contact_pair| contact_pair.has_any_active_contact)
             .count()
             == 0);
 
@@ -201,6 +415,7 @@ impl System for PhysicsSystem {
       ccd_solver: ccd_solver,
       player_handle: self.player_handle,
       entities,
+      frame_count: self.frame_count + 1,
     });
   }
 }

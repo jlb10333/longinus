@@ -2,6 +2,8 @@ use std::{any::Any, rc::Rc};
 
 use rapier2d::prelude::RigidBodyHandle;
 
+use crate::load_map::EnemyName;
+
 #[derive(Clone)]
 pub struct Entity {
   pub handle: RigidBodyHandle,
@@ -41,6 +43,24 @@ impl ComponentSet {
     };
   }
 
+  pub fn with<Item>(&self, item: Item) -> Self
+  where
+    Item: Component,
+  {
+    let components: Vec<_> = self
+      .components
+      .iter()
+      .cloned()
+      .filter(|component| {
+        (Rc::clone(component) as Rc<dyn Any>)
+          .downcast::<Item>()
+          .is_err()
+      })
+      .collect();
+
+    return Self { components }.insert(item);
+  }
+
   pub fn get<Item>(&self) -> Option<Rc<Item>>
   where
     Item: Component,
@@ -63,15 +83,22 @@ impl ComponentSet {
 pub trait Component: Any {}
 
 pub struct Damageable {
-  pub health: i32,
+  pub health: f32,
   pub destroy_on_zero_health: bool,
+  pub current_hitstun: f32,
+  pub max_hitstun: f32,
 }
 impl Component for Damageable {}
 
 pub struct Damager {
-  pub damage: i32,
+  pub damage: f32,
 }
 impl Component for Damager {}
 
 pub struct DestroyOnCollision;
 impl Component for DestroyOnCollision {}
+
+pub struct Enemy {
+  pub name: EnemyName,
+}
+impl Component for Enemy {}

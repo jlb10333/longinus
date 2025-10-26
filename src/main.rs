@@ -1,6 +1,7 @@
 use crate::camera::CameraSystem;
 use crate::combat::CombatSystem;
 use crate::controls::ControlsSystem;
+use crate::enemy::EnemySystem;
 use crate::graphics::GraphicsSystem;
 use crate::load_map::MapSystem;
 use crate::physics::PhysicsSystem;
@@ -10,6 +11,7 @@ mod camera;
 mod combat;
 mod controls;
 mod ecs;
+mod enemy;
 mod entity;
 mod f;
 mod graphics;
@@ -28,6 +30,7 @@ async fn main() {
     .add_system(CameraSystem::start)
     .add_system(ControlsSystem::start)
     .add_system(GraphicsSystem::start)
+    .add_system(EnemySystem::start)
     .run()
     .await;
 }
