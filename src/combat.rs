@@ -1,5 +1,6 @@
 use std::{
   any::Any,
+  array::from_fn,
   collections::{HashMap, HashSet},
   f32::consts::PI,
   rc::Rc,
@@ -11,7 +12,10 @@ use crate::{
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
 };
-use rapier2d::prelude::*;
+use rapier2d::{
+  na::{ArrayStorage, Const, Matrix},
+  prelude::*,
+};
 
 pub fn distance_projection_physics(angle: f32, distance: f32) -> PhysicsVector {
   return PhysicsVector::from_vec(vector![
@@ -242,12 +246,12 @@ pub trait WeaponModulator {
   fn modulate(&self, weapon: &Weapon) -> Vec<Weapon>;
 }
 
-enum WeaponInventory {
+enum EquippedWeapon {
   Generator(Rc<dyn WeaponGenerator>),
-  Modulator(Rc<dyn WeaponModulator>, Rc<WeaponInventory>),
+  Modulator(Rc<dyn WeaponModulator>, Rc<EquippedWeapon>),
 }
 
-impl WeaponInventory {
+impl EquippedWeapon {
   fn build(&self) -> Vec<Weapon> {
     return match self {
       Self::Generator(generator) => Vec::from([generator.generate()]),
@@ -306,11 +310,18 @@ impl WeaponModulator for DoubleDamageWeaponModulator {
   }
 }
 
+pub type WeaponInventory =
+  Matrix<Option<WeaponModule>, Const<7>, Const<10>, ArrayStorage<Option<WeaponModule>, 7, 10>>;
+
+pub type EquippedWeaponInventory =
+  Matrix<Option<WeaponModule>, Const<4>, Const<4>, ArrayStorage<Option<WeaponModule>, 4, 4>>;
+
 /* CombatSystem */
 
 #[derive(Clone)]
 pub struct CombatSystem {
-  pub inventory: Rc<WeaponInventory>,
+  pub inventory: WeaponInventory,
+  pub equipped_weapons: Rc<EquippedWeapon>,
   pub current_weapons: Vec<Weapon>,
   pub new_projectiles: Vec<Projectile>,
 }
@@ -321,14 +332,18 @@ impl System for CombatSystem {
     Self: Sized,
   {
     /* Initialize default inventory */
-    let inventory = &Rc::new(WeaponInventory::Modulator(
+    let inventory = WeaponInventory::from_data(ArrayStorage(from_fn(|_| from_fn(|_| None))));
+
+    /* Initialize default equipped weapons */
+    let equipped_weapons = &Rc::new(EquippedWeapon::Modulator(
       Rc::new(FrontTwoSlotWeaponModulator),
-      Rc::new(WeaponInventory::Generator(Rc::new(PlasmaWeaponGenerator))),
+      Rc::new(EquippedWeapon::Generator(Rc::new(PlasmaWeaponGenerator))),
     ));
 
     return Rc::new(Self {
-      inventory: Rc::clone(inventory),
-      current_weapons: inventory.build(),
+      inventory,
+      equipped_weapons: Rc::clone(equipped_weapons),
+      current_weapons: equipped_weapons.build(),
       new_projectiles: Vec::new(),
     });
   }
@@ -370,9 +385,16 @@ impl System for CombatSystem {
       .collect();
 
     return Rc::new(Self {
-      inventory: Rc::clone(&self.inventory),
+      inventory: self.inventory.clone(),
+      equipped_weapons: Rc::clone(&self.equipped_weapons),
       current_weapons: new_weapons,
       new_projectiles,
     });
   }
+}
+
+#[derive(Clone)]
+pub enum WeaponModule {
+  Generator(Rc<dyn WeaponGenerator>),
+  Modulator(Rc<dyn WeaponModulator>),
 }

@@ -11,6 +11,7 @@ use crate::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
     COLLISION_GROUP_WALL, MapSystem, MapTile,
   },
+  menu::MenuSystem,
   system::System,
   units::UnitConvert2,
 };
@@ -137,6 +138,27 @@ impl System for PhysicsSystem {
     let mut ccd_solver = self.ccd_solver.clone();
     let mut rigid_body_set = &mut self.rigid_body_set.clone();
     let mut collider_set = self.collider_set.clone();
+
+    /* Don't do physics if currently in menu */
+    let menu_system = ctx.get::<MenuSystem>().unwrap();
+
+    if menu_system.active_menus.iter().count() > 0 {
+      return Rc::new(Self {
+        rigid_body_set: rigid_body_set.clone(),
+        collider_set: collider_set,
+        integration_parameters: self.integration_parameters,
+        physics_pipeline: Rc::clone(&self.physics_pipeline),
+        island_manager: island_manager,
+        broad_phase: broad_phase,
+        narrow_phase: narrow_phase,
+        impulse_joint_set: impulse_joint_set,
+        multibody_joint_set: multibody_joint_set,
+        ccd_solver: ccd_solver,
+        player_handle: self.player_handle,
+        entities: self.entities.clone(),
+        frame_count: self.frame_count + 1,
+      });
+    }
 
     /* Move the player */
     let controls_system = ctx.get::<ControlsSystem>().unwrap();

@@ -4,6 +4,7 @@ use crate::controls::ControlsSystem;
 use crate::enemy::EnemySystem;
 use crate::graphics::GraphicsSystem;
 use crate::load_map::MapSystem;
+use crate::menu::MenuSystem;
 use crate::physics::PhysicsSystem;
 use crate::system::{Game, System};
 
@@ -17,6 +18,7 @@ mod f;
 mod graphics;
 mod graphics_utils;
 mod load_map;
+mod menu;
 mod physics;
 mod system;
 mod units;
@@ -29,6 +31,7 @@ async fn main() {
     .add_system(PhysicsSystem::start)
     .add_system(CameraSystem::start)
     .add_system(ControlsSystem::start)
+    .add_system(MenuSystem::start)
     .add_system(GraphicsSystem::start)
     .add_system(EnemySystem::start)
     .run()

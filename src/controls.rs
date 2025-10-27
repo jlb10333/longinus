@@ -45,10 +45,14 @@ fn handle_stick_input(keys: &Vec<Keycode>, bindings: KeyBindings) -> PhysicsVect
   return PhysicsVector::from_vec(component_vectors.iter().sum());
 }
 
+#[derive(Clone)]
 pub struct ControlsSystem {
   pub left_stick: PhysicsVector,
   pub right_stick: PhysicsVector,
   pub firing: bool,
+  pub inventory: bool,
+  pub pause: bool,
+  pub last_frame: Option<Rc<ControlsSystem>>,
 }
 
 pub fn angle_from_vec(direction: PhysicsVector) -> f32 {
@@ -67,22 +71,15 @@ impl System for ControlsSystem {
       left_stick: PhysicsVector::zero(),
       right_stick: PhysicsVector::zero(),
       firing: false,
+      inventory: false,
+      pause: false,
+      last_frame: None,
     });
   }
 
   fn run(&self, _: &Context) -> Rc<dyn System> {
     let device_state = DeviceState::new();
     let keys: Vec<Keycode> = device_state.get_keys();
-
-    let test = handle_stick_input(
-      &keys,
-      KeyBindings {
-        up: Keycode::W,
-        down: Keycode::S,
-        left: Keycode::A,
-        right: Keycode::D,
-      },
-    );
 
     return Rc::new(Self {
       left_stick: handle_stick_input(
@@ -104,6 +101,9 @@ impl System for ControlsSystem {
         },
       ),
       firing: keys.contains(&Keycode::Space),
+      inventory: keys.contains(&Keycode::E),
+      pause: keys.contains(&Keycode::Enter),
+      last_frame: Some(Rc::new(self.clone())),
     });
   }
 }
