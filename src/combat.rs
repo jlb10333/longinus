@@ -277,56 +277,102 @@ fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> W
 
 /* WeaponComponent Implementations */
 
-pub struct PlasmaWeaponGenerator; // PLSM
+// PLSM
+fn plasma() -> Weapon {
+  return weapon_with_defaults(ProjectileType::Plasma, 30.0);
+}
 
-impl WeaponGenerator for PlasmaWeaponGenerator {
-  fn generate(&self) -> Weapon {
-    return weapon_with_defaults(ProjectileType::Plasma, 30.0);
+// F2SL
+fn front_2_slot(weapon: &Weapon) -> Vec<Weapon> {
+  let mut new_weapon = weapon.clone();
+  new_weapon
+    .slot_positions
+    .insert(SlotPosition::FrontDoubleLeft);
+  new_weapon
+    .slot_positions
+    .insert(SlotPosition::FrontDoubleRight);
+  return Vec::from([new_weapon]);
+}
+
+// PWUP
+fn double_damage(weapon: &Weapon) -> Vec<Weapon> {
+  let mut new_weapon = weapon.clone();
+  new_weapon.damage_mod *= 2.0;
+  return Vec::from([new_weapon]);
+}
+
+pub type UnequippedModules = Vec<WeaponModuleKind>;
+
+const EQUIP_SLOTS_WIDTH: usize = 4;
+const EQUIP_SLOTS_HEIGHT: usize = 4;
+
+pub type EquippedModules = [[Option<WeaponModuleKind>; EQUIP_SLOTS_HEIGHT]; EQUIP_SLOTS_WIDTH];
+
+#[derive(Clone)]
+pub enum WeaponModuleKind {
+  Plasma,
+  Front2Slot,
+  DoubleDamage,
+}
+
+type Generator = fn() -> Weapon;
+type Modulator = fn(&Weapon) -> Vec<Weapon>;
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+enum WeaponModuleAttachmentPoint {
+  Up,
+  Down,
+  Left,
+  Right,
+}
+use WeaponModuleAttachmentPoint::*;
+
+enum WeaponModule {
+  Generator(Generator),
+  Modulator(Modulator, HashSet<WeaponModuleAttachmentPoint>),
+}
+
+fn weapon_module_from_kind(kind: WeaponModuleKind) -> WeaponModule {
+  match kind {
+    WeaponModuleKind::Plasma => WeaponModule::Generator(plasma),
+    WeaponModuleKind::Front2Slot => WeaponModule::Modulator(front_2_slot, HashSet::from([Down])),
+    WeaponModuleKind::DoubleDamage => WeaponModule::Modulator(double_damage, HashSet::from([Left])),
   }
 }
 
-pub struct FrontTwoSlotWeaponModulator; // F2SL
+fn build_weapons(equipped_modules: EquippedModules) -> Vec<Weapon> {
+  /* Find all generator modules and call each */
 
-impl WeaponModulator for FrontTwoSlotWeaponModulator {
-  fn modulate(&self, weapon: &Weapon) -> Vec<Weapon> {
-    let mut new_weapon = weapon.clone();
-    new_weapon
-      .slot_positions
-      .insert(SlotPosition::FrontDoubleLeft);
-    new_weapon
-      .slot_positions
-      .insert(SlotPosition::FrontDoubleRight);
-    return Vec::from([new_weapon]);
-  }
+  /* Recursively search the rest of the grid and grab each resulting weapon vec */
+
+  /* Output joined vecs */
 }
 
-pub struct DoubleDamageWeaponModulator; // PWUP
+/*
 
-impl WeaponModulator for DoubleDamageWeaponModulator {
-  fn modulate(&self, weapon: &Weapon) -> Vec<Weapon> {
-    let mut new_weapon = weapon.clone();
-    new_weapon.damage_mod *= 2.0;
-    return Vec::from([new_weapon]);
-  }
-}
+WeaponModuleKind: enum
+WeaponModule: enum(fn)
 
-pub type UnequippedModules = Vec<WeaponModule>;
-pub type EquippedModules =
-  Matrix<Option<WeaponModule>, Const<4>, Const<4>, ArrayStorage<Option<WeaponModule>, 4, 4>>;
+UnequippedModules: Vec<WeaponModuleKind>
+EquippedModules: Matrix<WeaponModuleKind>
+
+build: WeaponModuleKind -> WeaponModule -> Weapon
+
+
+
+*/
 
 /* CombatSystem */
 
-// UnequippedModule
-// EquippedModule
-// ConnectedModule
+// UnequippedModules
+// EquippedModules
 // Weapon
 // Projectile
 
 #[derive(Clone)]
 pub struct CombatSystem {
-  pub inventory: UnequippedModules,
-  pub equipped_weapons: EquippedModules,
-  pub tree_weapons: Rc<ConnectedModule>, // get rid of this
+  pub unequipped_modules: UnequippedModules,
+  pub equipped_modules: EquippedModules,
   pub current_weapons: Vec<Weapon>,
   pub new_projectiles: Vec<Projectile>,
   pub reticle_angle: f32,
@@ -338,7 +384,7 @@ impl System for CombatSystem {
     Self: Sized,
   {
     /* Initialize default inventory */
-    let inventory = Vec::new();
+    let unequipped_modules = Vec::new();
 
     /* Initialize default equipped weapons */
     let equipped_weapons = EquippedModules::from_data(ArrayStorage(from_fn(|_| from_fn(|_| None))));
@@ -350,9 +396,8 @@ impl System for CombatSystem {
     ));
 
     return Rc::new(Self {
-      inventory,
+      unequipped_modules,
       equipped_weapons,
-      tree_weapons: Rc::clone(tree_weapons),
       current_weapons: tree_weapons.build(),
       new_projectiles: Vec::new(),
       reticle_angle: 0.0,
@@ -406,10 +451,4 @@ impl System for CombatSystem {
       reticle_angle,
     });
   }
-}
-
-#[derive(Clone)]
-pub enum WeaponModule {
-  Generator(Rc<dyn WeaponGenerator>),
-  Modulator(Rc<dyn WeaponModulator>),
 }
