@@ -4,7 +4,7 @@ use rapier2d::na::Vector2;
 use rapier2d::prelude::*;
 
 use crate::{
-  combat::{EquippedWeaponInventory, WeaponInventory, WeaponModule},
+  combat::{CombatSystem, EquippedModules, UnequippedModules, WeaponModule},
   controls::ControlsSystem,
   system::System,
   units::UnitConvert2,
@@ -12,25 +12,23 @@ use crate::{
 
 #[derive(Clone)]
 pub struct InventoryUpdateData {
-  equipped_weapons: EquippedWeaponInventory,
-  weapon_inventory: WeaponInventory,
+  equipped_weapons: EquippedModules,
+  weapon_inventory: UnequippedModules,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum MenuKind {
   PauseMain,
   InventoryMain,
   InventoryPickModule,
-  // InventoryPickSlot(WeaponModule, InventoryUpdateData),
-  // InventoryConfirmEdit(InventoryUpdateData),
-  InventoryPickSlot(i32, i32),
-  InventoryConfirmEdit(i32),
+  InventoryPickSlot(WeaponModule, InventoryUpdateData),
+  InventoryConfirmEdit(InventoryUpdateData),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Menu {
-  kind: MenuKind,
-  cursor_position: Vector2<i32>,
+  pub kind: MenuKind,
+  pub cursor_position: Vector2<i32>,
 }
 
 struct MenuInput {
@@ -82,21 +80,27 @@ impl System for MenuSystem {
 
     if self.active_menus.iter().count() > 0 {
       println!(
-        "{} {} {} {:?}",
+        "{} {} {}",
         self.active_menus.iter().count(),
         self.active_menus[0].cursor_position.x,
         self.active_menus[0].cursor_position.y,
-        self.active_menus[0].kind,
       );
     }
 
+    let combat_system = ctx.get::<CombatSystem>().unwrap();
+
     if self.active_menus.iter().count() > 0 {
       return Rc::new(Self {
-        active_menus: next_menus(&self.active_menus[0], &input)
-          .iter()
-          .chain(self.active_menus.clone()[1..].iter())
-          .cloned()
-          .collect(),
+        active_menus: next_menus(
+          &self.active_menus[0],
+          &input,
+          &combat_system.inventory,
+          &combat_system.equipped_weapons,
+        )
+        .iter()
+        .chain(self.active_menus.clone()[1..].iter())
+        .cloned()
+        .collect(),
         inventory_update: None,
       });
     }
@@ -129,7 +133,12 @@ fn open_menu(input: &MenuInput) -> Option<Menu> {
   return None;
 }
 
-fn next_menus(current_menu: &Menu, input: &MenuInput) -> Vec<Menu> {
+fn next_menus(
+  current_menu: &Menu,
+  input: &MenuInput,
+  inventory: &UnequippedModules,
+  equipped_weapons: &EquippedModules,
+) -> Vec<Menu> {
   if !(input.up || input.down || input.left || input.right || input.confirm || input.cancel) {
     return vec![current_menu.clone()];
   }
@@ -140,20 +149,25 @@ fn next_menus(current_menu: &Menu, input: &MenuInput) -> Vec<Menu> {
 
   match current_menu.kind {
     MenuKind::InventoryMain => inventory_main(current_menu.cursor_position, input),
-    MenuKind::InventoryPickModule => vec![current_menu.clone()],
+    MenuKind::InventoryPickModule => inventory_pick_module(
+      current_menu.cursor_position,
+      input,
+      inventory,
+      equipped_weapons,
+    ),
     MenuKind::InventoryPickSlot(_, _) => vec![current_menu.clone()],
     MenuKind::InventoryConfirmEdit(_) => vec![current_menu.clone()],
     MenuKind::PauseMain => vec![current_menu.clone()],
   }
 }
 
+const EDIT_CURSOR: Vector2<i32> = vector![0, 0];
+const CLOSE_CURSOR: Vector2<i32> = vector![1, 0];
+
 fn inventory_main(cursor_position: Vector2<i32>, input: &MenuInput) -> Vec<Menu> {
   let cursor_position = handle_cursor_movement(cursor_position, 1, 0, input);
 
-  let edit_cursor = vector![0, 0];
-  let close_cursor = vector![1, 0];
-
-  if cursor_position == edit_cursor && input.confirm {
+  if cursor_position == EDIT_CURSOR && input.confirm {
     println!("{} {} new_window", cursor_position.x, cursor_position.y);
     return vec![
       Menu {
@@ -167,7 +181,7 @@ fn inventory_main(cursor_position: Vector2<i32>, input: &MenuInput) -> Vec<Menu>
     ];
   }
 
-  if cursor_position == close_cursor && input.confirm {
+  if cursor_position == CLOSE_CURSOR && input.confirm {
     println!("{} {} close window", cursor_position.x, cursor_position.y);
     return vec![];
   }
@@ -176,6 +190,56 @@ fn inventory_main(cursor_position: Vector2<i32>, input: &MenuInput) -> Vec<Menu>
     cursor_position,
     kind: MenuKind::InventoryMain,
   }];
+}
+
+const INVENTORY_WRAP_WIDTH: i32 = 7;
+
+fn inventory_pick_module(
+  cursor_position: Vector2<i32>,
+  input: &MenuInput,
+  inventory: &UnequippedModules,
+  equipped_weapons: &EquippedModules,
+) -> Vec<Menu> {
+  let inventory_count: i32 = inventory.iter().count().try_into().unwrap();
+
+  let inventory_height = inventory_count / INVENTORY_WRAP_WIDTH;
+
+  let cursor_position = handle_cursor_movement(
+    cursor_position,
+    INVENTORY_WRAP_WIDTH - 1,
+    inventory_height,
+    input,
+  );
+
+  let leftover_width_on_last_row = inventory_count % INVENTORY_WRAP_WIDTH;
+
+  if input.confirm
+    && (cursor_position.y < inventory_height || cursor_position.x < leftover_width_on_last_row)
+  {
+    return vec![
+      Menu {
+        cursor_position,
+        kind: MenuKind::InventoryPickSlot(
+          inventory
+            [(cursor_position.x + (cursor_position.y * (INVENTORY_WRAP_WIDTH + 1))) as usize]
+            .clone(),
+          InventoryUpdateData {
+            equipped_weapons: equipped_weapons.clone(),
+            weapon_inventory: inventory.clone(),
+          },
+        ),
+      },
+      Menu {
+        cursor_position,
+        kind: MenuKind::InventoryPickModule,
+      },
+    ];
+  }
+
+  vec![Menu {
+    cursor_position,
+    kind: MenuKind::InventoryPickModule,
+  }]
 }
 
 fn handle_cursor_movement(

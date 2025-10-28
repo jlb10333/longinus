@@ -246,12 +246,12 @@ pub trait WeaponModulator {
   fn modulate(&self, weapon: &Weapon) -> Vec<Weapon>;
 }
 
-enum EquippedWeapon {
+enum ConnectedModule {
   Generator(Rc<dyn WeaponGenerator>),
-  Modulator(Rc<dyn WeaponModulator>, Rc<EquippedWeapon>),
+  Modulator(Rc<dyn WeaponModulator>, Rc<ConnectedModule>),
 }
 
-impl EquippedWeapon {
+impl ConnectedModule {
   fn build(&self) -> Vec<Weapon> {
     return match self {
       Self::Generator(generator) => Vec::from([generator.generate()]),
@@ -300,7 +300,7 @@ impl WeaponModulator for FrontTwoSlotWeaponModulator {
   }
 }
 
-pub struct DoubleDamageWeaponModulator; // DDMG
+pub struct DoubleDamageWeaponModulator; // PWUP
 
 impl WeaponModulator for DoubleDamageWeaponModulator {
   fn modulate(&self, weapon: &Weapon) -> Vec<Weapon> {
@@ -310,20 +310,26 @@ impl WeaponModulator for DoubleDamageWeaponModulator {
   }
 }
 
-pub type WeaponInventory =
-  Matrix<Option<WeaponModule>, Const<7>, Const<10>, ArrayStorage<Option<WeaponModule>, 7, 10>>;
-
-pub type EquippedWeaponInventory =
+pub type UnequippedModules = Vec<WeaponModule>;
+pub type EquippedModules =
   Matrix<Option<WeaponModule>, Const<4>, Const<4>, ArrayStorage<Option<WeaponModule>, 4, 4>>;
 
 /* CombatSystem */
 
+// UnequippedModule
+// EquippedModule
+// ConnectedModule
+// Weapon
+// Projectile
+
 #[derive(Clone)]
 pub struct CombatSystem {
-  pub inventory: WeaponInventory,
-  pub equipped_weapons: Rc<EquippedWeapon>,
+  pub inventory: UnequippedModules,
+  pub equipped_weapons: EquippedModules,
+  pub tree_weapons: Rc<ConnectedModule>, // get rid of this
   pub current_weapons: Vec<Weapon>,
   pub new_projectiles: Vec<Projectile>,
+  pub reticle_angle: f32,
 }
 
 impl System for CombatSystem {
@@ -332,19 +338,24 @@ impl System for CombatSystem {
     Self: Sized,
   {
     /* Initialize default inventory */
-    let inventory = WeaponInventory::from_data(ArrayStorage(from_fn(|_| from_fn(|_| None))));
+    let inventory = Vec::new();
 
     /* Initialize default equipped weapons */
-    let equipped_weapons = &Rc::new(EquippedWeapon::Modulator(
+    let equipped_weapons = EquippedModules::from_data(ArrayStorage(from_fn(|_| from_fn(|_| None))));
+
+    /* TODO: Get rid of */
+    let tree_weapons = &Rc::new(ConnectedModule::Modulator(
       Rc::new(FrontTwoSlotWeaponModulator),
-      Rc::new(EquippedWeapon::Generator(Rc::new(PlasmaWeaponGenerator))),
+      Rc::new(ConnectedModule::Generator(Rc::new(PlasmaWeaponGenerator))),
     ));
 
     return Rc::new(Self {
       inventory,
-      equipped_weapons: Rc::clone(equipped_weapons),
-      current_weapons: equipped_weapons.build(),
+      equipped_weapons,
+      tree_weapons: Rc::clone(tree_weapons),
+      current_weapons: tree_weapons.build(),
       new_projectiles: Vec::new(),
+      reticle_angle: 0.0,
     });
   }
 
@@ -358,14 +369,16 @@ impl System for CombatSystem {
 
     let controls_system = ctx.get::<ControlsSystem>().unwrap();
 
+    let reticle_angle = if controls_system.right_stick.into_vec() == vector![0.0, 0.0] {
+      self.reticle_angle
+    } else {
+      angle_from_vec(controls_system.right_stick)
+    };
+
     let weapons_firing: Vec<(Weapon, Vec<Projectile>)> = if controls_system.firing {
       reduced_cooldown_weapons
         .iter()
-        .map(|weapon| {
-          weapon.fire_if_ready(get_slot_positions(angle_from_vec(
-            controls_system.right_stick,
-          )))
-        })
+        .map(|weapon| weapon.fire_if_ready(get_slot_positions(reticle_angle)))
         .collect()
     } else {
       reduced_cooldown_weapons
@@ -386,9 +399,11 @@ impl System for CombatSystem {
 
     return Rc::new(Self {
       inventory: self.inventory.clone(),
-      equipped_weapons: Rc::clone(&self.equipped_weapons),
+      equipped_weapons: self.equipped_weapons.clone(),
+      tree_weapons: Rc::clone(&self.tree_weapons),
       current_weapons: new_weapons,
       new_projectiles,
+      reticle_angle,
     });
   }
 }

@@ -5,9 +5,10 @@ use rapier2d::prelude::*;
 
 use crate::{
   camera::CameraSystem,
-  combat::{distance_projection_screen, get_reticle_pos, get_slot_positions},
+  combat::{CombatSystem, distance_projection_screen, get_reticle_pos, get_slot_positions},
   controls::{ControlsSystem, angle_from_vec},
   graphics_utils::draw_cuboid_collider,
+  menu::{Menu, MenuSystem},
   physics::PhysicsSystem,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
@@ -35,7 +36,7 @@ impl System for GraphicsSystem {
   fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
     let camera_system = ctx.get::<CameraSystem>().unwrap();
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-    let controls_system = ctx.get::<ControlsSystem>().unwrap();
+    let combat_system = ctx.get::<CombatSystem>().unwrap();
 
     /* Background */
     clear_background(RED);
@@ -57,7 +58,7 @@ impl System for GraphicsSystem {
     draw_circle(player_screen_pos.x(), player_screen_pos.y(), 12.5, GREEN);
 
     /* Draw reticle */
-    let reticle_pos = get_reticle_pos(angle_from_vec(controls_system.right_stick));
+    let reticle_pos = get_reticle_pos(combat_system.reticle_angle);
 
     draw_circle(
       player_screen_pos.x() + reticle_pos.x(),
@@ -68,7 +69,7 @@ impl System for GraphicsSystem {
 
     /* DEBUG - Draw slots */
     if SHOW_SLOTS {
-      let slot_positions = get_slot_positions(angle_from_vec(controls_system.right_stick));
+      let slot_positions = get_slot_positions(combat_system.reticle_angle);
       slot_positions.iter().for_each(|(_, slot)| {
         let slot_screen_offset = slot.offset.convert();
 
@@ -89,6 +90,11 @@ impl System for GraphicsSystem {
       });
     }
 
+    /* Draw the scuffed menu */
+    let menu_system = ctx.get::<MenuSystem>().unwrap();
+
+    menu_system.active_menus.iter().rev().for_each(draw_menu);
+
     /* Maintain target fps */
     let frame_time = get_frame_time();
 
@@ -98,5 +104,70 @@ impl System for GraphicsSystem {
     }
 
     return Rc::new(GraphicsSystem);
+  }
+}
+
+fn draw_menu(menu: &Menu) {
+  match menu.kind {
+    crate::menu::MenuKind::InventoryMain => {
+      draw_rectangle(
+        screen_width() * 0.1,
+        screen_height() * 0.1,
+        screen_width() * 0.8,
+        screen_height() * 0.8,
+        BLUE,
+      );
+
+      draw_text(
+        "inventory",
+        screen_width() * 0.2,
+        screen_height() * 0.3,
+        40.0,
+        WHITE,
+      );
+
+      draw_text(
+        if menu.cursor_position == vector![0, 0] {
+          "edit-"
+        } else {
+          "edit"
+        },
+        screen_width() * 0.2,
+        screen_height() * 0.6,
+        40.0,
+        WHITE,
+      );
+      draw_text(
+        if menu.cursor_position == vector![1, 0] {
+          "close-"
+        } else {
+          "close"
+        },
+        screen_width() * 0.5,
+        screen_height() * 0.6,
+        40.0,
+        WHITE,
+      );
+    }
+    crate::menu::MenuKind::InventoryPickModule => {
+      draw_rectangle(
+        screen_width() * 0.15,
+        screen_height() * 0.45,
+        screen_width() * 0.5,
+        screen_height() * 0.5,
+        GRAY,
+      );
+
+      draw_text(
+        "-",
+        (0.2 + (menu.cursor_position.x as f32 * 0.05)) * screen_width(),
+        (0.5 + (menu.cursor_position.y as f32 * 0.05)) * screen_height(),
+        40.0,
+        WHITE,
+      );
+    }
+    crate::menu::MenuKind::InventoryPickSlot(_, _) => {}
+    crate::menu::MenuKind::InventoryConfirmEdit(_) => {}
+    crate::menu::MenuKind::PauseMain => {}
   }
 }
