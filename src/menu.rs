@@ -4,7 +4,7 @@ use rapier2d::na::Vector2;
 use rapier2d::prelude::*;
 
 use crate::{
-  combat::{CombatSystem, EquippedModules, UnequippedModules, WeaponModule},
+  combat::{CombatSystem, EquippedModules, UnequippedModules, WeaponModuleKind},
   controls::ControlsSystem,
   system::System,
   units::UnitConvert2,
@@ -12,8 +12,8 @@ use crate::{
 
 #[derive(Clone)]
 pub struct InventoryUpdateData {
-  equipped_weapons: EquippedModules,
-  weapon_inventory: UnequippedModules,
+  equipped_modules: EquippedModules,
+  unequipped_modules: UnequippedModules,
 }
 
 #[derive(Clone)]
@@ -21,7 +21,7 @@ pub enum MenuKind {
   PauseMain,
   InventoryMain,
   InventoryPickModule,
-  InventoryPickSlot(WeaponModule, InventoryUpdateData),
+  InventoryPickSlot(WeaponModuleKind, InventoryUpdateData),
   InventoryConfirmEdit(InventoryUpdateData),
 }
 
@@ -94,8 +94,8 @@ impl System for MenuSystem {
         active_menus: next_menus(
           &self.active_menus[0],
           &input,
-          &combat_system.inventory,
-          &combat_system.equipped_weapons,
+          &combat_system.unequipped_modules,
+          &combat_system.equipped_modules,
         )
         .iter()
         .chain(self.active_menus.clone()[1..].iter())
@@ -136,8 +136,8 @@ fn open_menu(input: &MenuInput) -> Option<Menu> {
 fn next_menus(
   current_menu: &Menu,
   input: &MenuInput,
-  inventory: &UnequippedModules,
-  equipped_weapons: &EquippedModules,
+  unequipped_modules: &UnequippedModules,
+  equipped_modules: &EquippedModules,
 ) -> Vec<Menu> {
   if !(input.up || input.down || input.left || input.right || input.confirm || input.cancel) {
     return vec![current_menu.clone()];
@@ -152,8 +152,8 @@ fn next_menus(
     MenuKind::InventoryPickModule => inventory_pick_module(
       current_menu.cursor_position,
       input,
-      inventory,
-      equipped_weapons,
+      unequipped_modules,
+      equipped_modules,
     ),
     MenuKind::InventoryPickSlot(_, _) => vec![current_menu.clone()],
     MenuKind::InventoryConfirmEdit(_) => vec![current_menu.clone()],
@@ -197,10 +197,10 @@ const INVENTORY_WRAP_WIDTH: i32 = 7;
 fn inventory_pick_module(
   cursor_position: Vector2<i32>,
   input: &MenuInput,
-  inventory: &UnequippedModules,
-  equipped_weapons: &EquippedModules,
+  unequipped_modules: &UnequippedModules,
+  equipped_modules: &EquippedModules,
 ) -> Vec<Menu> {
-  let inventory_count: i32 = inventory.iter().count().try_into().unwrap();
+  let inventory_count: i32 = unequipped_modules.iter().count().try_into().unwrap();
 
   let inventory_height = inventory_count / INVENTORY_WRAP_WIDTH;
 
@@ -220,12 +220,12 @@ fn inventory_pick_module(
       Menu {
         cursor_position,
         kind: MenuKind::InventoryPickSlot(
-          inventory
+          unequipped_modules
             [(cursor_position.x + (cursor_position.y * (INVENTORY_WRAP_WIDTH + 1))) as usize]
             .clone(),
           InventoryUpdateData {
-            equipped_weapons: equipped_weapons.clone(),
-            weapon_inventory: inventory.clone(),
+            equipped_modules: equipped_modules.clone(),
+            unequipped_modules: unequipped_modules.clone(),
           },
         ),
       },
