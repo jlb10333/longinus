@@ -10,6 +10,7 @@ use crate::{
   controls::{ControlsSystem, angle_from_vec},
   f::Monad,
   load_map::{COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL},
+  menu::MenuSystem,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
 };
@@ -304,12 +305,21 @@ fn double_damage(weapon: &Weapon) -> Vec<Weapon> {
 
 pub type UnequippedModules = Vec<WeaponModuleKind>;
 
-const EQUIP_SLOTS_WIDTH: usize = 4;
-const EQUIP_SLOTS_HEIGHT: usize = 4;
+pub const EQUIP_SLOTS_WIDTH: i32 = 4;
+pub const EQUIP_SLOTS_HEIGHT: i32 = 4;
 
-pub type EquippedModules = [[Option<WeaponModuleKind>; EQUIP_SLOTS_HEIGHT]; EQUIP_SLOTS_WIDTH];
+pub type EquippedModules = Matrix<
+  Option<WeaponModuleKind>,
+  Const<{ EQUIP_SLOTS_HEIGHT as usize }>,
+  Const<{ EQUIP_SLOTS_WIDTH as usize }>,
+  ArrayStorage<
+    Option<WeaponModuleKind>,
+    { EQUIP_SLOTS_HEIGHT as usize },
+    { EQUIP_SLOTS_WIDTH as usize },
+  >,
+>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum WeaponModuleKind {
   Plasma,
   Front2Slot,
@@ -320,18 +330,18 @@ type Generator = fn() -> Weapon;
 type Modulator = fn(&Weapon) -> Vec<Weapon>;
 
 #[derive(Clone, Hash, PartialEq, Eq)]
-enum WeaponModuleAttachmentPoint {
+pub enum Direction {
   Up,
   Down,
   Left,
   Right,
 }
-use WeaponModuleAttachmentPoint::*;
+use Direction::*;
 
 #[derive(Clone)]
 enum WeaponModule {
   Generator(Generator),
-  Modulator(Modulator, HashSet<WeaponModuleAttachmentPoint>),
+  Modulator(Modulator, HashSet<Direction>),
 }
 
 fn weapon_module_from_kind(kind: &WeaponModuleKind) -> WeaponModule {
@@ -350,7 +360,7 @@ fn build_adjacent_modules(
   let module_left = if current_module_position.x <= 0 {
     None
   } else {
-    equipped_modules[current_module_position.y][current_module_position.x - 1]
+    equipped_modules.data.0[current_module_position.y][current_module_position.x - 1]
       .clone()
       .bind(weapon_module_from_kind)
       .bind(|weapon_module| match weapon_module.clone() {
@@ -378,10 +388,10 @@ fn build_adjacent_modules(
       .flatten()
   };
 
-  let module_right = if current_module_position.x >= equipped_modules.len() - 1 {
+  let module_right = if current_module_position.x >= (EQUIP_SLOTS_WIDTH - 1) as usize {
     None
   } else {
-    equipped_modules[current_module_position.y][current_module_position.x + 1]
+    equipped_modules.data.0[current_module_position.y][current_module_position.x + 1]
       .clone()
       .bind(weapon_module_from_kind)
       .bind(|weapon_module| match weapon_module.clone() {
@@ -412,7 +422,7 @@ fn build_adjacent_modules(
   let module_up = if current_module_position.y <= 0 {
     None
   } else {
-    equipped_modules[current_module_position.y - 1][current_module_position.x]
+    equipped_modules.data.0[current_module_position.y - 1][current_module_position.x]
       .clone()
       .bind(weapon_module_from_kind)
       .bind(|weapon_module| match weapon_module.clone() {
@@ -440,10 +450,10 @@ fn build_adjacent_modules(
       .flatten()
   };
 
-  let module_down = if current_module_position.y >= equipped_modules[0].len() - 1 {
+  let module_down = if current_module_position.y >= (EQUIP_SLOTS_HEIGHT - 1) as usize {
     None
   } else {
-    equipped_modules[current_module_position.y + 1][current_module_position.x]
+    equipped_modules.data.0[current_module_position.y + 1][current_module_position.x]
       .clone()
       .bind(weapon_module_from_kind)
       .bind(|weapon_module| match weapon_module.clone() {
@@ -487,13 +497,15 @@ fn build_adjacent_modules(
 
 fn build_weapons(equipped_modules: &EquippedModules) -> Vec<Weapon> {
   equipped_modules
+    .data
+    .0
     .iter()
     .enumerate()
-    .flat_map(|(x, row)| {
+    .flat_map(|(y, row)| {
       row
         .iter()
         .enumerate()
-        .map(|(y, value)| {
+        .map(|(x, value)| {
           value.clone().bind(|weapon_module_kind| {
             match weapon_module_from_kind(weapon_module_kind) {
               WeaponModule::Modulator(_, _) => vec![],
@@ -549,12 +561,12 @@ impl System for CombatSystem {
     let unequipped_modules = Vec::new();
 
     /* Initialize default equipped weapons */
-    let equipped_modules = &[
+    let equipped_modules = &EquippedModules::from_data(ArrayStorage([
       [None, None, None, None],
       [None, None, None, None],
       [None, None, None, Some(WeaponModuleKind::Front2Slot)],
       [None, None, None, Some(WeaponModuleKind::Plasma)],
-    ];
+    ]));
 
     return Rc::new(Self {
       unequipped_modules,
@@ -566,6 +578,22 @@ impl System for CombatSystem {
   }
 
   fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
+    let menu_system = ctx.get::<MenuSystem>().unwrap();
+
+    if menu_system.active_menus.len() > 0 {
+      if let Some(inventory_update) = &menu_system.inventory_update {
+        return Rc::new(Self {
+          unequipped_modules: inventory_update.unequipped_modules.clone(),
+          equipped_modules: inventory_update.equipped_modules.clone(),
+          current_weapons: build_weapons(&inventory_update.equipped_modules),
+          new_projectiles: Vec::new(),
+          reticle_angle: self.reticle_angle,
+        });
+      }
+
+      return Rc::new(self.clone());
+    }
+
     /* Decrement cooldown for active weapons */
     let reduced_cooldown_weapons: Vec<Weapon> = self
       .current_weapons

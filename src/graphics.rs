@@ -5,7 +5,10 @@ use rapier2d::prelude::*;
 
 use crate::{
   camera::CameraSystem,
-  combat::{CombatSystem, distance_projection_screen, get_reticle_pos, get_slot_positions},
+  combat::{
+    CombatSystem, EQUIP_SLOTS_WIDTH, distance_projection_screen, get_reticle_pos,
+    get_slot_positions,
+  },
   controls::{ControlsSystem, angle_from_vec},
   graphics_utils::draw_cuboid_collider,
   menu::{Menu, MenuSystem},
@@ -108,7 +111,7 @@ impl System for GraphicsSystem {
 }
 
 fn draw_menu(menu: &Menu) {
-  match menu.kind {
+  match menu.kind.clone() {
     crate::menu::MenuKind::InventoryMain => {
       draw_rectangle(
         screen_width() * 0.1,
@@ -166,7 +169,43 @@ fn draw_menu(menu: &Menu) {
         WHITE,
       );
     }
-    crate::menu::MenuKind::InventoryPickSlot(_, _) => {}
+    crate::menu::MenuKind::InventoryPickSlot(_, inventory_update) => {
+      draw_rectangle(
+        screen_width() * 0.45,
+        screen_height() * 0.45,
+        screen_width() * 0.5,
+        screen_height() * 0.5,
+        LIGHTGRAY,
+      );
+
+      draw_text(
+        "-",
+        (0.5 + (menu.cursor_position.x as f32 * 0.05)) * screen_width(),
+        (0.5 + (menu.cursor_position.y as f32 * 0.05)) * screen_height(),
+        40.0,
+        WHITE,
+      );
+
+      inventory_update
+        .equipped_modules
+        .iter()
+        .enumerate()
+        .for_each(|(index, equipped_module)| {
+          equipped_module.clone().map(|module_kind| {
+            draw_text(
+              match module_kind {
+                crate::combat::WeaponModuleKind::Plasma => "P",
+                crate::combat::WeaponModuleKind::DoubleDamage => "D",
+                crate::combat::WeaponModuleKind::Front2Slot => "2",
+              },
+              (0.5 + ((index as i32 % EQUIP_SLOTS_WIDTH) as f32 * 0.05)) * screen_width(),
+              (0.5 + ((index as i32 / EQUIP_SLOTS_WIDTH) as f32 * 0.05)) * screen_height(),
+              40.0,
+              WHITE,
+            );
+          });
+        });
+    }
     crate::menu::MenuKind::InventoryConfirmEdit(_) => {}
     crate::menu::MenuKind::PauseMain => {}
   }
