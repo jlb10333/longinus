@@ -1,11 +1,14 @@
 use rapier2d::prelude::*;
-use std::{cell::RefCell, ops::Deref, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-  combat::CombatSystem,
+  combat::{CombatSystem, WeaponModuleKind},
   controls::ControlsSystem,
-  ecs::{ComponentSet, Damageable, Damager, DestroyOnCollision, Enemy, Entity},
-  enemy::{EnemyDecision, EnemySystem},
+  ecs::{
+    ComponentSet, Damageable, Damager, DestroyOnCollision, Enemy, Entity, GivesItemOnCollision,
+    Sensor,
+  },
+  enemy::EnemySystem,
   f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
@@ -29,6 +32,8 @@ pub struct PhysicsSystem {
   pub ccd_solver: CCDSolver,
   pub player_handle: RigidBodyHandle,
   pub entities: Vec<Entity>,
+  pub sensors: Vec<Sensor>,
+  pub new_weapon_modules: Vec<WeaponModuleKind>,
   pub frame_count: i64,
 }
 
@@ -93,6 +98,24 @@ impl System for PhysicsSystem {
       })
       .collect();
 
+    /* Spawn item pickups. */
+    let item_pickups = map_system
+      .map
+      .item_pickups
+      .iter()
+      .map(|item_pickup| {
+        let handle = collider_set.insert(item_pickup.collider.clone());
+        Sensor {
+          handle,
+          components: ComponentSet::new()
+            .insert(GivesItemOnCollision {
+              weapon_module_kind: item_pickup.weapon_module_kind.clone(),
+            })
+            .insert(DestroyOnCollision),
+        }
+      })
+      .collect::<Vec<_>>();
+
     /* Create the map colliders. */
     map_system.map.colliders.iter().for_each(|map_tile| {
       match map_tile {
@@ -110,6 +133,7 @@ impl System for PhysicsSystem {
     let multibody_joint_set = MultibodyJointSet::new();
     let ccd_solver: CCDSolver = CCDSolver::new();
     let entities: Vec<_> = [player].iter().cloned().chain(enemies).collect();
+    let sensors = item_pickups;
 
     return Rc::new(Self {
       rigid_body_set,
@@ -124,7 +148,9 @@ impl System for PhysicsSystem {
       ccd_solver,
       player_handle,
       entities,
+      sensors,
       frame_count: 0,
+      new_weapon_modules: vec![],
     });
   }
 
@@ -138,6 +164,9 @@ impl System for PhysicsSystem {
     let mut ccd_solver = self.ccd_solver.clone();
     let mut rigid_body_set = &mut self.rigid_body_set.clone();
     let mut collider_set = self.collider_set.clone();
+
+    let entities = self.entities.clone();
+    let sensors = self.sensors.clone();
 
     /* Don't do physics if currently in menu */
     let menu_system = ctx.get::<MenuSystem>().unwrap();
@@ -156,7 +185,9 @@ impl System for PhysicsSystem {
         ccd_solver: ccd_solver,
         player_handle: self.player_handle,
         entities: self.entities.clone(),
+        sensors: self.sensors.clone(),
         frame_count: self.frame_count + 1,
+        new_weapon_modules: vec![],
       });
     }
 
@@ -187,17 +218,14 @@ impl System for PhysicsSystem {
           handle,
           components: ComponentSet::new()
             .insert(DestroyOnCollision)
-            .insert(Damager { damage: projectile.damage }),
+            .insert(Damager {
+              damage: projectile.damage,
+            }),
         };
       })
       .collect();
 
-    let entities: Vec<Entity> = self
-      .entities
-      .iter()
-      .cloned()
-      .chain(new_projectiles)
-      .collect();
+    let entities: Vec<Entity> = entities.iter().cloned().chain(new_projectiles).collect();
 
     /* Carry out enemy behavior */
     let enemy_system = ctx.get::<EnemySystem>().unwrap();
@@ -409,6 +437,56 @@ impl System for PhysicsSystem {
       })
       .collect();
 
+    /* Give items on collision */
+    let new_weapon_modules = sensors.iter().cloned().fold(vec![], |acc, sensor| {
+      if let Some(gives_item) = sensor.components.get::<GivesItemOnCollision>()
+        && rigid_body_set[self.player_handle]
+          .colliders()
+          .iter()
+          .any(|player_collider| {
+            narrow_phase
+              .intersection_pair(sensor.handle, *player_collider)
+              .unwrap_or(false)
+          })
+      {
+        [gives_item.weapon_module_kind.clone()]
+          .iter()
+          .chain(acc.iter())
+          .cloned()
+          .collect::<Vec<_>>()
+      } else {
+        acc
+      }
+    });
+
+    /* Remove colliding sensors marked as destroy on collision */
+    let sensors = sensors
+      .iter()
+      .cloned()
+      .filter(|sensor| {
+        let entity_destroyed = sensor
+          .clone()
+          .components
+          .get::<DestroyOnCollision>()
+          .is_none()
+          || narrow_phase
+            .intersection_pairs_with(sensor.handle)
+            .filter(|(_, _, colliding)| *colliding)
+            .count()
+            > 0;
+
+        if entity_destroyed {
+          collider_set.remove(
+            sensor.handle,
+            &mut island_manager,
+            &mut rigid_body_set,
+            true,
+          );
+        }
+        return !entity_destroyed;
+      })
+      .collect();
+
     /* Step physics */
     physics_pipeline.step(
       &vector![0.0, 0.0],
@@ -438,6 +516,8 @@ impl System for PhysicsSystem {
       ccd_solver: ccd_solver,
       player_handle: self.player_handle,
       entities,
+      sensors,
+      new_weapon_modules,
       frame_count: self.frame_count + 1,
     });
   }

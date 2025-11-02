@@ -11,6 +11,7 @@ use crate::{
   f::Monad,
   load_map::{COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL},
   menu::MenuSystem,
+  physics::PhysicsSystem,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
 };
@@ -319,7 +320,7 @@ pub type EquippedModules = Matrix<
   >,
 >;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Deserialize)]
 pub enum WeaponModuleKind {
   Plasma,
   Front2Slot,
@@ -337,6 +338,7 @@ pub enum Direction {
   Right,
 }
 use Direction::*;
+use serde::Deserialize;
 
 #[derive(Clone)]
 enum WeaponModule {
@@ -594,6 +596,16 @@ impl System for CombatSystem {
       return Rc::new(self.clone());
     }
 
+    /* Add new unequipped modules from item pickups */
+    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+
+    let unequipped_modules = self
+      .unequipped_modules
+      .iter()
+      .chain(physics_system.new_weapon_modules.iter())
+      .cloned()
+      .collect();
+
     /* Decrement cooldown for active weapons */
     let reduced_cooldown_weapons: Vec<Weapon> = self
       .current_weapons
@@ -632,7 +644,7 @@ impl System for CombatSystem {
       .collect();
 
     return Rc::new(Self {
-      unequipped_modules: self.unequipped_modules.clone(),
+      unequipped_modules,
       equipped_modules: self.equipped_modules.clone(),
       current_weapons: new_weapons,
       new_projectiles,

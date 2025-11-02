@@ -13,7 +13,6 @@ mod combat;
 mod controls;
 mod ecs;
 mod enemy;
-mod entity;
 mod f;
 mod graphics;
 mod graphics_utils;

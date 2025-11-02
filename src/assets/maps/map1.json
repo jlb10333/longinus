@@ -61,7 +61,7 @@
                 {
                  "height":0,
                  "id":5,
-                 "name":"",
+                 "name":"Player Spawn",
                  "rotation":0,
                  "type":"PlayerSpawn",
                  "visible":true,
@@ -90,7 +90,20 @@
                  "width":0,
                  "x":376,
                  "y":168
+                }, 
+                {
+                 "height":0,
+                 "id":10,
+                 "name":"DoubleDamage",
+                 "rotation":0,
+                 "type":"ItemPickup",
+                 "visible":true,
+                 "width":0,
+                 "x":88,
+                 "y":192
                 }],
+         "offsetx":-91.3333333333333,
+         "offsety":5.33333333333333,
          "opacity":1,
          "type":"objectgroup",
          "visible":true,
@@ -98,7 +111,7 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":10,
+ "nextobjectid":12,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

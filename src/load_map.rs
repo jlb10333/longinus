@@ -4,10 +4,10 @@ use rapier2d::{na::Vector2, prelude::*};
 use serde::Deserialize;
 
 use crate::{
-  entity::{EnemySpawn, PlayerSpawn, Wall, collider_from_enemy_name},
+  combat::WeaponModuleKind,
   f::{Monad, MonadTranslate},
   system::System,
-  units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
+  units::{PhysicsVector, UnitConvert2},
 };
 
 #[derive(Clone, Debug, Deserialize)]
@@ -56,10 +56,25 @@ struct MapPlayerSpawn {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+pub enum MapItemPickupClass {
+  ItemPickup,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapItemPickup {
+  x: f32,
+  y: f32,
+  name: WeaponModuleKind,
+  #[serde(rename = "type")]
+  _class: MapItemPickupClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
   PlayerSpawn(MapPlayerSpawn),
+  ItemPickup(MapItemPickup),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -95,9 +110,47 @@ pub const COLLISION_GROUP_PLAYER_PROJECTILE: Group = Group::GROUP_3;
 pub const COLLISION_GROUP_ENEMY: Group = Group::GROUP_4;
 pub const COLLISION_GROUP_ENEMY_PROJECTILE: Group = Group::GROUP_5;
 
+#[derive(Clone)]
+pub struct EnemySpawn {
+  pub name: EnemyName,
+  pub collider: Collider,
+  pub rigid_body: RigidBody,
+}
+
+#[derive(Clone)]
+pub struct PlayerSpawn {
+  pub translation: PhysicsVector,
+}
+
+#[derive(Clone)]
+pub struct ItemPickup {
+  pub weapon_module_kind: WeaponModuleKind,
+  pub collider: Collider,
+}
+
+#[derive(Clone)]
+pub struct Wall {
+  pub collider: Collider,
+}
+
+pub fn collider_from_enemy_name(name: EnemyName) -> Collider {
+  match name {
+    EnemyName::Defender => ColliderBuilder::cuboid(0.5, 0.5)
+      .collision_groups(InteractionGroups {
+        memberships: COLLISION_GROUP_ENEMY,
+        filter: COLLISION_GROUP_PLAYER
+          .union(COLLISION_GROUP_PLAYER_PROJECTILE)
+          .union(COLLISION_GROUP_WALL),
+      })
+      .build(),
+  }
+}
+
+#[derive(Clone)]
 pub enum MapComponent {
   Player(PlayerSpawn),
   Enemy(EnemySpawn),
+  ItemPickup(ItemPickup),
 }
 
 //    (index % map_dimensions.x) as f32 * TILE_DIMENSION_PHYSICS,
@@ -126,6 +179,19 @@ impl Object {
           player_spawn.x * 0.125 * TILE_DIMENSION_PHYSICS,
           (map_height - player_spawn.y) * 0.125 * TILE_DIMENSION_PHYSICS
         ]),
+      }),
+      Object::ItemPickup(item_pickup) => MapComponent::ItemPickup(ItemPickup {
+        weapon_module_kind: item_pickup.name.clone(),
+        collider: ColliderBuilder::ball(1.0)
+          .translation(
+            PhysicsVector::from_vec(vector![
+              item_pickup.x * 0.125 * TILE_DIMENSION_PHYSICS,
+              (map_height - item_pickup.y) * 0.125 * TILE_DIMENSION_PHYSICS
+            ])
+            .into_vec(),
+          )
+          .sensor(true)
+          .build(),
       }),
     }
   }
@@ -201,6 +267,7 @@ pub struct Map {
   pub colliders: Vec<MapTile>,
   pub player_spawn: PlayerSpawn,
   pub enemy_spawns: Vec<EnemySpawn>,
+  pub item_pickups: Vec<ItemPickup>,
 }
 
 impl RawMap {
@@ -246,8 +313,9 @@ impl RawMap {
             .into(*map_height)
             .iter()
             .flat_map(|object| match object {
-              MapComponent::Enemy(enemy_spawn) => Vec::from([enemy_spawn.clone()]),
-              MapComponent::Player(_) => Vec::new(),
+              MapComponent::Enemy(enemy_spawn) => vec![enemy_spawn.clone()],
+              MapComponent::Player(_) => vec![],
+              MapComponent::ItemPickup(_) => vec![],
             })
             .collect()
         })
@@ -261,8 +329,9 @@ impl RawMap {
             .into(*map_height)
             .iter()
             .flat_map(|object| match object {
-              MapComponent::Enemy(_) => Vec::new(),
-              MapComponent::Player(player_spawn) => Vec::from([player_spawn.clone()]),
+              MapComponent::Enemy(_) => vec![],
+              MapComponent::Player(player_spawn) => vec![player_spawn.clone()],
+              MapComponent::ItemPickup(_) => vec![],
             })
             .collect::<Vec<_>>()[0]
             .clone()
@@ -270,16 +339,39 @@ impl RawMap {
       })
       .flatten();
 
+    let item_pickups = entities_layer
+      .bind(|&layer| {
+        map_height.bind(|map_height| {
+          layer
+            .into(*map_height)
+            .iter()
+            .cloned()
+            .flat_map(|object| match object {
+              MapComponent::Enemy(_) => vec![],
+              MapComponent::Player(_) => vec![],
+              MapComponent::ItemPickup(item_pickup) => vec![item_pickup],
+            })
+            .collect::<Vec<_>>()
+        })
+      })
+      .flatten();
+
     enemy_spawns
       .bind(|enemy_spawns| {
         player_spawn.clone().bind(|player_spawn| {
-          colliders.clone().bind(|colliders| Map {
-            colliders: colliders.clone(),
-            enemy_spawns: enemy_spawns.clone(),
-            player_spawn: player_spawn.clone(),
+          item_pickups.clone().map(|item_pickups| {
+            {
+              colliders.clone().bind(|colliders| Map {
+                colliders: colliders.clone(),
+                enemy_spawns: enemy_spawns.clone(),
+                player_spawn: player_spawn.clone(),
+                item_pickups: item_pickups.clone(),
+              })
+            }
           })
         })
       })
+      .flatten()
       .flatten()
       .flatten()
   }

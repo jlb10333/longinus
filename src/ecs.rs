@@ -1,12 +1,18 @@
 use std::{any::Any, rc::Rc};
 
-use rapier2d::prelude::RigidBodyHandle;
+use rapier2d::prelude::{ColliderHandle, RigidBodyHandle};
 
-use crate::load_map::EnemyName;
+use crate::{combat::WeaponModuleKind, load_map::EnemyName};
 
 #[derive(Clone)]
 pub struct Entity {
   pub handle: RigidBodyHandle,
+  pub components: ComponentSet,
+}
+
+#[derive(Clone)]
+pub struct Sensor {
+  pub handle: ColliderHandle,
   pub components: ComponentSet,
 }
 
@@ -102,3 +108,8 @@ pub struct Enemy {
   pub name: EnemyName,
 }
 impl Component for Enemy {}
+
+pub struct GivesItemOnCollision {
+  pub weapon_module_kind: WeaponModuleKind,
+}
+impl Component for GivesItemOnCollision {}
