@@ -109,6 +109,7 @@ pub const COLLISION_GROUP_PLAYER: Group = Group::GROUP_2;
 pub const COLLISION_GROUP_PLAYER_PROJECTILE: Group = Group::GROUP_3;
 pub const COLLISION_GROUP_ENEMY: Group = Group::GROUP_4;
 pub const COLLISION_GROUP_ENEMY_PROJECTILE: Group = Group::GROUP_5;
+pub const COLLISION_GROUP_PLAYER_INTERACTIBLE: Group = Group::GROUP_6;
 
 #[derive(Clone)]
 pub struct EnemySpawn {
@@ -191,6 +192,10 @@ impl Object {
             .into_vec(),
           )
           .sensor(true)
+          .collision_groups(InteractionGroups {
+            memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+            filter: COLLISION_GROUP_PLAYER,
+          })
           .build(),
       }),
     }
@@ -272,45 +277,32 @@ pub struct Map {
 
 impl RawMap {
   pub fn into(&self) -> Option<Map> {
-    let tile_layer = self
-      .layers
-      .iter()
-      .find(|&layer| match layer {
-        Layer::ObjectLayer(_) => false,
-        Layer::TileLayer(tile_layer) => match tile_layer.name {
-          TileLayerName::Colliders => true,
-        },
-      })
-      .bind(|&found_layer| match found_layer {
-        Layer::ObjectLayer(_) => None,
-        Layer::TileLayer(tile_layer) => Some(tile_layer),
-      })
-      .flatten();
+    let tile_layer = self.layers.iter().find_map(|layer| {
+      if let Layer::TileLayer(tile_layer) = layer
+        && let TileLayerName::Colliders = tile_layer.name
+      {
+        Some(tile_layer)
+      } else {
+        None
+      }
+    });
 
-    let colliders = tile_layer.bind(|&tile_layer| tile_layer.into());
+    let colliders: Option<Vec<MapTile>> = tile_layer.map(|tile_layer| (&tile_layer).into());
 
-    let entities_layer = self
-      .layers
-      .iter()
-      .find(|&layer| match layer {
-        Layer::ObjectLayer(object_layer) => match object_layer.name {
-          ObjectLayerName::Entities => true,
-        },
-        Layer::TileLayer(_) => false,
-      })
-      .bind(|found_layer| match found_layer {
-        Layer::ObjectLayer(object_layer) => Some(object_layer),
-        Layer::TileLayer(_) => None,
-      })
-      .flatten();
+    let entities_layer = self.layers.iter().find_map(|layer| match layer {
+      Layer::ObjectLayer(object_layer) => match object_layer.name {
+        ObjectLayerName::Entities => Some(object_layer),
+      },
+      Layer::TileLayer(_) => None,
+    });
 
     let map_height = tile_layer.bind(|&tile_layer| tile_layer.height as f32 * 8.0);
 
     let enemy_spawns: Option<Vec<EnemySpawn>> = entities_layer
-      .bind(|&layer| {
-        map_height.bind(|map_height| {
+      .map(|layer| {
+        map_height.map(|map_height| {
           layer
-            .into(*map_height)
+            .into(map_height)
             .iter()
             .flat_map(|object| match object {
               MapComponent::Enemy(enemy_spawn) => vec![enemy_spawn.clone()],
@@ -323,10 +315,10 @@ impl RawMap {
       .flatten();
 
     let player_spawn = entities_layer
-      .bind(|&layer| {
-        map_height.bind(|map_height| {
+      .map(|layer| {
+        map_height.map(|map_height| {
           layer
-            .into(*map_height)
+            .into(map_height)
             .iter()
             .flat_map(|object| match object {
               MapComponent::Enemy(_) => vec![],
@@ -340,10 +332,10 @@ impl RawMap {
       .flatten();
 
     let item_pickups = entities_layer
-      .bind(|&layer| {
-        map_height.bind(|map_height| {
+      .map(|layer| {
+        map_height.map(|map_height| {
           layer
-            .into(*map_height)
+            .into(map_height)
             .iter()
             .cloned()
             .flat_map(|object| match object {

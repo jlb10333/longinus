@@ -12,7 +12,7 @@ use crate::{
   f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
-    COLLISION_GROUP_WALL, MapSystem, MapTile,
+    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, MapSystem, MapTile,
   },
   menu::MenuSystem,
   system::System,
@@ -57,7 +57,8 @@ impl System for PhysicsSystem {
         memberships: COLLISION_GROUP_PLAYER,
         filter: COLLISION_GROUP_WALL
           .union(COLLISION_GROUP_ENEMY)
-          .union(COLLISION_GROUP_ENEMY_PROJECTILE),
+          .union(COLLISION_GROUP_ENEMY_PROJECTILE)
+          .union(COLLISION_GROUP_PLAYER_INTERACTIBLE),
       })
       .build();
     let player_handle = rigid_body_set.insert(player_rigid_body);
