@@ -13,7 +13,7 @@ use crate::{
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
 };
 
-const CAMERA_SCREEN_MARGIN: f32 = 0.3;
+const CAMERA_SCREEN_MARGIN: f32 = 0.4;
 fn camera_screen_bounds() -> Rect {
   return Rect {
     x: CAMERA_SCREEN_MARGIN * screen_width(),

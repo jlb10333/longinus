@@ -562,8 +562,8 @@ impl System for CombatSystem {
 
     /* Initialize default equipped weapons */
     let equipped_modules = &EquippedModules::from_data(ArrayStorage([
-      [None, None, None, None],
-      [None, None, None, None],
+      [Some(WeaponModuleKind::Plasma), None, None, None],
+      [None, None, Some(WeaponModuleKind::DoubleDamage), None],
       [None, None, None, Some(WeaponModuleKind::Front2Slot)],
       [None, None, None, Some(WeaponModuleKind::Plasma)],
     ]));

@@ -1,12 +1,10 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use rapier2d::na::ArrayStorage;
 use rapier2d::prelude::*;
 use rapier2d::{na::Vector2, parry::utils::hashmap::HashMap};
 
 use crate::combat::Direction;
-use crate::f::Monad;
 use crate::{
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, EquippedModules, UnequippedModules,
@@ -27,7 +25,6 @@ pub struct InventoryUpdateData {
 pub enum MenuKind {
   PauseMain,
   InventoryMain,
-  InventoryPickModule,
   InventoryPickSlot(Option<WeaponModuleKind>, InventoryUpdateData),
   InventoryConfirmEdit(InventoryUpdateData),
 }
@@ -179,15 +176,6 @@ fn next_menus(
       ),
       inventory_update: None,
     },
-    MenuKind::InventoryPickModule => NextMenuUpdate {
-      menus: inventory_pick_module(
-        current_menu.cursor_position,
-        input,
-        unequipped_modules,
-        equipped_modules,
-      ),
-      inventory_update: None,
-    },
     MenuKind::InventoryPickSlot(currently_holding, inventory_update) => {
       let (menus, inventory_update) = inventory_pick_slot(
         current_menu.cursor_position,
@@ -220,10 +208,9 @@ fn inventory_main(
   unequipped_modules: &UnequippedModules,
   equipped_modules: &EquippedModules,
 ) -> Vec<Menu> {
-  let cursor_position = handle_cursor_movement(cursor_position, 1, 0, input, None);
+  let cursor_position = handle_cursor_movement(cursor_position, 0, 1, 0, input, None);
 
   if cursor_position == EDIT_CURSOR && input.confirm {
-    println!("{} {} new_window", cursor_position.x, cursor_position.y);
     return vec![
       Menu {
         cursor_position: vector![0, 0],
@@ -243,7 +230,6 @@ fn inventory_main(
   }
 
   if cursor_position == CLOSE_CURSOR && input.confirm {
-    println!("{} {} close window", cursor_position.x, cursor_position.y);
     return vec![];
   }
 
@@ -253,58 +239,7 @@ fn inventory_main(
   }];
 }
 
-const INVENTORY_WRAP_WIDTH: i32 = 7;
-
-fn inventory_pick_module(
-  cursor_position: Vector2<i32>,
-  input: &MenuInput,
-  unequipped_modules: &UnequippedModules,
-  equipped_modules: &EquippedModules,
-) -> Vec<Menu> {
-  let inventory_count: i32 = unequipped_modules.len().try_into().unwrap();
-
-  let inventory_height = inventory_count / INVENTORY_WRAP_WIDTH;
-
-  let cursor_position = handle_cursor_movement(
-    cursor_position,
-    INVENTORY_WRAP_WIDTH - 1,
-    inventory_height,
-    input,
-    None,
-  );
-
-  let leftover_width_on_last_row = inventory_count % INVENTORY_WRAP_WIDTH;
-
-  if input.confirm
-    && (cursor_position.y < inventory_height || cursor_position.x < leftover_width_on_last_row)
-  {
-    return vec![
-      Menu {
-        cursor_position,
-        kind: MenuKind::InventoryPickSlot(
-          Some(
-            unequipped_modules
-              [(cursor_position.x + (cursor_position.y * (INVENTORY_WRAP_WIDTH + 1))) as usize]
-              .clone(),
-          ),
-          InventoryUpdateData {
-            equipped_modules: equipped_modules.clone(),
-            unequipped_modules: unequipped_modules.clone(),
-          },
-        ),
-      },
-      Menu {
-        cursor_position,
-        kind: MenuKind::InventoryPickModule,
-      },
-    ];
-  }
-
-  vec![Menu {
-    cursor_position,
-    kind: MenuKind::InventoryPickModule,
-  }]
-}
+pub const INVENTORY_WRAP_WIDTH: i32 = 7;
 
 fn inventory_pick_slot(
   cursor_position: Vector2<i32>,
@@ -312,63 +247,151 @@ fn inventory_pick_slot(
   currently_holding: Option<WeaponModuleKind>,
   inventory_update: &InventoryUpdateData,
 ) -> (Vec<Menu>, Option<InventoryUpdateData>) {
-  let cursor_position = handle_cursor_movement(
-    cursor_position,
-    EQUIP_SLOTS_WIDTH - 1,
-    EQUIP_SLOTS_HEIGHT - 1,
-    input,
-    Some(
-      &(0..4)
-        .map(|x| {
-          (
-            vector![x, 0],
-            [(Direction::Up, vector![0, -1])].iter().cloned().collect(),
-          )
-        })
-        .collect(),
-    ),
-  );
+  let unequipped_modules_count: i32 = inventory_update
+    .unequipped_modules
+    .len()
+    .try_into()
+    .unwrap();
 
-  println!("{} {}", input.confirm, cursor_position == vector![0, -1]);
+  let unequipped_modules_height = (unequipped_modules_count / INVENTORY_WRAP_WIDTH) + 1;
 
-  if input.confirm && cursor_position != vector![0, -1] {
-    return (
-      vec![Menu {
-        cursor_position,
-        kind: MenuKind::InventoryPickSlot(
-          inventory_update.equipped_modules.data.0[cursor_position.y as usize]
-            [cursor_position.x as usize]
-            .clone(),
-          InventoryUpdateData {
-            equipped_modules: EquippedModules::from_iterator(
-              inventory_update
-                .equipped_modules
+  let cursor_position = if cursor_position.x < EQUIP_SLOTS_WIDTH {
+    handle_cursor_movement(
+      cursor_position,
+      0,
+      EQUIP_SLOTS_WIDTH - 1,
+      EQUIP_SLOTS_HEIGHT - 1,
+      input,
+      Some(
+        &(0..EQUIP_SLOTS_WIDTH)
+          .map(|x| {
+            (
+              vector![x, 0],
+              [(Direction::Up, vector![0, -1])].iter().cloned().collect(),
+            )
+          })
+          .chain((0..EQUIP_SLOTS_HEIGHT).map(|y| {
+            (
+              vector![EQUIP_SLOTS_WIDTH - 1, y],
+              [(Direction::Right, vector![EQUIP_SLOTS_WIDTH, 0])]
                 .iter()
                 .cloned()
-                .enumerate()
-                .map(|(index, value)| {
-                  if index as i32 == cursor_position.x + (cursor_position.y * EQUIP_SLOTS_WIDTH) {
-                    currently_holding.clone()
-                  } else {
-                    value
-                  }
-                }),
-            ),
-            unequipped_modules: inventory_update.unequipped_modules.clone(),
-          },
-        ),
-      }],
-      None,
-    );
+                .collect(),
+            )
+          }))
+          .collect(),
+      ),
+    )
+  } else {
+    handle_cursor_movement(
+      cursor_position,
+      EQUIP_SLOTS_WIDTH,
+      EQUIP_SLOTS_WIDTH + INVENTORY_WRAP_WIDTH,
+      unequipped_modules_height,
+      input,
+      Some(
+        &((0..unequipped_modules_height + 1).map(|y| {
+          (
+            vector![EQUIP_SLOTS_WIDTH, y],
+            [(Direction::Left, vector![EQUIP_SLOTS_WIDTH - 1, 0])]
+              .iter()
+              .cloned()
+              .collect(),
+          )
+        }))
+        .collect(),
+      ),
+    )
   };
 
+  if input.confirm && cursor_position != vector![0, -1] {
+    return if cursor_position.x < EQUIP_SLOTS_WIDTH {
+      (
+        vec![Menu {
+          cursor_position,
+          kind: MenuKind::InventoryPickSlot(
+            inventory_update.equipped_modules.data.0[cursor_position.y as usize]
+              [cursor_position.x as usize]
+              .clone(),
+            InventoryUpdateData {
+              equipped_modules: EquippedModules::from_iterator(
+                inventory_update
+                  .equipped_modules
+                  .iter()
+                  .cloned()
+                  .enumerate()
+                  .map(|(index, value)| {
+                    if index as i32 == cursor_position.x + (cursor_position.y * EQUIP_SLOTS_WIDTH) {
+                      currently_holding.clone()
+                    } else {
+                      value
+                    }
+                  }),
+              ),
+              unequipped_modules: inventory_update.unequipped_modules.clone(),
+            },
+          ),
+        }],
+        None,
+      )
+    } else {
+      let accessing_index = (cursor_position.x - EQUIP_SLOTS_WIDTH
+        + (cursor_position.y * (INVENTORY_WRAP_WIDTH + 1))) as usize;
+
+      let updated_unequipped_modules =
+        if accessing_index < inventory_update.unequipped_modules.len() {
+          inventory_update
+            .unequipped_modules
+            .iter()
+            .cloned()
+            .enumerate()
+            .flat_map(|(index, module)| {
+              if index == accessing_index {
+                currently_holding
+                  .clone()
+                  .map(|currently_holding| vec![currently_holding])
+                  .unwrap_or(vec![])
+              } else {
+                vec![module]
+              }
+            })
+            .collect()
+        } else {
+          currently_holding
+            .map(|currently_holding| {
+              inventory_update
+                .unequipped_modules
+                .iter()
+                .chain([currently_holding].iter())
+                .cloned()
+                .collect()
+            })
+            .unwrap_or(inventory_update.unequipped_modules.clone())
+        };
+
+      (
+        vec![Menu {
+          cursor_position,
+          kind: MenuKind::InventoryPickSlot(
+            inventory_update
+              .unequipped_modules
+              .get(accessing_index)
+              .cloned(),
+            InventoryUpdateData {
+              equipped_modules: inventory_update.equipped_modules.clone(),
+              unequipped_modules: updated_unequipped_modules,
+            },
+          ),
+        }],
+        None,
+      )
+    };
+  };
+
+  /* Confirm change and add whatever module is currently held back into the unequipped modules */
   if input.confirm {
-    // Confirm change and add whatever module is currently held back into the unequipped modules
     return (
-      vec![Menu {
-        cursor_position,
-        kind: MenuKind::InventoryMain,
-      }],
+      vec![],
       Some(InventoryUpdateData {
         equipped_modules: inventory_update.equipped_modules.clone(),
         unequipped_modules: currently_holding
@@ -419,6 +442,7 @@ fn menu_input_to_direction(input: &MenuInput) -> HashSet<Direction> {
 
 fn handle_cursor_movement(
   cursor_position: Vector2<i32>,
+  min_x_inclusive: i32,
   max_x_inclusive: i32,
   max_y_inclusive: i32,
   input: &MenuInput,
@@ -444,6 +468,16 @@ fn handle_cursor_movement(
     return override_movement[0];
   }
 
+  /* Debug - warn console if multiple conflicting cursor overrides are found */
+  if override_movement.len() > 1 {
+    println!(
+      "Conflicting cursor movement overrides! Found {} for cursor position {} {}",
+      override_movement.len(),
+      cursor_position.x,
+      cursor_position.y
+    );
+  }
+
   let up = if input.up { -1 } else { 0 };
   let down = if input.down { 1 } else { 0 };
   let right = if input.right { 1 } else { 0 };
@@ -456,10 +490,10 @@ fn handle_cursor_movement(
   }
 
   return vector![
-    if new_attempted_position.x < 0 {
+    if new_attempted_position.x < min_x_inclusive {
       max_x_inclusive
     } else if new_attempted_position.x > max_x_inclusive {
-      0
+      min_x_inclusive
     } else {
       new_attempted_position.x
     },

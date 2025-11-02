@@ -6,12 +6,11 @@ use rapier2d::prelude::*;
 use crate::{
   camera::CameraSystem,
   combat::{
-    CombatSystem, EQUIP_SLOTS_WIDTH, distance_projection_screen, get_reticle_pos,
+    CombatSystem, EQUIP_SLOTS_WIDTH, WeaponModuleKind, distance_projection_screen, get_reticle_pos,
     get_slot_positions,
   },
-  controls::{ControlsSystem, angle_from_vec},
-  graphics_utils::draw_cuboid_collider,
-  menu::{Menu, MenuSystem},
+  graphics_utils::draw_collider,
+  menu::{INVENTORY_WRAP_WIDTH, Menu, MenuSystem},
   physics::PhysicsSystem,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
@@ -49,7 +48,7 @@ impl System for GraphicsSystem {
       physics_system
         .collider_set
         .iter()
-        .for_each(|(_, collider)| draw_cuboid_collider(collider, camera_system.translation));
+        .for_each(|(_, collider)| draw_collider(collider, camera_system.translation, None));
     }
 
     /* Draw player */
@@ -152,23 +151,6 @@ fn draw_menu(menu: &Menu) {
         WHITE,
       );
     }
-    crate::menu::MenuKind::InventoryPickModule => {
-      draw_rectangle(
-        screen_width() * 0.15,
-        screen_height() * 0.45,
-        screen_width() * 0.5,
-        screen_height() * 0.5,
-        GRAY,
-      );
-
-      draw_text(
-        "-",
-        (0.2 + (menu.cursor_position.x as f32 * 0.05)) * screen_width(),
-        (0.5 + (menu.cursor_position.y as f32 * 0.05)) * screen_height(),
-        40.0,
-        WHITE,
-      );
-    }
     crate::menu::MenuKind::InventoryPickSlot(_, inventory_update) => {
       draw_rectangle(
         screen_width() * 0.45,
@@ -193,11 +175,7 @@ fn draw_menu(menu: &Menu) {
         .for_each(|(index, equipped_module)| {
           equipped_module.clone().map(|module_kind| {
             draw_text(
-              match module_kind {
-                crate::combat::WeaponModuleKind::Plasma => "P",
-                crate::combat::WeaponModuleKind::DoubleDamage => "D",
-                crate::combat::WeaponModuleKind::Front2Slot => "2",
-              },
+              debug_module_text(&module_kind),
               (0.5 + ((index as i32 % EQUIP_SLOTS_WIDTH) as f32 * 0.05)) * screen_width(),
               (0.5 + ((index as i32 / EQUIP_SLOTS_WIDTH) as f32 * 0.05)) * screen_height(),
               40.0,
@@ -205,8 +183,33 @@ fn draw_menu(menu: &Menu) {
             );
           });
         });
+
+      inventory_update
+        .unequipped_modules
+        .iter()
+        .enumerate()
+        .for_each(|(index, unequipped_module_kind)| {
+          draw_text(
+            debug_module_text(unequipped_module_kind),
+            (0.5
+              + (EQUIP_SLOTS_WIDTH as f32 * 0.05)
+              + ((index as i32 % INVENTORY_WRAP_WIDTH) as f32 * 0.05))
+              * screen_width(),
+            (0.5 + ((index as i32 / INVENTORY_WRAP_WIDTH) as f32 * 0.05)) * screen_height(),
+            40.0,
+            WHITE,
+          );
+        });
     }
     crate::menu::MenuKind::InventoryConfirmEdit(_) => {}
     crate::menu::MenuKind::PauseMain => {}
+  }
+}
+
+fn debug_module_text(module_kind: &WeaponModuleKind) -> &'static str {
+  match module_kind {
+    WeaponModuleKind::Plasma => "P",
+    WeaponModuleKind::DoubleDamage => "D",
+    WeaponModuleKind::Front2Slot => "2",
   }
 }

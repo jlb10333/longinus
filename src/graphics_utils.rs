@@ -10,7 +10,7 @@ pub fn screen_bounds_adjusted() -> PhysicsVector {
   );
 }
 
-pub fn draw_cuboid_collider(collider: &Collider, camera_position: Vector2<f32>) {
+pub fn draw_collider(collider: &Collider, camera_position: Vector2<f32>, label: Option<&str>) {
   let translation = PhysicsVector::from_vec(*collider.translation()).into_pos(camera_position);
 
   match collider.shape().as_cuboid() {
@@ -27,6 +27,8 @@ pub fn draw_cuboid_collider(collider: &Collider, camera_position: Vector2<f32>) 
         dimensions.y(),
         ORANGE,
       );
+
+      label.map(|label| draw_text(label, top_left.x(), top_left.y(), 40.0, BLACK));
     }
     None => {}
   }

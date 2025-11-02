@@ -187,7 +187,7 @@ impl System for PhysicsSystem {
           handle,
           components: ComponentSet::new()
             .insert(DestroyOnCollision)
-            .insert(Damager { damage: 10.0 }),
+            .insert(Damager { damage: projectile.damage }),
         };
       })
       .collect();
@@ -333,6 +333,8 @@ impl System for PhysicsSystem {
             }),
           };
         }
+
+        println!("{}", incoming_damage);
 
         return Entity {
           handle: entity.handle,
