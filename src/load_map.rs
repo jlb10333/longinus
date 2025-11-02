@@ -287,7 +287,7 @@ impl RawMap {
       }
     });
 
-    let colliders: Option<Vec<MapTile>> = tile_layer.map(|tile_layer| (&tile_layer).into());
+    let colliders: Option<Vec<MapTile>> = tile_layer.map(|tile_layer| tile_layer.into());
 
     let entities_layer = self.layers.iter().find_map(|layer| match layer {
       Layer::ObjectLayer(object_layer) => match object_layer.name {
