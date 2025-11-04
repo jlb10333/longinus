@@ -370,7 +370,7 @@ fn build_adjacent_modules(
     equipped_modules.data.0[current_module_position.y][current_module_position.x - 1]
       .clone()
       .bind(weapon_module_from_kind)
-      .map(move |weapon_module| match weapon_module {
+      .map(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
           if attachment_points.contains(&Right) {
