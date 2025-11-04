@@ -380,7 +380,7 @@ pub struct MapSystem {
   pub map: Rc<Map>,
 }
 
-const MAP_READ_PATH: &str = "/home/bentlesf/github/game-rs/src/assets/maps/map1.json";
+const MAP_READ_PATH: &str = "./assets/maps/map1.json";
 
 impl System for MapSystem {
   fn start(_: crate::system::Context) -> std::rc::Rc<dyn System>

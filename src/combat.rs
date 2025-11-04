@@ -286,7 +286,7 @@ fn plasma() -> Weapon {
 }
 
 // F2SL
-fn front_2_slot(weapon: &Weapon) -> Vec<Weapon> {
+fn front_2_slot(weapon: &Weapon) -> Weapon {
   let mut new_weapon = weapon.clone();
   new_weapon
     .slot_positions
@@ -294,14 +294,14 @@ fn front_2_slot(weapon: &Weapon) -> Vec<Weapon> {
   new_weapon
     .slot_positions
     .insert(SlotPosition::FrontDoubleRight);
-  return Vec::from([new_weapon]);
+  return new_weapon;
 }
 
 // PWUP
-fn double_damage(weapon: &Weapon) -> Vec<Weapon> {
+fn double_damage(weapon: &Weapon) -> Weapon {
   let mut new_weapon = weapon.clone();
   new_weapon.damage_mod *= 2.0;
-  return Vec::from([new_weapon]);
+  return new_weapon;
 }
 
 pub type UnequippedModules = Vec<WeaponModuleKind>;
@@ -328,7 +328,8 @@ pub enum WeaponModuleKind {
 }
 
 type Generator = fn() -> Weapon;
-type Modulator = fn(&Weapon) -> Vec<Weapon>;
+type Modulator = fn(&Weapon) -> Weapon;
+type RcModulator = Rc<dyn Fn(&Weapon) -> Weapon>;
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 pub enum Direction {
@@ -343,45 +344,42 @@ use serde::Deserialize;
 #[derive(Clone)]
 enum WeaponModule {
   Generator(Generator),
-  Modulator(Modulator, HashSet<Direction>),
+  Modulator(Rc<Modulator>, HashSet<Direction>),
 }
 
 fn weapon_module_from_kind(kind: &WeaponModuleKind) -> WeaponModule {
   match *kind {
     WeaponModuleKind::Plasma => WeaponModule::Generator(plasma),
-    WeaponModuleKind::Front2Slot => WeaponModule::Modulator(front_2_slot, HashSet::from([Down])),
-    WeaponModuleKind::DoubleDamage => WeaponModule::Modulator(double_damage, HashSet::from([Left])),
+    WeaponModuleKind::Front2Slot => {
+      WeaponModule::Modulator(Rc::new(front_2_slot), HashSet::from([Down]))
+    }
+    WeaponModuleKind::DoubleDamage => {
+      WeaponModule::Modulator(Rc::new(double_damage), HashSet::from([Left]))
+    }
   }
 }
 
 fn build_adjacent_modules(
-  equipped_modules: &EquippedModules,
+  equipped_modules: EquippedModules,
   current_module_position: Vector2<usize>,
-  current_weapon: &Weapon,
-) -> Vec<Weapon> {
+) -> RcModulator {
   let module_left = if current_module_position.x <= 0 {
     None
   } else {
+    let equipped_modules_clone = equipped_modules.clone();
     equipped_modules.data.0[current_module_position.y][current_module_position.x - 1]
       .clone()
       .bind(weapon_module_from_kind)
-      .bind(|weapon_module| match weapon_module.clone() {
+      .map(move |weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
           if attachment_points.contains(&Right) {
-            Some(
-              modulator(current_weapon)
-                .iter()
-                .map(|next_weapon| {
-                  build_adjacent_modules(
-                    equipped_modules,
-                    vector![current_module_position.x - 1, current_module_position.y],
-                    next_weapon,
-                  )
-                })
-                .flatten()
-                .collect::<Vec<_>>(),
-            )
+            Some(Rc::new(move |weapon: &Weapon| {
+              build_adjacent_modules(
+                equipped_modules_clone.clone(),
+                vector![current_module_position.x - 1, current_module_position.y],
+              )(&modulator(weapon))
+            }) as RcModulator)
           } else {
             None
           }
@@ -393,26 +391,20 @@ fn build_adjacent_modules(
   let module_right = if current_module_position.x >= (EQUIP_SLOTS_WIDTH - 1) as usize {
     None
   } else {
-    equipped_modules.data.0[current_module_position.y][current_module_position.x + 1]
+    let equipped_modules_clone = equipped_modules.clone();
+    equipped_modules.clone().data.0[current_module_position.y][current_module_position.x + 1]
       .clone()
       .bind(weapon_module_from_kind)
-      .bind(|weapon_module| match weapon_module.clone() {
+      .map(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
           if attachment_points.contains(&Left) {
-            Some(
-              modulator(current_weapon)
-                .iter()
-                .map(|next_weapon| {
-                  build_adjacent_modules(
-                    equipped_modules,
-                    vector![current_module_position.x + 1, current_module_position.y],
-                    next_weapon,
-                  )
-                })
-                .flatten()
-                .collect::<Vec<_>>(),
-            )
+            Some(Rc::new(move |weapon: &Weapon| {
+              build_adjacent_modules(
+                equipped_modules_clone.clone(),
+                vector![current_module_position.x + 1, current_module_position.y],
+              )(&modulator(weapon))
+            }) as RcModulator)
           } else {
             None
           }
@@ -424,26 +416,20 @@ fn build_adjacent_modules(
   let module_up = if current_module_position.y <= 0 {
     None
   } else {
+    let equipped_modules_clone = equipped_modules.clone();
     equipped_modules.data.0[current_module_position.y - 1][current_module_position.x]
       .clone()
       .bind(weapon_module_from_kind)
-      .bind(|weapon_module| match weapon_module.clone() {
+      .map(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
           if attachment_points.contains(&Down) {
-            Some(
-              modulator(current_weapon)
-                .iter()
-                .map(|next_weapon| {
-                  build_adjacent_modules(
-                    equipped_modules,
-                    vector![current_module_position.x, current_module_position.y - 1],
-                    next_weapon,
-                  )
-                })
-                .flatten()
-                .collect::<Vec<_>>(),
-            )
+            Some(Rc::new(move |weapon: &Weapon| {
+              build_adjacent_modules(
+                equipped_modules_clone.clone(),
+                vector![current_module_position.x, current_module_position.y - 1],
+              )(&modulator(weapon))
+            }) as RcModulator)
           } else {
             None
           }
@@ -455,26 +441,20 @@ fn build_adjacent_modules(
   let module_down = if current_module_position.y >= (EQUIP_SLOTS_HEIGHT - 1) as usize {
     None
   } else {
+    let equipped_modules_clone = equipped_modules.clone();
     equipped_modules.data.0[current_module_position.y + 1][current_module_position.x]
       .clone()
       .bind(weapon_module_from_kind)
-      .bind(|weapon_module| match weapon_module.clone() {
+      .map(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
           if attachment_points.contains(&Up) {
-            Some(
-              modulator(current_weapon)
-                .iter()
-                .map(|next_weapon| {
-                  build_adjacent_modules(
-                    equipped_modules,
-                    vector![current_module_position.x, current_module_position.y + 1],
-                    next_weapon,
-                  )
-                })
-                .flatten()
-                .collect::<Vec<_>>(),
-            )
+            Some(Rc::new(move |weapon: &Weapon| {
+              build_adjacent_modules(
+                equipped_modules_clone.clone(),
+                vector![current_module_position.x, current_module_position.y + 1],
+              )(&modulator(&weapon.clone()))
+            }) as RcModulator)
           } else {
             None
           }
@@ -483,21 +463,19 @@ fn build_adjacent_modules(
       .flatten()
   };
 
-  let branch_modules = [module_left, module_right, module_up, module_down]
+  [module_left, module_right, module_up, module_down]
     .iter()
     .flatten()
-    .flatten()
     .cloned()
-    .collect::<Vec<_>>();
-
-  if branch_modules.len() == 0 {
-    return vec![current_weapon.clone()];
-  }
-
-  return branch_modules;
+    .fold(
+      Rc::new(|weapon: &Weapon| weapon.clone()) as RcModulator,
+      move |acc: Rc<dyn Fn(&Weapon) -> Weapon>, modulator: Rc<dyn Fn(&Weapon) -> Weapon>| {
+        Rc::new(move |weapon: &Weapon| acc(&modulator(weapon))) as Rc<dyn Fn(&Weapon) -> Weapon>
+      },
+    )
 }
 
-fn build_weapons(equipped_modules: &EquippedModules) -> Vec<Weapon> {
+fn build_weapons(equipped_modules: EquippedModules) -> Vec<Weapon> {
   equipped_modules
     .data
     .0
@@ -505,15 +483,17 @@ fn build_weapons(equipped_modules: &EquippedModules) -> Vec<Weapon> {
     .enumerate()
     .flat_map(|(y, row)| {
       row
+        .clone()
         .iter()
         .enumerate()
         .map(|(x, value)| {
           value.clone().bind(|weapon_module_kind| {
             match weapon_module_from_kind(weapon_module_kind) {
-              WeaponModule::Modulator(_, _) => vec![],
-              WeaponModule::Generator(generator) => {
-                build_adjacent_modules(&equipped_modules, vector![x, y], &generator())
-              }
+              WeaponModule::Modulator(_, _) => None,
+              WeaponModule::Generator(generator) => Some(build_adjacent_modules(
+                equipped_modules.clone(),
+                vector![x, y],
+              )(&generator())),
             }
           })
         })
@@ -573,7 +553,7 @@ impl System for CombatSystem {
     return Rc::new(Self {
       unequipped_modules,
       equipped_modules: equipped_modules.clone(),
-      current_weapons: build_weapons(equipped_modules),
+      current_weapons: build_weapons(equipped_modules.clone()),
       new_projectiles: Vec::new(),
       reticle_angle: 0.0,
     });
@@ -587,7 +567,7 @@ impl System for CombatSystem {
         return Rc::new(Self {
           unequipped_modules: inventory_update.unequipped_modules.clone(),
           equipped_modules: inventory_update.equipped_modules.clone(),
-          current_weapons: build_weapons(&inventory_update.equipped_modules),
+          current_weapons: build_weapons(inventory_update.equipped_modules.clone()),
           new_projectiles: Vec::new(),
           reticle_angle: self.reticle_angle,
         });
