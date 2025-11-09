@@ -33,12 +33,16 @@ pub struct PhysicsSystem {
   pub player_handle: RigidBodyHandle,
   pub entities: Vec<Entity>,
   pub sensors: Vec<Sensor>,
-  pub new_weapon_modules: Vec<WeaponModuleKind>,
+  pub new_weapon_modules: Vec<(i32, WeaponModuleKind)>,
   pub frame_count: i64,
   pub load_new_map_name: Option<String>,
 }
 
-fn load_new_map(map: &Map) -> Rc<PhysicsSystem> {
+fn load_new_map(
+  map: &Map,
+  map_name: &str,
+  acquired_modules: &Vec<(String, i32)>,
+) -> Rc<PhysicsSystem> {
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
 
@@ -97,12 +101,14 @@ fn load_new_map(map: &Map) -> Rc<PhysicsSystem> {
   let item_pickups = map
     .item_pickups
     .iter()
+    .filter(|item_pickup| !acquired_modules.contains(&(map_name.to_string(), item_pickup.id)))
     .map(|item_pickup| {
       let handle = collider_set.insert(item_pickup.collider.clone());
       Sensor {
         handle,
         components: ComponentSet::new()
           .insert(GivesItemOnCollision {
+            id: item_pickup.id,
             weapon_module_kind: item_pickup.weapon_module_kind.clone(),
           })
           .insert(DestroyOnCollision),
@@ -175,14 +181,27 @@ impl System for PhysicsSystem {
     let map_system = ctx.get::<MapSystem>().unwrap();
     let map = map_system.map.as_ref().unwrap();
 
-    load_new_map(map)
+    let combat_system = ctx.get::<CombatSystem>().unwrap();
+
+    load_new_map(
+      map,
+      &map_system.current_map_name,
+      &combat_system.acquired_items,
+    )
   }
 
   fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
     let map_system = ctx.get::<MapSystem>().unwrap();
+
+    let combat_system = ctx.get::<CombatSystem>().unwrap();
+
     if let Some(map) = map_system.map.as_ref() {
       // TODO: give the ability to specify which player spawn to start from
-      return load_new_map(map);
+      return load_new_map(
+        map,
+        &map_system.current_map_name,
+        &combat_system.acquired_items,
+      );
     }
 
     let mut physics_pipeline = self.physics_pipeline.as_ref().borrow_mut();
@@ -228,8 +247,6 @@ impl System for PhysicsSystem {
     rigid_body_set[self.player_handle].apply_impulse(controls_system.left_stick.into_vec(), true);
 
     /* Fire all weapons */
-    let combat_system = ctx.get::<CombatSystem>().unwrap();
-
     let new_projectiles: Vec<Entity> = combat_system
       .new_projectiles
       .iter()
@@ -469,7 +486,6 @@ impl System for PhysicsSystem {
       .collect();
 
     /* Give items on collision */
-    // TODO: Make it mark said item as "permanently collected" so that it doesn't respawn when reloading the screen
     let new_weapon_modules = sensors.iter().cloned().fold(vec![], |acc, sensor| {
       if let Some(gives_item) = sensor.components.get::<GivesItemOnCollision>()
         && rigid_body_set[self.player_handle]
@@ -481,7 +497,7 @@ impl System for PhysicsSystem {
               .unwrap_or(false)
           })
       {
-        [gives_item.weapon_module_kind.clone()]
+        [(gives_item.id, gives_item.weapon_module_kind.clone())]
           .iter()
           .chain(acc.iter())
           .cloned()

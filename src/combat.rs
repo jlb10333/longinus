@@ -9,7 +9,9 @@ use std::{
 use crate::{
   controls::{ControlsSystem, angle_from_vec},
   f::Monad,
-  load_map::{COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL},
+  load_map::{
+    COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL, MapSystem,
+  },
   menu::MenuSystem,
   physics::PhysicsSystem,
   system::System,
@@ -531,6 +533,7 @@ pub struct CombatSystem {
   pub equipped_modules: EquippedModules,
   pub current_weapons: Vec<Weapon>,
   pub new_projectiles: Vec<Projectile>,
+  pub acquired_items: Vec<(String, i32)>,
   pub reticle_angle: f32,
 }
 
@@ -554,8 +557,9 @@ impl System for CombatSystem {
       unequipped_modules,
       equipped_modules: equipped_modules.clone(),
       current_weapons: build_weapons(equipped_modules.clone()),
-      new_projectiles: Vec::new(),
+      new_projectiles: vec![],
       reticle_angle: 0.0,
+      acquired_items: vec![],
     });
   }
 
@@ -570,6 +574,7 @@ impl System for CombatSystem {
           current_weapons: build_weapons(inventory_update.equipped_modules.clone()),
           new_projectiles: Vec::new(),
           reticle_angle: self.reticle_angle,
+          acquired_items: self.acquired_items.clone(),
         });
       }
 
@@ -582,8 +587,28 @@ impl System for CombatSystem {
     let unequipped_modules = self
       .unequipped_modules
       .iter()
-      .chain(physics_system.new_weapon_modules.iter())
+      .chain(
+        physics_system
+          .new_weapon_modules
+          .iter()
+          .map(|(_, module)| module),
+      )
       .cloned()
+      .collect();
+
+    /* Mark new item pickups as acquired */
+    let map_system = ctx.get::<MapSystem>().unwrap();
+
+    let acquired_items = self
+      .acquired_items
+      .iter()
+      .cloned()
+      .chain(
+        physics_system
+          .new_weapon_modules
+          .iter()
+          .map(|(id, _)| (map_system.current_map_name.clone(), *id)),
+      )
       .collect();
 
     /* Decrement cooldown for active weapons */
@@ -629,6 +654,7 @@ impl System for CombatSystem {
       current_weapons: new_weapons,
       new_projectiles,
       reticle_angle,
+      acquired_items,
     });
   }
 }

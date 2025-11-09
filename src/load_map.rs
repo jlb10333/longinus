@@ -63,6 +63,7 @@ pub enum MapItemPickupClass {
 
 #[derive(Clone, Debug, Deserialize)]
 struct MapItemPickup {
+  id: i32,
   x: f32,
   y: f32,
   name: WeaponModuleKind,
@@ -143,6 +144,7 @@ pub struct PlayerSpawn {
 
 #[derive(Clone)]
 pub struct ItemPickup {
+  pub id: i32,
   pub weapon_module_kind: WeaponModuleKind,
   pub collider: Collider,
 }
@@ -211,6 +213,7 @@ impl Object {
         ]),
       }),
       Object::ItemPickup(item_pickup) => MapComponent::ItemPickup(ItemPickup {
+        id: item_pickup.id,
         weapon_module_kind: item_pickup.name.clone(),
         collider: ColliderBuilder::ball(1.0)
           .translation(
@@ -456,6 +459,7 @@ pub fn load(file_path: &str) -> Option<Map> {
 
 pub struct MapSystem {
   pub map: Option<Map>,
+  pub current_map_name: String,
 }
 
 const INITIAL_MAP: &str = "map1";
@@ -470,7 +474,10 @@ impl System for MapSystem {
     Self: Sized,
   {
     let map = load(&map_read_path(INITIAL_MAP.to_string()));
-    return Rc::new(Self { map });
+    return Rc::new(Self {
+      map,
+      current_map_name: INITIAL_MAP.to_string(),
+    });
   }
 
   fn run(&self, ctx: &crate::system::Context) -> std::rc::Rc<dyn System> {
@@ -482,6 +489,11 @@ impl System for MapSystem {
         .as_ref()
         .map(|load_new_map_name| load(&map_read_path(load_new_map_name.to_string())))
         .flatten(),
+      current_map_name: physics_system
+        .load_new_map_name
+        .as_ref()
+        .unwrap_or(&self.current_map_name)
+        .clone(),
     });
   }
 }

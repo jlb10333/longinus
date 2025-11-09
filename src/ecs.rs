@@ -110,6 +110,7 @@ pub struct Enemy {
 impl Component for Enemy {}
 
 pub struct GivesItemOnCollision {
+  pub id: i32,
   pub weapon_module_kind: WeaponModuleKind,
 }
 impl Component for GivesItemOnCollision {}
