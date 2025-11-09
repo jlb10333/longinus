@@ -6,13 +6,13 @@ use crate::{
   controls::ControlsSystem,
   ecs::{
     ComponentSet, Damageable, Damager, DestroyOnCollision, Enemy, Entity, GivesItemOnCollision,
-    Sensor,
+    MapTransitionOnCollision, Sensor,
   },
   enemy::EnemySystem,
   f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
-    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, MapSystem, MapTile,
+    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapSystem, MapTile,
   },
   menu::MenuSystem,
   system::System,
@@ -35,6 +35,136 @@ pub struct PhysicsSystem {
   pub sensors: Vec<Sensor>,
   pub new_weapon_modules: Vec<WeaponModuleKind>,
   pub frame_count: i64,
+  pub load_new_map_name: Option<String>,
+}
+
+fn load_new_map(map: &Map) -> Rc<PhysicsSystem> {
+  let mut rigid_body_set = RigidBodySet::new();
+  let mut collider_set = ColliderSet::new();
+
+  /* Create the player. */
+  let player_rigid_body = RigidBodyBuilder::dynamic()
+    .translation(map.player_spawn.translation.into_vec())
+    .build();
+  let player_collider = &ColliderBuilder::ball(0.25)
+    .restitution(0.7)
+    .collision_groups(InteractionGroups {
+      memberships: COLLISION_GROUP_PLAYER,
+      filter: COLLISION_GROUP_WALL
+        .union(COLLISION_GROUP_ENEMY)
+        .union(COLLISION_GROUP_ENEMY_PROJECTILE)
+        .union(COLLISION_GROUP_PLAYER_INTERACTIBLE),
+    })
+    .build();
+  let player_handle = rigid_body_set.insert(player_rigid_body);
+  collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
+
+  let player = Entity {
+    handle: player_handle,
+    components: ComponentSet::new().insert(Damageable {
+      health: 100.0,
+      destroy_on_zero_health: false,
+      current_hitstun: 0.0,
+      max_hitstun: 30.0,
+    }),
+  };
+
+  /* Spawn enemies. */
+  let enemies: Vec<_> = map
+    .enemy_spawns
+    .iter()
+    .map(|enemy_spawn| {
+      let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
+      collider_set.insert_with_parent(enemy_spawn.collider.clone(), handle, &mut rigid_body_set);
+      Entity {
+        handle,
+        components: ComponentSet::new()
+          .insert(Damageable {
+            health: 100.0,
+            destroy_on_zero_health: true,
+            current_hitstun: 0.0,
+            max_hitstun: 0.0,
+          })
+          .insert(Damager { damage: 20.0 })
+          .insert(Enemy {
+            name: enemy_spawn.name.clone(),
+          }),
+      }
+    })
+    .collect();
+
+  /* Spawn item pickups. */
+  let item_pickups = map
+    .item_pickups
+    .iter()
+    .map(|item_pickup| {
+      let handle = collider_set.insert(item_pickup.collider.clone());
+      Sensor {
+        handle,
+        components: ComponentSet::new()
+          .insert(GivesItemOnCollision {
+            weapon_module_kind: item_pickup.weapon_module_kind.clone(),
+          })
+          .insert(DestroyOnCollision),
+      }
+    })
+    .collect::<Vec<_>>();
+
+  /* Spawn map transitions. */
+  let map_transitions = map
+    .map_transitions
+    .iter()
+    .map(|map_transition| Sensor {
+      handle: collider_set.insert(map_transition.collider.clone()),
+      components: ComponentSet::new().insert(MapTransitionOnCollision {
+        map_name: map_transition.map_name.clone(),
+      }),
+    })
+    .collect::<Vec<_>>();
+
+  /* Create the map colliders. */
+  map.colliders.iter().for_each(|map_tile| {
+    match map_tile {
+      MapTile::Wall(wall) => collider_set.insert(wall.collider.clone()),
+    };
+  });
+
+  /* Create other structures necessary for the simulation. */
+  let integration_parameters = IntegrationParameters::default();
+  let physics_pipeline = Rc::new(RefCell::new(PhysicsPipeline::new()));
+  let island_manager = IslandManager::new();
+  let broad_phase = DefaultBroadPhase::new();
+  let narrow_phase = NarrowPhase::new();
+  let impulse_joint_set = ImpulseJointSet::new();
+  let multibody_joint_set = MultibodyJointSet::new();
+  let ccd_solver: CCDSolver = CCDSolver::new();
+  let entities: Vec<_> = [player].iter().cloned().chain(enemies).collect();
+  let sensors = item_pickups
+    .iter()
+    .cloned()
+    .chain(map_transitions)
+    .collect();
+
+  println!("{}", collider_set.len());
+
+  return Rc::new(PhysicsSystem {
+    rigid_body_set,
+    collider_set,
+    integration_parameters,
+    physics_pipeline,
+    island_manager,
+    broad_phase,
+    narrow_phase,
+    impulse_joint_set,
+    multibody_joint_set,
+    ccd_solver,
+    player_handle,
+    entities,
+    sensors,
+    frame_count: 0,
+    new_weapon_modules: vec![],
+    load_new_map_name: None,
+  });
 }
 
 impl System for PhysicsSystem {
@@ -42,120 +172,19 @@ impl System for PhysicsSystem {
   where
     Self: Sized,
   {
-    let mut rigid_body_set = RigidBodySet::new();
-    let mut collider_set = ColliderSet::new();
-
     let map_system = ctx.get::<MapSystem>().unwrap();
+    let map = map_system.map.as_ref().unwrap();
 
-    /* Create the player. */
-    let player_rigid_body = RigidBodyBuilder::dynamic()
-      .translation(map_system.map.player_spawn.translation.into_vec())
-      .build();
-    let player_collider = &ColliderBuilder::ball(0.25)
-      .restitution(0.7)
-      .collision_groups(InteractionGroups {
-        memberships: COLLISION_GROUP_PLAYER,
-        filter: COLLISION_GROUP_WALL
-          .union(COLLISION_GROUP_ENEMY)
-          .union(COLLISION_GROUP_ENEMY_PROJECTILE)
-          .union(COLLISION_GROUP_PLAYER_INTERACTIBLE),
-      })
-      .build();
-    let player_handle = rigid_body_set.insert(player_rigid_body);
-    collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
-
-    let player = Entity {
-      handle: player_handle,
-      components: ComponentSet::new().insert(Damageable {
-        health: 100.0,
-        destroy_on_zero_health: false,
-        current_hitstun: 0.0,
-        max_hitstun: 30.0,
-      }),
-    };
-
-    /* Spawn enemies. */
-    let enemies: Vec<_> = map_system
-      .map
-      .enemy_spawns
-      .iter()
-      .map(|enemy_spawn| {
-        let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
-        collider_set.insert_with_parent(enemy_spawn.collider.clone(), handle, &mut rigid_body_set);
-        Entity {
-          handle,
-          components: ComponentSet::new()
-            .insert(Damageable {
-              health: 100.0,
-              destroy_on_zero_health: true,
-              current_hitstun: 0.0,
-              max_hitstun: 0.0,
-            })
-            .insert(Damager { damage: 20.0 })
-            .insert(Enemy {
-              name: enemy_spawn.name.clone(),
-            }),
-        }
-      })
-      .collect();
-
-    /* Spawn item pickups. */
-    let item_pickups = map_system
-      .map
-      .item_pickups
-      .iter()
-      .map(|item_pickup| {
-        let handle = collider_set.insert(item_pickup.collider.clone());
-        Sensor {
-          handle,
-          components: ComponentSet::new()
-            .insert(GivesItemOnCollision {
-              weapon_module_kind: item_pickup.weapon_module_kind.clone(),
-            })
-            .insert(DestroyOnCollision),
-        }
-      })
-      .collect::<Vec<_>>();
-
-    /* Create the map colliders. */
-    map_system.map.colliders.iter().for_each(|map_tile| {
-      match map_tile {
-        MapTile::Wall(wall) => collider_set.insert(wall.collider.clone()),
-      };
-    });
-
-    /* Create other structures necessary for the simulation. */
-    let integration_parameters = IntegrationParameters::default();
-    let physics_pipeline = Rc::new(RefCell::new(PhysicsPipeline::new()));
-    let island_manager = IslandManager::new();
-    let broad_phase = DefaultBroadPhase::new();
-    let narrow_phase = NarrowPhase::new();
-    let impulse_joint_set = ImpulseJointSet::new();
-    let multibody_joint_set = MultibodyJointSet::new();
-    let ccd_solver: CCDSolver = CCDSolver::new();
-    let entities: Vec<_> = [player].iter().cloned().chain(enemies).collect();
-    let sensors = item_pickups;
-
-    return Rc::new(Self {
-      rigid_body_set,
-      collider_set,
-      integration_parameters,
-      physics_pipeline,
-      island_manager,
-      broad_phase,
-      narrow_phase,
-      impulse_joint_set,
-      multibody_joint_set,
-      ccd_solver,
-      player_handle,
-      entities,
-      sensors,
-      frame_count: 0,
-      new_weapon_modules: vec![],
-    });
+    load_new_map(map)
   }
 
   fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
+    let map_system = ctx.get::<MapSystem>().unwrap();
+    if let Some(map) = map_system.map.as_ref() {
+      // TODO: give the ability to specify which player spawn to start from
+      return load_new_map(map);
+    }
+
     let mut physics_pipeline = self.physics_pipeline.as_ref().borrow_mut();
     let mut island_manager = self.island_manager.clone();
     let mut broad_phase = self.broad_phase.clone();
@@ -189,6 +218,7 @@ impl System for PhysicsSystem {
         sensors: self.sensors.clone(),
         frame_count: self.frame_count + 1,
         new_weapon_modules: vec![],
+        load_new_map_name: None,
       });
     }
 
@@ -439,6 +469,7 @@ impl System for PhysicsSystem {
       .collect();
 
     /* Give items on collision */
+    // TODO: Make it mark said item as "permanently collected" so that it doesn't respawn when reloading the screen
     let new_weapon_modules = sensors.iter().cloned().fold(vec![], |acc, sensor| {
       if let Some(gives_item) = sensor.components.get::<GivesItemOnCollision>()
         && rigid_body_set[self.player_handle]
@@ -460,6 +491,22 @@ impl System for PhysicsSystem {
       }
     });
 
+    let load_new_map_name = sensors.iter().find_map(|sensor| {
+      if narrow_phase
+        .intersection_pairs_with(sensor.handle)
+        .filter(|(_, _, colliding)| *colliding)
+        .count()
+        == 0
+      {
+        return None;
+      }
+
+      sensor
+        .components
+        .get::<MapTransitionOnCollision>()
+        .map(|map_transition_on_collision| map_transition_on_collision.map_name.clone())
+    });
+
     /* Remove colliding sensors marked as destroy on collision */
     let sensors = sensors
       .iter()
@@ -469,8 +516,8 @@ impl System for PhysicsSystem {
           .clone()
           .components
           .get::<DestroyOnCollision>()
-          .is_none()
-          || narrow_phase
+          .is_some()
+          && narrow_phase
             .intersection_pairs_with(sensor.handle)
             .filter(|(_, _, colliding)| *colliding)
             .count()
@@ -486,7 +533,7 @@ impl System for PhysicsSystem {
         }
         return !entity_destroyed;
       })
-      .collect();
+      .collect::<Vec<_>>();
 
     /* Step physics */
     physics_pipeline.step(
@@ -520,6 +567,7 @@ impl System for PhysicsSystem {
       sensors,
       new_weapon_modules,
       frame_count: self.frame_count + 1,
+      load_new_map_name,
     });
   }
 }

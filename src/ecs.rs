@@ -113,3 +113,8 @@ pub struct GivesItemOnCollision {
   pub weapon_module_kind: WeaponModuleKind,
 }
 impl Component for GivesItemOnCollision {}
+
+pub struct MapTransitionOnCollision {
+  pub map_name: String,
+}
+impl Component for MapTransitionOnCollision {}

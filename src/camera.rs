@@ -56,6 +56,8 @@ impl System for CameraSystem {
     return Rc::new(Self {
       translation: map_system
         .map
+        .as_ref()
+        .unwrap()
         .player_spawn
         .translation
         .into_pos(vec_zero())
@@ -65,6 +67,15 @@ impl System for CameraSystem {
   }
 
   fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
+    let map_system = ctx.get::<MapSystem>().unwrap();
+
+    if let Some(map) = map_system.map.as_ref() {
+      return Rc::new(Self {
+        translation: map.player_spawn.translation.into_pos(vec_zero()).into_vec()
+          - vector![screen_width() / 2.0, screen_height() / 2.0],
+      });
+    }
+
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
     let player_translation = PhysicsVector::from_vec(

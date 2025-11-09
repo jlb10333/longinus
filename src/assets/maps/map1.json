@@ -101,9 +101,18 @@
                  "width":0,
                  "x":88,
                  "y":192
+                }, 
+                {
+                 "height":168,
+                 "id":18,
+                 "name":"map2",
+                 "rotation":0,
+                 "type":"MapTransition",
+                 "visible":true,
+                 "width":8,
+                 "x":392,
+                 "y":32
                 }],
-         "offsetx":-91.3333333333333,
-         "offsety":5.33333333333333,
          "opacity":1,
          "type":"objectgroup",
          "visible":true,
@@ -111,7 +120,7 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":12,
+ "nextobjectid":19,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

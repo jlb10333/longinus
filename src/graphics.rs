@@ -9,6 +9,7 @@ use crate::{
     CombatSystem, EQUIP_SLOTS_WIDTH, WeaponModuleKind, distance_projection_screen, get_reticle_pos,
     get_slot_positions,
   },
+  ecs::MapTransitionOnCollision,
   graphics_utils::draw_collider,
   menu::{INVENTORY_WRAP_WIDTH, Menu, MenuSystem},
   physics::PhysicsSystem,
