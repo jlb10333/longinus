@@ -7,6 +7,7 @@ use crate::{
   combat::WeaponModuleKind,
   f::{Monad, MonadTranslate},
   physics::PhysicsSystem,
+  save::SaveSystem,
   system::System,
   units::{PhysicsScalar, PhysicsVector, UnitConvert2},
 };
@@ -107,7 +108,8 @@ enum MapSpawnPointTargetClass {
 
 #[derive(Clone, Debug, Deserialize)]
 struct MapSpawnPointTarget {
-  name: MapSpawnPointTargetClass,
+  #[serde(rename = "name")]
+  _name: MapSpawnPointTargetClass,
   value: i32,
 }
 
@@ -118,7 +120,6 @@ enum MapSavePointClass {
 
 #[derive(Clone, Debug, Deserialize)]
 struct MapSavePoint {
-  id: i32,
   x: f32,
   y: f32,
   properties: (MapSpawnPointTarget,),
@@ -546,23 +547,24 @@ pub struct MapSystem {
   pub target_player_spawn_id: i32,
 }
 
-const INITIAL_MAP: &str = "map1";
-const INITIAL_SPAWN_ID: i32 = 5;
-
-fn map_read_path(map_name: String) -> String {
+fn map_read_path(map_name: &String) -> String {
   return format!("./assets/maps/{map_name}.json");
 }
 
 impl System for MapSystem {
-  fn start(_: crate::system::Context) -> std::rc::Rc<dyn System>
+  fn start(ctx: crate::system::Context) -> std::rc::Rc<dyn System>
   where
     Self: Sized,
   {
-    let map = load(&map_read_path(INITIAL_MAP.to_string()));
+    let save_system = ctx.get::<SaveSystem>().unwrap();
+
+    let save_data = save_system.loaded_save_data.as_ref().unwrap();
+
+    let map = load(&map_read_path(&save_data.map_name));
     return Rc::new(Self {
       map,
-      current_map_name: INITIAL_MAP.to_string(),
-      target_player_spawn_id: INITIAL_SPAWN_ID,
+      current_map_name: save_data.map_name.clone(),
+      target_player_spawn_id: save_data.player_spawn_id,
     });
   }
 
@@ -575,7 +577,7 @@ impl System for MapSystem {
       map: physics_system
         .load_new_map
         .as_ref()
-        .map(|(new_map_name, _)| load(&map_read_path(new_map_name.to_string())))
+        .map(|(new_map_name, _)| load(&map_read_path(&new_map_name.to_string())))
         .flatten(),
       current_map_name: load_new_map
         .map(|(map_name, _)| map_name)

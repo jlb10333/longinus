@@ -12,8 +12,8 @@ use crate::{
   system::System,
 };
 
-#[derive(Serialize, Deserialize)]
-struct SaveData {
+#[derive(Serialize, Deserialize, Clone)]
+pub struct SaveData {
   pub player_spawn_id: i32,
   pub map_name: String,
   pub unequipped_modules: UnequippedModules,
@@ -25,10 +25,10 @@ fn save_data_path(file_name: String) -> String {
   format!("./storage/{}.json", file_name)
 }
 
-const initial_save_file_path: &str = "./assets/save_initial.json";
+const INITIAL_SAVE_FILE_PATH: &str = "./assets/save_initial.json";
 
 pub struct SaveSystem {
-  loaded_save_data: Option<SaveData>,
+  pub loaded_save_data: Option<SaveData>,
 }
 
 impl System for SaveSystem {
@@ -37,7 +37,7 @@ impl System for SaveSystem {
     Self: Sized,
   {
     let initial_data: SaveData =
-      serde_json::from_str(&fs::read_to_string(initial_save_file_path).unwrap())
+      serde_json::from_str(&fs::read_to_string(INITIAL_SAVE_FILE_PATH).unwrap())
         .expect("JSON was not well-formatted");
     return Rc::new(SaveSystem {
       loaded_save_data: Some(initial_data),

@@ -1,0 +1,31 @@
+{
+  "player_spawn_id": 1,
+  "map_name": "map4",
+  "unequipped_modules": [],
+  "equipped_modules": [
+    [
+      "Plasma",
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      "DoubleDamage",
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      "Front2Slot"
+    ],
+    [
+      null,
+      null,
+      null,
+      "Plasma"
+    ]
+  ]
+}

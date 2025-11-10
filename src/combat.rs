@@ -12,6 +12,7 @@ use crate::{
   },
   menu::MenuSystem,
   physics::PhysicsSystem,
+  save::{self, SaveSystem},
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -510,23 +511,19 @@ pub struct CombatSystem {
 }
 
 impl System for CombatSystem {
-  fn start(_: crate::system::Context) -> Rc<dyn System>
+  fn start(ctx: crate::system::Context) -> Rc<dyn System>
   where
     Self: Sized,
   {
-    /* Initialize default inventory */
-    let unequipped_modules = Vec::new();
+    let save_system = ctx.get::<SaveSystem>().unwrap();
+
+    let save_data = save_system.loaded_save_data.as_ref().unwrap().clone();
 
     /* Initialize default equipped weapons */
-    let equipped_modules = &EquippedModules::from_data(ArrayStorage([
-      [Some(WeaponModuleKind::Plasma), None, None, None],
-      [None, None, Some(WeaponModuleKind::DoubleDamage), None],
-      [None, None, None, Some(WeaponModuleKind::Front2Slot)],
-      [None, None, None, Some(WeaponModuleKind::Plasma)],
-    ]));
+    let equipped_modules = &EquippedModules::from_data(ArrayStorage(save_data.equipped_modules));
 
     return Rc::new(Self {
-      unequipped_modules,
+      unequipped_modules: save_data.unequipped_modules,
       equipped_modules: equipped_modules.clone(),
       current_weapons: build_weapons(equipped_modules.clone()),
       new_projectiles: vec![],

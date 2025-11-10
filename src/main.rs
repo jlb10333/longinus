@@ -27,6 +27,7 @@ mod units;
 #[macroquad::main("MyGame")]
 async fn main() {
   Game::new()
+    .add_system(SaveSystem::start)
     .add_system(CombatSystem::start)
     .add_system(MapSystem::start)
     .add_system(PhysicsSystem::start)
@@ -35,7 +36,6 @@ async fn main() {
     .add_system(MenuSystem::start)
     .add_system(GraphicsSystem::start)
     .add_system(EnemySystem::start)
-    .add_system(SaveSystem::start)
     .run()
     .await;
 }
