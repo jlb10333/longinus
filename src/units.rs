@@ -4,8 +4,6 @@ use derive_more::{Add, Div, Mul, Sub};
 use macroquad::window::screen_height;
 use rapier2d::{na::Vector2, prelude::*};
 
-use crate::load_map::TILE_DIMENSION_PHYSICS;
-
 pub fn vec_zero() -> Vector2<f32> {
   return vector![0.0, 0.0];
 }

@@ -49,8 +49,25 @@ impl System for GraphicsSystem {
       physics_system
         .collider_set
         .iter()
-        .for_each(|(_, collider)| draw_collider(collider, camera_system.translation, None));
+        .for_each(|(_, collider)| draw_collider(collider, camera_system.translation, None, None));
     }
+
+    /* Draw entities */
+    physics_system.sensors.iter().for_each(|sensor| {
+      let label = if let Some(map_transition) = sensor.components.get::<MapTransitionOnCollision>()
+      {
+        Some(map_transition.map_name.clone())
+      } else {
+        None
+      };
+
+      draw_collider(
+        &physics_system.collider_set[sensor.handle],
+        camera_system.translation,
+        label,
+        Some(GREEN),
+      )
+    });
 
     /* Draw player */
     let player_screen_pos = PhysicsVector::from_vec(
@@ -204,6 +221,39 @@ fn draw_menu(menu: &Menu) {
     }
     crate::menu::MenuKind::InventoryConfirmEdit(_) => {}
     crate::menu::MenuKind::PauseMain => {}
+    crate::menu::MenuKind::SaveConfirm(_) => {
+      draw_rectangle(
+        screen_width() * 0.3,
+        screen_height() * 0.45,
+        screen_width() * 0.4,
+        screen_height() * 0.1,
+        LIGHTGRAY,
+      );
+
+      draw_text(
+        "Cancel",
+        0.4 * screen_width(),
+        0.5 * screen_height(),
+        40.0,
+        WHITE,
+      );
+
+      draw_text(
+        "Save",
+        0.6 * screen_width(),
+        0.5 * screen_height(),
+        40.0,
+        WHITE,
+      );
+
+      draw_text(
+        "-",
+        (0.4 + (menu.cursor_position.x as f32 * 0.2)) * screen_width(),
+        0.53 * screen_height(),
+        40.0,
+        WHITE,
+      );
+    }
   }
 }
 

@@ -6,6 +6,7 @@ use crate::graphics::GraphicsSystem;
 use crate::load_map::MapSystem;
 use crate::menu::MenuSystem;
 use crate::physics::PhysicsSystem;
+use crate::save::SaveSystem;
 use crate::system::{Game, System};
 
 mod camera;
@@ -19,6 +20,7 @@ mod graphics_utils;
 mod load_map;
 mod menu;
 mod physics;
+mod save;
 mod system;
 mod units;
 
@@ -33,6 +35,7 @@ async fn main() {
     .add_system(MenuSystem::start)
     .add_system(GraphicsSystem::start)
     .add_system(EnemySystem::start)
+    .add_system(SaveSystem::start)
     .run()
     .await;
 }

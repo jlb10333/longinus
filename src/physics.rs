@@ -6,7 +6,7 @@ use crate::{
   controls::ControlsSystem,
   ecs::{
     ComponentSet, Damageable, Damager, DestroyOnCollision, Enemy, Entity, GivesItemOnCollision,
-    MapTransitionOnCollision, Sensor,
+    MapTransitionOnCollision, SaveMenuOnCollision, Sensor,
   },
   enemy::EnemySystem,
   f::Monad,
@@ -35,20 +35,29 @@ pub struct PhysicsSystem {
   pub sensors: Vec<Sensor>,
   pub new_weapon_modules: Vec<(i32, WeaponModuleKind)>,
   pub frame_count: i64,
-  pub load_new_map_name: Option<String>,
+  pub load_new_map: Option<(String, i32)>,
+  pub save_point_contact: Option<i32>,
+  pub save_point_contact_last_frame: Option<i32>,
 }
 
 fn load_new_map(
   map: &Map,
   map_name: &str,
   acquired_modules: &Vec<(String, i32)>,
+  target_player_spawn_id: i32,
 ) -> Rc<PhysicsSystem> {
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
 
+  let player_spawn = map
+    .player_spawns
+    .iter()
+    .find(|&player_spawn| player_spawn.id == target_player_spawn_id)
+    .unwrap();
+
   /* Create the player. */
   let player_rigid_body = RigidBodyBuilder::dynamic()
-    .translation(map.player_spawn.translation.into_vec())
+    .translation(player_spawn.translation.into_vec())
     .build();
   let player_collider = &ColliderBuilder::ball(0.25)
     .restitution(0.7)
@@ -124,6 +133,19 @@ fn load_new_map(
       handle: collider_set.insert(map_transition.collider.clone()),
       components: ComponentSet::new().insert(MapTransitionOnCollision {
         map_name: map_transition.map_name.clone(),
+        target_player_spawn_id: map_transition.target_player_spawn_id,
+      }),
+    })
+    .collect::<Vec<_>>();
+
+  /* Spawn save points. */
+  let save_points = map
+    .save_points
+    .iter()
+    .map(|save_point| Sensor {
+      handle: collider_set.insert(save_point.collider.clone()),
+      components: ComponentSet::new().insert(SaveMenuOnCollision {
+        id: save_point.player_spawn_id,
       }),
     })
     .collect::<Vec<_>>();
@@ -149,6 +171,7 @@ fn load_new_map(
     .iter()
     .cloned()
     .chain(map_transitions)
+    .chain(save_points)
     .collect();
 
   println!("{}", collider_set.len());
@@ -169,7 +192,9 @@ fn load_new_map(
     sensors,
     frame_count: 0,
     new_weapon_modules: vec![],
-    load_new_map_name: None,
+    load_new_map: None,
+    save_point_contact: None,
+    save_point_contact_last_frame: None,
   });
 }
 
@@ -187,6 +212,7 @@ impl System for PhysicsSystem {
       map,
       &map_system.current_map_name,
       &combat_system.acquired_items,
+      map_system.target_player_spawn_id,
     )
   }
 
@@ -201,6 +227,7 @@ impl System for PhysicsSystem {
         map,
         &map_system.current_map_name,
         &combat_system.acquired_items,
+        map_system.target_player_spawn_id,
       );
     }
 
@@ -237,7 +264,9 @@ impl System for PhysicsSystem {
         sensors: self.sensors.clone(),
         frame_count: self.frame_count + 1,
         new_weapon_modules: vec![],
-        load_new_map_name: None,
+        load_new_map: None,
+        save_point_contact: self.save_point_contact,
+        save_point_contact_last_frame: self.save_point_contact_last_frame,
       });
     }
 
@@ -507,7 +536,7 @@ impl System for PhysicsSystem {
       }
     });
 
-    let load_new_map_name = sensors.iter().find_map(|sensor| {
+    let load_new_map = sensors.iter().find_map(|sensor| {
       if narrow_phase
         .intersection_pairs_with(sensor.handle)
         .filter(|(_, _, colliding)| *colliding)
@@ -520,7 +549,28 @@ impl System for PhysicsSystem {
       sensor
         .components
         .get::<MapTransitionOnCollision>()
-        .map(|map_transition_on_collision| map_transition_on_collision.map_name.clone())
+        .map(|map_transition_on_collision| {
+          (
+            map_transition_on_collision.map_name.clone(),
+            map_transition_on_collision.target_player_spawn_id,
+          )
+        })
+    });
+
+    let save_point_contact = sensors.iter().find_map(|sensor| {
+      if narrow_phase
+        .intersection_pairs_with(sensor.handle)
+        .filter(|(_, _, colliding)| *colliding)
+        .count()
+        == 0
+      {
+        return None;
+      }
+
+      sensor
+        .components
+        .get::<SaveMenuOnCollision>()
+        .map(|save_menu_on_collision| save_menu_on_collision.id)
     });
 
     /* Remove colliding sensors marked as destroy on collision */
@@ -583,7 +633,9 @@ impl System for PhysicsSystem {
       sensors,
       new_weapon_modules,
       frame_count: self.frame_count + 1,
-      load_new_map_name,
+      load_new_map,
+      save_point_contact,
+      save_point_contact_last_frame: self.save_point_contact,
     });
   }
 }

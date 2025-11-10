@@ -117,5 +117,11 @@ impl Component for GivesItemOnCollision {}
 
 pub struct MapTransitionOnCollision {
   pub map_name: String,
+  pub target_player_spawn_id: i32,
 }
 impl Component for MapTransitionOnCollision {}
+
+pub struct SaveMenuOnCollision {
+  pub id: i32,
+}
+impl Component for SaveMenuOnCollision {}

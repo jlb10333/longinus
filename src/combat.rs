@@ -1,6 +1,4 @@
 use std::{
-  any::Any,
-  array::from_fn,
   collections::{HashMap, HashSet},
   f32::consts::PI,
   rc::Rc,
@@ -15,7 +13,7 @@ use crate::{
   menu::MenuSystem,
   physics::PhysicsSystem,
   system::System,
-  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
+  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 use rapier2d::{
   na::{ArrayStorage, Const, Matrix, Vector2},
@@ -243,32 +241,6 @@ fn base_speed_from_projectile_type(projectile_type: ProjectileType) -> f32 {
   };
 }
 
-pub trait WeaponGenerator: Any {
-  fn generate(&self) -> Weapon;
-}
-
-pub trait WeaponModulator {
-  fn modulate(&self, weapon: &Weapon) -> Vec<Weapon>;
-}
-
-enum ConnectedModule {
-  Generator(Rc<dyn WeaponGenerator>),
-  Modulator(Rc<dyn WeaponModulator>, Rc<ConnectedModule>),
-}
-
-impl ConnectedModule {
-  fn build(&self) -> Vec<Weapon> {
-    return match self {
-      Self::Generator(generator) => Vec::from([generator.generate()]),
-      Self::Modulator(modulator, next) => next
-        .build()
-        .iter()
-        .flat_map(|weapon| modulator.modulate(weapon))
-        .collect(),
-    };
-  }
-}
-
 fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> Weapon {
   return Weapon {
     projectile_type,
@@ -322,7 +294,7 @@ pub type EquippedModules = Matrix<
   >,
 >;
 
-#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub enum WeaponModuleKind {
   Plasma,
   Front2Slot,
@@ -341,7 +313,7 @@ pub enum Direction {
   Right,
 }
 use Direction::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
 enum WeaponModule {

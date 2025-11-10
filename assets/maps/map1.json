@@ -66,8 +66,8 @@
                  "type":"PlayerSpawn",
                  "visible":true,
                  "width":0,
-                 "x":184,
-                 "y":128
+                 "x":24,
+                 "y":144
                 }, 
                 {
                  "height":0,
@@ -106,12 +106,46 @@
                  "height":168,
                  "id":18,
                  "name":"map2",
+                 "properties":[
+                        {
+                         "name":"TargetPlayerSpawn",
+                         "type":"int",
+                         "value":3
+                        }],
                  "rotation":0,
                  "type":"MapTransition",
                  "visible":true,
                  "width":8,
                  "x":392,
                  "y":32
+                }, 
+                {
+                 "height":0,
+                 "id":19,
+                 "name":"Player Spawn",
+                 "rotation":0,
+                 "type":"PlayerSpawn",
+                 "visible":true,
+                 "width":0,
+                 "x":376,
+                 "y":112
+                }, 
+                {
+                 "height":280,
+                 "id":28,
+                 "name":"map3",
+                 "properties":[
+                        {
+                         "name":"TargetPlayerSpawn",
+                         "type":"int",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"MapTransition",
+                 "visible":true,
+                 "width":8,
+                 "x":0,
+                 "y":16
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -120,15 +154,15 @@
          "y":0
         }],
  "nextlayerid":4,
- "nextobjectid":19,
+ "nextobjectid":30,
  "orientation":"orthogonal",
  "renderorder":"right-down",
- "tiledversion":"1.11.2",
+ "tiledversion":"1.11.1-99-gec89c545",
  "tileheight":8,
  "tilesets":[
         {
          "firstgid":1,
-         "source":"..\/map-internal.tsx"
+         "source":"tilesets\/colliders.tsx"
         }],
  "tilewidth":8,
  "type":"map",

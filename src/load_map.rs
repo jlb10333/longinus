@@ -50,6 +50,7 @@ pub enum MapPlayerSpawnClass {
 
 #[derive(Clone, Debug, Deserialize)]
 struct MapPlayerSpawn {
+  id: i32,
   x: f32,
   y: f32,
   #[serde(rename = "type")]
@@ -72,6 +73,17 @@ struct MapItemPickup {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapMapTransitionTargetClass {
+  TargetPlayerSpawn,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapMapTransitionTarget {
+  name: MapMapTransitionTargetClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 enum MapMapTransitionClass {
   MapTransition,
 }
@@ -83,8 +95,35 @@ struct MapMapTransition {
   width: f32,
   height: f32,
   name: String,
+  properties: (MapMapTransitionTarget,),
   #[serde(rename = "type")]
   _class: MapMapTransitionClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapSpawnPointTargetClass {
+  PlayerSpawnId,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapSpawnPointTarget {
+  name: MapSpawnPointTargetClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapSavePointClass {
+  SavePoint,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapSavePoint {
+  id: i32,
+  x: f32,
+  y: f32,
+  properties: (MapSpawnPointTarget,),
+  #[serde(rename = "type")]
+  _class: MapSavePointClass,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -94,6 +133,7 @@ enum Object {
   PlayerSpawn(MapPlayerSpawn),
   ItemPickup(MapItemPickup),
   MapTransition(MapMapTransition),
+  SavePoint(MapSavePoint),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -139,6 +179,7 @@ pub struct EnemySpawn {
 
 #[derive(Clone)]
 pub struct PlayerSpawn {
+  pub id: i32,
   pub translation: PhysicsVector,
 }
 
@@ -152,6 +193,13 @@ pub struct ItemPickup {
 #[derive(Clone)]
 pub struct MapTransition {
   pub map_name: String,
+  pub collider: Collider,
+  pub target_player_spawn_id: i32,
+}
+
+#[derive(Clone)]
+pub struct SavePoint {
+  pub player_spawn_id: i32,
   pub collider: Collider,
 }
 
@@ -179,10 +227,8 @@ pub enum MapComponent {
   Enemy(EnemySpawn),
   ItemPickup(ItemPickup),
   MapTransition(MapTransition),
+  SavePoint(SavePoint),
 }
-
-//    (index % map_dimensions.x) as f32 * TILE_DIMENSION_PHYSICS,
-//    (map_dimensions.y - (index / map_dimensions.x)) as f32 * TILE_DIMENSION_PHYSICS
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
   PhysicsScalar(scalar * 0.125 * TILE_DIMENSION_PHYSICS)
@@ -207,6 +253,7 @@ impl Object {
         })
       }
       Object::PlayerSpawn(player_spawn) => MapComponent::Player(PlayerSpawn {
+        id: player_spawn.id,
         translation: PhysicsVector::from_vec(vector![
           player_spawn.x * 0.125 * TILE_DIMENSION_PHYSICS,
           (map_height - player_spawn.y) * 0.125 * TILE_DIMENSION_PHYSICS
@@ -231,6 +278,7 @@ impl Object {
           .build(),
       }),
       Object::MapTransition(map_transition) => MapComponent::MapTransition(MapTransition {
+        target_player_spawn_id: map_transition.properties.0.value,
         map_name: map_transition.name.clone(),
         collider: ColliderBuilder::cuboid(
           *map_scalar_to_physics(map_transition.width / 2.0),
@@ -246,6 +294,20 @@ impl Object {
           filter: COLLISION_GROUP_PLAYER,
         })
         .build(),
+      }),
+      Object::SavePoint(save_point) => MapComponent::SavePoint(SavePoint {
+        player_spawn_id: save_point.properties.0.value,
+        collider: ColliderBuilder::ball(1.0)
+          .translation(vector![
+            *map_scalar_to_physics(save_point.x),
+            *map_scalar_to_physics(map_height - save_point.y)
+          ])
+          .sensor(true)
+          .collision_groups(InteractionGroups {
+            memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+            filter: COLLISION_GROUP_PLAYER,
+          })
+          .build(),
       }),
     }
   }
@@ -273,8 +335,8 @@ pub enum MapTile {
 
 pub fn translation_vector_from_index(index: i32, map_dimensions: Vector2<i32>) -> Vector<f32> {
   return vector![
-    (index % map_dimensions.x) as f32 * TILE_DIMENSION_PHYSICS,
-    (map_dimensions.y - (index / map_dimensions.x)) as f32 * TILE_DIMENSION_PHYSICS
+    ((index % map_dimensions.x) as f32 + 0.5) * TILE_DIMENSION_PHYSICS,
+    ((map_dimensions.y - (index / map_dimensions.x)) as f32 - 0.5) * TILE_DIMENSION_PHYSICS
   ];
 }
 
@@ -319,10 +381,11 @@ impl TileLayer {
 
 pub struct Map {
   pub colliders: Vec<MapTile>,
-  pub player_spawn: PlayerSpawn,
+  pub player_spawns: Vec<PlayerSpawn>,
   pub enemy_spawns: Vec<EnemySpawn>,
   pub item_pickups: Vec<ItemPickup>,
   pub map_transitions: Vec<MapTransition>,
+  pub save_points: Vec<SavePoint>,
 }
 
 impl RawMap {
@@ -366,7 +429,7 @@ impl RawMap {
       })
       .flatten();
 
-    let player_spawn = entities_layer
+    let player_spawns = entities_layer
       .map(|layer| {
         map_height.map(|map_height| {
           layer
@@ -379,7 +442,7 @@ impl RawMap {
                 vec![]
               }
             })
-            .collect::<Vec<_>>()[0]
+            .collect::<Vec<_>>()
             .clone()
         })
       })
@@ -421,11 +484,30 @@ impl RawMap {
       })
       .flatten();
 
+    let save_points = entities_layer
+      .map(|layer| {
+        map_height.map(|map_height| {
+          layer
+            .into(map_height)
+            .iter()
+            .flat_map(|object| {
+              if let MapComponent::SavePoint(save_point) = object {
+                vec![save_point.clone()]
+              } else {
+                vec![]
+              }
+            })
+            .collect::<Vec<_>>()
+        })
+      })
+      .flatten();
+
     if let Some(enemy_spawns) = enemy_spawns
-      && let Some(player_spawn) = player_spawn
+      && let Some(player_spawns) = player_spawns
       && let Some(item_pickups) = item_pickups
       && let Some(colliders) = colliders
       && let Some(map_transitions) = map_transitions
+      && let Some(save_points) = save_points
     {
       println!("{}", map_transitions[0].collider.translation());
       println!(
@@ -440,9 +522,10 @@ impl RawMap {
       Some(Map {
         colliders,
         enemy_spawns,
-        player_spawn,
+        player_spawns,
         item_pickups,
         map_transitions,
+        save_points,
       })
     } else {
       None
@@ -460,9 +543,11 @@ pub fn load(file_path: &str) -> Option<Map> {
 pub struct MapSystem {
   pub map: Option<Map>,
   pub current_map_name: String,
+  pub target_player_spawn_id: i32,
 }
 
 const INITIAL_MAP: &str = "map1";
+const INITIAL_SPAWN_ID: i32 = 5;
 
 fn map_read_path(map_name: String) -> String {
   return format!("./assets/maps/{map_name}.json");
@@ -477,22 +562,28 @@ impl System for MapSystem {
     return Rc::new(Self {
       map,
       current_map_name: INITIAL_MAP.to_string(),
+      target_player_spawn_id: INITIAL_SPAWN_ID,
     });
   }
 
   fn run(&self, ctx: &crate::system::Context) -> std::rc::Rc<dyn System> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
+    let load_new_map = physics_system.load_new_map.as_ref();
+
     return Rc::new(Self {
       map: physics_system
-        .load_new_map_name
+        .load_new_map
         .as_ref()
-        .map(|load_new_map_name| load(&map_read_path(load_new_map_name.to_string())))
+        .map(|(new_map_name, _)| load(&map_read_path(new_map_name.to_string())))
         .flatten(),
-      current_map_name: physics_system
-        .load_new_map_name
-        .as_ref()
+      current_map_name: load_new_map
+        .map(|(map_name, _)| map_name)
         .unwrap_or(&self.current_map_name)
+        .clone(),
+      target_player_spawn_id: load_new_map
+        .map(|(_, id)| id)
+        .unwrap_or(&self.target_player_spawn_id)
         .clone(),
     });
   }

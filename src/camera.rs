@@ -10,7 +10,7 @@ use crate::{
   load_map::MapSystem,
   physics::PhysicsSystem,
   system::System,
-  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2, vec_zero},
+  units::{PhysicsVector, ScreenVector, UnitConvert2, vec_zero},
 };
 
 const CAMERA_SCREEN_MARGIN: f32 = 0.4;
@@ -58,7 +58,10 @@ impl System for CameraSystem {
         .map
         .as_ref()
         .unwrap()
-        .player_spawn
+        .player_spawns
+        .iter()
+        .find(|player_spawn| player_spawn.id == map_system.target_player_spawn_id)
+        .unwrap()
         .translation
         .into_pos(vec_zero())
         .into_vec()
@@ -71,7 +74,14 @@ impl System for CameraSystem {
 
     if let Some(map) = map_system.map.as_ref() {
       return Rc::new(Self {
-        translation: map.player_spawn.translation.into_pos(vec_zero()).into_vec()
+        translation: map
+          .player_spawns
+          .iter()
+          .find(|player_spawn| player_spawn.id == map_system.target_player_spawn_id)
+          .unwrap()
+          .translation
+          .into_pos(vec_zero())
+          .into_vec()
           - vector![screen_width() / 2.0, screen_height() / 2.0],
       });
     }

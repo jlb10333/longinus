@@ -5,6 +5,7 @@ use rapier2d::prelude::*;
 use rapier2d::{na::Vector2, parry::utils::hashmap::HashMap};
 
 use crate::combat::Direction;
+use crate::physics::PhysicsSystem;
 use crate::{
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, EquippedModules, UnequippedModules,
@@ -27,6 +28,7 @@ pub enum MenuKind {
   InventoryMain,
   InventoryPickSlot(Option<WeaponModuleKind>, InventoryUpdateData),
   InventoryConfirmEdit(InventoryUpdateData),
+  SaveConfirm(i32),
 }
 
 #[derive(Clone)]
@@ -50,6 +52,7 @@ struct MenuInput {
 pub struct MenuSystem {
   pub active_menus: Vec<Menu>,
   pub inventory_update: Option<InventoryUpdateData>,
+  pub save_point_confirmed_id: Option<i32>,
 }
 
 impl System for MenuSystem {
@@ -60,6 +63,7 @@ impl System for MenuSystem {
     return Rc::new(Self {
       active_menus: vec![],
       inventory_update: None,
+      save_point_confirmed_id: None,
     });
   }
 
@@ -97,6 +101,7 @@ impl System for MenuSystem {
       let NextMenuUpdate {
         menus: next_menus,
         inventory_update,
+        save_point_confirmed_id,
       } = next_menus(
         &self.active_menus[0],
         &input,
@@ -110,20 +115,33 @@ impl System for MenuSystem {
           .cloned()
           .collect(),
         inventory_update,
+        save_point_confirmed_id,
       });
     }
 
+    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+
     Rc::new(Self {
-      active_menus: match open_menu(&input) {
+      active_menus: match open_menu(&input, physics_system) {
         Some(menu) => vec![menu],
         None => vec![],
       },
       inventory_update: None,
+      save_point_confirmed_id: None,
     })
   }
 }
 
-fn open_menu(input: &MenuInput) -> Option<Menu> {
+fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Option<Menu> {
+  if let Some(id) = physics_system.save_point_contact
+    && physics_system.save_point_contact_last_frame.is_none()
+  {
+    return Some(Menu {
+      kind: MenuKind::SaveConfirm(id),
+      cursor_position: vector![0, 0],
+    });
+  }
+
   if input.inventory {
     return Some(Menu {
       kind: MenuKind::InventoryMain,
@@ -141,9 +159,11 @@ fn open_menu(input: &MenuInput) -> Option<Menu> {
   return None;
 }
 
+#[derive(Default)]
 struct NextMenuUpdate {
   menus: Vec<Menu>,
   inventory_update: Option<InventoryUpdateData>,
+  save_point_confirmed_id: Option<i32>,
 }
 
 fn next_menus(
@@ -156,6 +176,7 @@ fn next_menus(
     return NextMenuUpdate {
       menus: vec![current_menu.clone()],
       inventory_update: None,
+      save_point_confirmed_id: None,
     };
   }
 
@@ -163,6 +184,7 @@ fn next_menus(
     return NextMenuUpdate {
       menus: vec![],
       inventory_update: None,
+      save_point_confirmed_id: None,
     };
   }
 
@@ -174,7 +196,7 @@ fn next_menus(
         unequipped_modules,
         equipped_modules,
       ),
-      inventory_update: None,
+      ..Default::default()
     },
     MenuKind::InventoryPickSlot(currently_holding, inventory_update) => {
       let (menus, inventory_update) = inventory_pick_slot(
@@ -186,16 +208,25 @@ fn next_menus(
       NextMenuUpdate {
         menus,
         inventory_update,
+        ..Default::default()
       }
     }
     MenuKind::InventoryConfirmEdit(_) => NextMenuUpdate {
       menus: vec![current_menu.clone()],
-      inventory_update: None,
+      ..Default::default()
     },
     MenuKind::PauseMain => NextMenuUpdate {
       menus: vec![current_menu.clone()],
-      inventory_update: None,
+      ..Default::default()
     },
+    MenuKind::SaveConfirm(id) => {
+      let (menus, save_point_confirmed_id) = save_confirm(current_menu.cursor_position, input, id);
+      NextMenuUpdate {
+        menus,
+        save_point_confirmed_id,
+        ..Default::default()
+      }
+    }
   }
 }
 
@@ -415,6 +446,34 @@ fn inventory_pick_slot(
     }],
     None,
   );
+}
+
+fn save_confirm(
+  cursor_position: Vector2<i32>,
+  input: &MenuInput,
+  id: i32,
+) -> (Vec<Menu>, Option<i32>) {
+  let cursor_position = handle_cursor_movement(cursor_position, 0, 1, 0, input, None);
+
+  if !input.confirm {
+    return (
+      vec![Menu {
+        cursor_position,
+        kind: MenuKind::SaveConfirm(id),
+      }],
+      None,
+    );
+  }
+
+  if cursor_position == vector![0, 0] {
+    return (vec![], None);
+  }
+
+  if cursor_position == vector![1, 0] {
+    return (vec![], Some(id));
+  }
+
+  panic!("Unaccounted cursor position {}", cursor_position);
 }
 
 fn menu_input_to_direction(input: &MenuInput) -> HashSet<Direction> {
