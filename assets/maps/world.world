@@ -13,6 +13,20 @@
             "width": 400,
             "x": 400,
             "y": 32
+        },
+        {
+            "fileName": "map3.json",
+            "height": 400,
+            "width": 400,
+            "x": -400,
+            "y": 0
+        },
+        {
+            "fileName": "map4.json",
+            "height": 80,
+            "width": 80,
+            "x": -480,
+            "y": 96
         }
     ],
     "onlyShowAdjacentMaps": false,

@@ -528,7 +528,7 @@ impl System for CombatSystem {
       current_weapons: build_weapons(equipped_modules.clone()),
       new_projectiles: vec![],
       reticle_angle: 0.0,
-      acquired_items: vec![],
+      acquired_items: save_data.acquired_items,
     });
   }
 

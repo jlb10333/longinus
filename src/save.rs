@@ -19,6 +19,7 @@ pub struct SaveData {
   pub unequipped_modules: UnequippedModules,
   pub equipped_modules:
     [[Option<WeaponModuleKind>; EQUIP_SLOTS_HEIGHT as usize]; EQUIP_SLOTS_WIDTH as usize],
+  pub acquired_items: Vec<(String, i32)>,
 }
 
 fn save_data_path(file_name: String) -> String {
@@ -56,6 +57,7 @@ impl System for SaveSystem {
         map_name: map_system.current_map_name.clone(),
         unequipped_modules: combat_system.unequipped_modules.clone(),
         equipped_modules: combat_system.equipped_modules.data.0.clone(),
+        acquired_items: combat_system.acquired_items.clone(),
       };
 
       let sys_time: DateTime<Utc> = time::SystemTime::now().into();
