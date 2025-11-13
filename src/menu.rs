@@ -6,6 +6,7 @@ use rapier2d::{na::Vector2, parry::utils::hashmap::HashMap};
 
 use crate::combat::Direction;
 use crate::physics::PhysicsSystem;
+use crate::save::{SaveData, SaveSystem};
 use crate::{
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, EquippedModules, UnequippedModules,
@@ -24,6 +25,7 @@ pub struct InventoryUpdateData {
 
 #[derive(Clone)]
 pub enum MenuKind {
+  Main,
   PauseMain,
   InventoryMain,
   InventoryPickSlot(Option<WeaponModuleKind>, InventoryUpdateData),
@@ -49,10 +51,17 @@ struct MenuInput {
 }
 
 #[derive(Clone)]
+pub enum MapToLoad {
+  Initial,
+  SaveData(String),
+}
+
+#[derive(Clone, Default)]
 pub struct MenuSystem {
   pub active_menus: Vec<Menu>,
   pub inventory_update: Option<InventoryUpdateData>,
   pub save_point_confirmed_id: Option<i32>,
+  pub map_to_load: Option<MapToLoad>,
 }
 
 impl System for MenuSystem {
@@ -62,8 +71,7 @@ impl System for MenuSystem {
   {
     return Rc::new(Self {
       active_menus: vec![],
-      inventory_update: None,
-      save_point_confirmed_id: None,
+      ..Default::default()
     });
   }
 
@@ -96,17 +104,20 @@ impl System for MenuSystem {
     }
 
     let combat_system = ctx.get::<CombatSystem>().unwrap();
+    let save_system = ctx.get::<SaveSystem>().unwrap();
 
     if self.active_menus.iter().count() > 0 {
       let NextMenuUpdate {
         menus: next_menus,
         inventory_update,
         save_point_confirmed_id,
+        map_to_load,
       } = next_menus(
         &self.active_menus[0],
         &input,
         &combat_system.unequipped_modules,
         &combat_system.equipped_modules,
+        &save_system.available_save_data,
       );
       return Rc::new(Self {
         active_menus: next_menus
@@ -116,6 +127,7 @@ impl System for MenuSystem {
           .collect(),
         inventory_update,
         save_point_confirmed_id,
+        map_to_load,
       });
     }
 
@@ -126,8 +138,7 @@ impl System for MenuSystem {
         Some(menu) => vec![menu],
         None => vec![],
       },
-      inventory_update: None,
-      save_point_confirmed_id: None,
+      ..Default::default()
     })
   }
 }
@@ -164,6 +175,7 @@ struct NextMenuUpdate {
   menus: Vec<Menu>,
   inventory_update: Option<InventoryUpdateData>,
   save_point_confirmed_id: Option<i32>,
+  map_to_load: Option<MapToLoad>,
 }
 
 fn next_menus(
@@ -171,24 +183,31 @@ fn next_menus(
   input: &MenuInput,
   unequipped_modules: &UnequippedModules,
   equipped_modules: &EquippedModules,
+  available_saves: &Vec<String>,
 ) -> NextMenuUpdate {
   if !(input.up || input.down || input.left || input.right || input.confirm || input.cancel) {
     return NextMenuUpdate {
       menus: vec![current_menu.clone()],
-      inventory_update: None,
-      save_point_confirmed_id: None,
+      ..Default::default()
     };
   }
 
   if input.cancel {
     return NextMenuUpdate {
       menus: vec![],
-      inventory_update: None,
-      save_point_confirmed_id: None,
+      ..Default::default()
     };
   }
 
   match current_menu.kind.clone() {
+    MenuKind::Main => {
+      let (menus, map_to_load) = main_menu(current_menu.cursor_position, available_saves, input);
+      NextMenuUpdate {
+        menus,
+        map_to_load,
+        ..Default::default()
+      }
+    }
     MenuKind::InventoryMain => NextMenuUpdate {
       menus: inventory_main(
         current_menu.cursor_position,
@@ -228,6 +247,67 @@ fn next_menus(
       }
     }
   }
+}
+
+fn main_menu(
+  cursor_position: Vector2<i32>,
+  available_saves: &Vec<String>,
+  input: &MenuInput,
+) -> (Vec<Menu>, Option<MapToLoad>) {
+  let should_include_continue_option = available_saves.len() > 0;
+
+  let cursor_position = handle_cursor_movement(
+    cursor_position,
+    0,
+    0,
+    if should_include_continue_option { 2 } else { 1 },
+    input,
+    None,
+  );
+
+  /* No change if confirm is not input */
+  if !input.confirm {
+    return (
+      vec![Menu {
+        cursor_position,
+        kind: MenuKind::Main,
+      }],
+      None,
+    );
+  }
+
+  /* Transition to next menu */
+  let continue_game = should_include_continue_option && cursor_position == vector![0, 0];
+  let new_game = if should_include_continue_option {
+    cursor_position == vector![0, 1]
+  } else {
+    cursor_position == vector![0, 0]
+  };
+  let load_game = if should_include_continue_option {
+    cursor_position == vector![0, 2]
+  } else {
+    cursor_position == vector![0, 1]
+  };
+
+  if continue_game {
+    let most_recent_save = available_saves
+      .iter()
+      .fold("", |init, elem| if *init > **elem { init } else { elem });
+    return (
+      vec![],
+      Some(MapToLoad::SaveData(most_recent_save.to_string())),
+    );
+  }
+
+  if new_game {
+    return (vec![], Some(MapToLoad::Initial));
+  }
+
+  if load_game {
+    todo!();
+  }
+
+  panic!("Unhandled cursor positon {}", cursor_position);
 }
 
 const EDIT_CURSOR: Vector2<i32> = vector![0, 0];

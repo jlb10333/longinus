@@ -30,6 +30,7 @@ const INITIAL_SAVE_FILE_PATH: &str = "./assets/save_initial.json";
 
 pub struct SaveSystem {
   pub loaded_save_data: Option<SaveData>,
+  pub available_save_data: Vec<String>,
 }
 
 impl System for SaveSystem {
@@ -37,19 +38,36 @@ impl System for SaveSystem {
   where
     Self: Sized,
   {
-    let initial_data: SaveData =
-      serde_json::from_str(&fs::read_to_string(INITIAL_SAVE_FILE_PATH).unwrap())
-        .expect("JSON was not well-formatted");
+    let available_save_data = fs::read_dir("./")
+      .unwrap()
+      .flatten()
+      .map(|dir_entry| dir_entry.file_name().into_string())
+      .flatten()
+      .collect::<Vec<_>>();
     return Rc::new(SaveSystem {
-      loaded_save_data: Some(initial_data),
+      loaded_save_data: None,
+      available_save_data,
     });
   }
 
   fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
     let menu_system = ctx.get::<MenuSystem>().unwrap();
+    let map_system = ctx.get::<MapSystem>().unwrap();
 
+    /* Load save data */
+    let loaded_save_data: Option<SaveData> = menu_system.map_to_load.as_ref().map(|map_to_load| {
+      serde_json::from_str(
+        &fs::read_to_string(match map_to_load {
+          crate::menu::MapToLoad::Initial => INITIAL_SAVE_FILE_PATH,
+          crate::menu::MapToLoad::SaveData(path) => &path,
+        })
+        .unwrap(),
+      )
+      .expect("JSON was not well-formatted")
+    });
+
+    /* Save current progress */
     if let Some(player_spawn_id) = menu_system.save_point_confirmed_id {
-      let map_system = ctx.get::<MapSystem>().unwrap();
       let combat_system = ctx.get::<CombatSystem>().unwrap();
 
       let save_data = SaveData {
@@ -70,7 +88,17 @@ impl System for SaveSystem {
     }
 
     return Rc::new(SaveSystem {
-      loaded_save_data: None,
+      loaded_save_data,
+      available_save_data: self
+        .available_save_data
+        .iter()
+        .chain(
+          menu_system
+            .save_point_confirmed_id
+            .map(|_| &map_system.current_map_name),
+        )
+        .cloned()
+        .collect(),
     });
   }
 }

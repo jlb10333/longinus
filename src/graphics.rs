@@ -129,6 +129,46 @@ impl System for GraphicsSystem {
 
 fn draw_menu(menu: &Menu) {
   match menu.kind.clone() {
+    crate::menu::MenuKind::Main => {
+      draw_rectangle(
+        screen_width() * 0.1,
+        screen_height() * 0.1,
+        screen_width() * 0.8,
+        screen_height() * 0.8,
+        GREEN,
+      );
+
+      draw_text(
+        "LONGINUS",
+        screen_width() * 0.2,
+        screen_height() * 0.3,
+        40.0,
+        WHITE,
+      );
+
+      draw_text(
+        if menu.cursor_position == vector![0, 0] {
+          "new game-"
+        } else {
+          "new game"
+        },
+        screen_width() * 0.2,
+        screen_height() * 0.6,
+        40.0,
+        WHITE,
+      );
+      draw_text(
+        if menu.cursor_position == vector![1, 0] {
+          "load game-"
+        } else {
+          "load game"
+        },
+        screen_width() * 0.5,
+        screen_height() * 0.6,
+        40.0,
+        WHITE,
+      );
+    }
     crate::menu::MenuKind::InventoryMain => {
       draw_rectangle(
         screen_width() * 0.1,
