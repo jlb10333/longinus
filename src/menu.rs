@@ -131,19 +131,26 @@ impl System for MenuSystem {
       });
     }
 
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+    let save_system = ctx.get::<SaveSystem>().unwrap();
+
+    let active_menus = match save_system
+      .active_game_state
+      .as_ref()
+      .map(|active_game_state| open_menu(&input, &active_game_state.map_system.physics_system))
+      .flatten()
+    {
+      Some(menu) => vec![menu],
+      None => vec![],
+    };
 
     Rc::new(Self {
-      active_menus: match open_menu(&input, physics_system) {
-        Some(menu) => vec![menu],
-        None => vec![],
-      },
+      active_menus,
       ..Default::default()
     })
   }
 }
 
-fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Option<Menu> {
+fn open_menu(input: &MenuInput, physics_system: &PhysicsSystem) -> Option<Menu> {
   if let Some(id) = physics_system.save_point_contact
     && physics_system.save_point_contact_last_frame.is_none()
   {

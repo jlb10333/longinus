@@ -7,7 +7,7 @@ use crate::{
   combat::WeaponModuleKind,
   f::{Monad, MonadTranslate},
   physics::PhysicsSystem,
-  save::SaveSystem,
+  save::{SaveData, SaveSystem},
   system::System,
   units::{PhysicsScalar, PhysicsVector, UnitConvert2},
 };
@@ -380,6 +380,7 @@ impl TileLayer {
   }
 }
 
+#[derive(Clone)]
 pub struct Map {
   pub colliders: Vec<MapTile>,
   pub player_spawns: Vec<PlayerSpawn>,
@@ -542,51 +543,60 @@ pub fn load(file_path: &str) -> Option<Map> {
 }
 
 pub struct MapSystem {
-  pub map: Option<Map>,
+  pub map: Map,
   pub current_map_name: String,
   pub target_player_spawn_id: i32,
+  pub physics_system: PhysicsSystem,
 }
 
 fn map_read_path(map_name: &String) -> String {
   return format!("./assets/maps/{map_name}.json");
 }
 
-impl System for MapSystem {
-  fn start(ctx: crate::system::Context) -> std::rc::Rc<dyn System>
-  where
-    Self: Sized,
-  {
-    let save_system = ctx.get::<SaveSystem>().unwrap();
+impl MapSystem {
+  pub fn start(ctx: &crate::system::Context, loaded_save_data: &SaveData) -> Self {
+    let map = load(&map_read_path(&loaded_save_data.map_name)).unwrap();
 
-    let save_data = save_system.loaded_save_data.as_ref().unwrap();
+    let physics_system = PhysicsSystem::start(
+      ctx,
+      &map,
+      &loaded_save_data.map_name,
+      loaded_save_data.player_spawn_id,
+    );
 
-    let map = load(&map_read_path(&save_data.map_name));
-    return Rc::new(Self {
+    return Self {
       map,
-      current_map_name: save_data.map_name.clone(),
-      target_player_spawn_id: save_data.player_spawn_id,
-    });
+      current_map_name: loaded_save_data.map_name.clone(),
+      target_player_spawn_id: loaded_save_data.player_spawn_id,
+      physics_system,
+    };
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> std::rc::Rc<dyn System> {
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+  pub fn run(&self, ctx: &crate::system::Context) -> Self {
+    let physics_system = self.physics_system.run(ctx);
 
     let load_new_map = physics_system.load_new_map.as_ref();
 
-    return Rc::new(Self {
-      map: physics_system
-        .load_new_map
-        .as_ref()
-        .map(|(new_map_name, _)| load(&map_read_path(&new_map_name.to_string())))
-        .flatten(),
-      current_map_name: load_new_map
-        .map(|(map_name, _)| map_name)
-        .unwrap_or(&self.current_map_name)
-        .clone(),
-      target_player_spawn_id: load_new_map
-        .map(|(_, id)| id)
-        .unwrap_or(&self.target_player_spawn_id)
-        .clone(),
-    });
+    if let Some((new_map_name, id)) = load_new_map {
+      let map = load(&map_read_path(&new_map_name.to_string())).unwrap();
+      let current_map_name = new_map_name.clone();
+      let target_player_spawn_id = id.clone();
+      let physics_system =
+        PhysicsSystem::start(ctx, &map, &current_map_name, target_player_spawn_id);
+
+      Self {
+        map,
+        current_map_name,
+        target_player_spawn_id,
+        physics_system,
+      }
+    } else {
+      Self {
+        map: self.map.clone(),
+        current_map_name: self.current_map_name.clone(),
+        target_player_spawn_id: self.target_player_spawn_id.clone(),
+        physics_system,
+      }
+    }
   }
 }

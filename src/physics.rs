@@ -15,7 +15,7 @@ use crate::{
     COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapSystem, MapTile,
   },
   menu::MenuSystem,
-  system::System,
+  system::{Context, System},
   units::UnitConvert2,
 };
 
@@ -40,196 +40,171 @@ pub struct PhysicsSystem {
   pub save_point_contact_last_frame: Option<i32>,
 }
 
-fn load_new_map(
-  map: &Map,
-  map_name: &str,
-  acquired_modules: &Vec<(String, i32)>,
-  target_player_spawn_id: i32,
-) -> Rc<PhysicsSystem> {
-  let mut rigid_body_set = RigidBodySet::new();
-  let mut collider_set = ColliderSet::new();
-
-  let player_spawn = map
-    .player_spawns
-    .iter()
-    .find(|&player_spawn| player_spawn.id == target_player_spawn_id)
-    .unwrap();
-
-  /* Create the player. */
-  let player_rigid_body = RigidBodyBuilder::dynamic()
-    .translation(player_spawn.translation.into_vec())
-    .build();
-  let player_collider = &ColliderBuilder::ball(0.25)
-    .restitution(0.7)
-    .collision_groups(InteractionGroups {
-      memberships: COLLISION_GROUP_PLAYER,
-      filter: COLLISION_GROUP_WALL
-        .union(COLLISION_GROUP_ENEMY)
-        .union(COLLISION_GROUP_ENEMY_PROJECTILE)
-        .union(COLLISION_GROUP_PLAYER_INTERACTIBLE),
-    })
-    .build();
-  let player_handle = rigid_body_set.insert(player_rigid_body);
-  collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
-
-  let player = Entity {
-    handle: player_handle,
-    components: ComponentSet::new().insert(Damageable {
-      health: 100.0,
-      destroy_on_zero_health: false,
-      current_hitstun: 0.0,
-      max_hitstun: 30.0,
-    }),
-  };
-
-  /* Spawn enemies. */
-  let enemies: Vec<_> = map
-    .enemy_spawns
-    .iter()
-    .map(|enemy_spawn| {
-      let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
-      collider_set.insert_with_parent(enemy_spawn.collider.clone(), handle, &mut rigid_body_set);
-      Entity {
-        handle,
-        components: ComponentSet::new()
-          .insert(Damageable {
-            health: 100.0,
-            destroy_on_zero_health: true,
-            current_hitstun: 0.0,
-            max_hitstun: 0.0,
-          })
-          .insert(Damager { damage: 20.0 })
-          .insert(Enemy {
-            name: enemy_spawn.name.clone(),
-          }),
-      }
-    })
-    .collect();
-
-  /* Spawn item pickups. */
-  let item_pickups = map
-    .item_pickups
-    .iter()
-    .filter(|item_pickup| !acquired_modules.contains(&(map_name.to_string(), item_pickup.id)))
-    .map(|item_pickup| {
-      let handle = collider_set.insert(item_pickup.collider.clone());
-      Sensor {
-        handle,
-        components: ComponentSet::new()
-          .insert(GivesItemOnCollision {
-            id: item_pickup.id,
-            weapon_module_kind: item_pickup.weapon_module_kind.clone(),
-          })
-          .insert(DestroyOnCollision),
-      }
-    })
-    .collect::<Vec<_>>();
-
-  /* Spawn map transitions. */
-  let map_transitions = map
-    .map_transitions
-    .iter()
-    .map(|map_transition| Sensor {
-      handle: collider_set.insert(map_transition.collider.clone()),
-      components: ComponentSet::new().insert(MapTransitionOnCollision {
-        map_name: map_transition.map_name.clone(),
-        target_player_spawn_id: map_transition.target_player_spawn_id,
-      }),
-    })
-    .collect::<Vec<_>>();
-
-  /* Spawn save points. */
-  let save_points = map
-    .save_points
-    .iter()
-    .map(|save_point| Sensor {
-      handle: collider_set.insert(save_point.collider.clone()),
-      components: ComponentSet::new().insert(SaveMenuOnCollision {
-        id: save_point.player_spawn_id,
-      }),
-    })
-    .collect::<Vec<_>>();
-
-  /* Create the map colliders. */
-  map.colliders.iter().for_each(|map_tile| {
-    match map_tile {
-      MapTile::Wall(wall) => collider_set.insert(wall.collider.clone()),
-    };
-  });
-
-  /* Create other structures necessary for the simulation. */
-  let integration_parameters = IntegrationParameters::default();
-  let physics_pipeline = Rc::new(RefCell::new(PhysicsPipeline::new()));
-  let island_manager = IslandManager::new();
-  let broad_phase = DefaultBroadPhase::new();
-  let narrow_phase = NarrowPhase::new();
-  let impulse_joint_set = ImpulseJointSet::new();
-  let multibody_joint_set = MultibodyJointSet::new();
-  let ccd_solver: CCDSolver = CCDSolver::new();
-  let entities: Vec<_> = [player].iter().cloned().chain(enemies).collect();
-  let sensors = item_pickups
-    .iter()
-    .cloned()
-    .chain(map_transitions)
-    .chain(save_points)
-    .collect();
-
-  println!("{}", collider_set.len());
-
-  return Rc::new(PhysicsSystem {
-    rigid_body_set,
-    collider_set,
-    integration_parameters,
-    physics_pipeline,
-    island_manager,
-    broad_phase,
-    narrow_phase,
-    impulse_joint_set,
-    multibody_joint_set,
-    ccd_solver,
-    player_handle,
-    entities,
-    sensors,
-    frame_count: 0,
-    new_weapon_modules: vec![],
-    load_new_map: None,
-    save_point_contact: None,
-    save_point_contact_last_frame: None,
-  });
-}
-
-impl System for PhysicsSystem {
-  fn start(ctx: crate::system::Context) -> Rc<dyn System>
-  where
-    Self: Sized,
-  {
-    let map_system = ctx.get::<MapSystem>().unwrap();
-    let map = map_system.map.as_ref().unwrap();
-
+impl PhysicsSystem {
+  pub fn start(
+    ctx: &Context,
+    map: &Map,
+    current_map_name: &str,
+    target_player_spawn_id: i32,
+  ) -> Self {
     let combat_system = ctx.get::<CombatSystem>().unwrap();
 
-    load_new_map(
-      map,
-      &map_system.current_map_name,
-      &combat_system.acquired_items,
-      map_system.target_player_spawn_id,
-    )
+    let mut rigid_body_set = RigidBodySet::new();
+    let mut collider_set = ColliderSet::new();
+
+    let player_spawn = map
+      .player_spawns
+      .iter()
+      .find(|&player_spawn| player_spawn.id == target_player_spawn_id)
+      .unwrap();
+
+    /* Create the player. */
+    let player_rigid_body = RigidBodyBuilder::dynamic()
+      .translation(player_spawn.translation.into_vec())
+      .build();
+    let player_collider = &ColliderBuilder::ball(0.25)
+      .restitution(0.7)
+      .collision_groups(InteractionGroups {
+        memberships: COLLISION_GROUP_PLAYER,
+        filter: COLLISION_GROUP_WALL
+          .union(COLLISION_GROUP_ENEMY)
+          .union(COLLISION_GROUP_ENEMY_PROJECTILE)
+          .union(COLLISION_GROUP_PLAYER_INTERACTIBLE),
+      })
+      .build();
+    let player_handle = rigid_body_set.insert(player_rigid_body);
+    collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
+
+    let player = Entity {
+      handle: player_handle,
+      components: ComponentSet::new().insert(Damageable {
+        health: 100.0,
+        destroy_on_zero_health: false,
+        current_hitstun: 0.0,
+        max_hitstun: 30.0,
+      }),
+    };
+
+    /* Spawn enemies. */
+    let enemies: Vec<_> = map
+      .enemy_spawns
+      .iter()
+      .map(|enemy_spawn| {
+        let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
+        collider_set.insert_with_parent(enemy_spawn.collider.clone(), handle, &mut rigid_body_set);
+        Entity {
+          handle,
+          components: ComponentSet::new()
+            .insert(Damageable {
+              health: 100.0,
+              destroy_on_zero_health: true,
+              current_hitstun: 0.0,
+              max_hitstun: 0.0,
+            })
+            .insert(Damager { damage: 20.0 })
+            .insert(Enemy {
+              name: enemy_spawn.name.clone(),
+            }),
+        }
+      })
+      .collect();
+
+    /* Spawn item pickups. */
+    let item_pickups = map
+      .item_pickups
+      .iter()
+      .filter(|item_pickup| {
+        !combat_system
+          .acquired_items
+          .contains(&(current_map_name.to_string(), item_pickup.id))
+      })
+      .map(|item_pickup| {
+        let handle = collider_set.insert(item_pickup.collider.clone());
+        Sensor {
+          handle,
+          components: ComponentSet::new()
+            .insert(GivesItemOnCollision {
+              id: item_pickup.id,
+              weapon_module_kind: item_pickup.weapon_module_kind.clone(),
+            })
+            .insert(DestroyOnCollision),
+        }
+      })
+      .collect::<Vec<_>>();
+
+    /* Spawn map transitions. */
+    let map_transitions = map
+      .map_transitions
+      .iter()
+      .map(|map_transition| Sensor {
+        handle: collider_set.insert(map_transition.collider.clone()),
+        components: ComponentSet::new().insert(MapTransitionOnCollision {
+          map_name: map_transition.map_name.clone(),
+          target_player_spawn_id: map_transition.target_player_spawn_id,
+        }),
+      })
+      .collect::<Vec<_>>();
+
+    /* Spawn save points. */
+    let save_points = map
+      .save_points
+      .iter()
+      .map(|save_point| Sensor {
+        handle: collider_set.insert(save_point.collider.clone()),
+        components: ComponentSet::new().insert(SaveMenuOnCollision {
+          id: save_point.player_spawn_id,
+        }),
+      })
+      .collect::<Vec<_>>();
+
+    /* Create the map colliders. */
+    map.colliders.iter().for_each(|map_tile| {
+      match map_tile {
+        MapTile::Wall(wall) => collider_set.insert(wall.collider.clone()),
+      };
+    });
+
+    /* Create other structures necessary for the simulation. */
+    let integration_parameters = IntegrationParameters::default();
+    let physics_pipeline = Rc::new(RefCell::new(PhysicsPipeline::new()));
+    let island_manager = IslandManager::new();
+    let broad_phase = DefaultBroadPhase::new();
+    let narrow_phase = NarrowPhase::new();
+    let impulse_joint_set = ImpulseJointSet::new();
+    let multibody_joint_set = MultibodyJointSet::new();
+    let ccd_solver: CCDSolver = CCDSolver::new();
+    let entities: Vec<_> = [player].iter().cloned().chain(enemies).collect();
+    let sensors = item_pickups
+      .iter()
+      .cloned()
+      .chain(map_transitions)
+      .chain(save_points)
+      .collect();
+
+    PhysicsSystem {
+      rigid_body_set,
+      collider_set,
+      integration_parameters,
+      physics_pipeline,
+      island_manager,
+      broad_phase,
+      narrow_phase,
+      impulse_joint_set,
+      multibody_joint_set,
+      ccd_solver,
+      player_handle,
+      entities,
+      sensors,
+      frame_count: 0,
+      new_weapon_modules: vec![],
+      load_new_map: None,
+      save_point_contact: None,
+      save_point_contact_last_frame: None,
+    }
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
-    let map_system = ctx.get::<MapSystem>().unwrap();
-
+  pub fn run(&self, ctx: &crate::system::Context) -> Self {
     let combat_system = ctx.get::<CombatSystem>().unwrap();
-
-    if let Some(map) = map_system.map.as_ref() {
-      // TODO: give the ability to specify which player spawn to start from
-      return load_new_map(
-        map,
-        &map_system.current_map_name,
-        &combat_system.acquired_items,
-        map_system.target_player_spawn_id,
-      );
-    }
 
     let mut physics_pipeline = self.physics_pipeline.as_ref().borrow_mut();
     let mut island_manager = self.island_manager.clone();
@@ -248,7 +223,7 @@ impl System for PhysicsSystem {
     let menu_system = ctx.get::<MenuSystem>().unwrap();
 
     if menu_system.active_menus.iter().count() > 0 {
-      return Rc::new(Self {
+      return Self {
         rigid_body_set: rigid_body_set.clone(),
         collider_set: collider_set,
         integration_parameters: self.integration_parameters,
@@ -267,7 +242,7 @@ impl System for PhysicsSystem {
         load_new_map: None,
         save_point_contact: self.save_point_contact,
         save_point_contact_last_frame: self.save_point_contact_last_frame,
-      });
+      };
     }
 
     /* Move the player */
@@ -617,7 +592,7 @@ impl System for PhysicsSystem {
       &(),
     );
 
-    return Rc::new(Self {
+    return Self {
       rigid_body_set: rigid_body_set.clone(),
       collider_set: collider_set,
       integration_parameters: self.integration_parameters,
@@ -636,6 +611,6 @@ impl System for PhysicsSystem {
       load_new_map,
       save_point_contact,
       save_point_contact_last_frame: self.save_point_contact,
-    });
+    };
   }
 }
