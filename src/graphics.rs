@@ -129,7 +129,7 @@ impl System for GraphicsSystem {
 
 fn draw_menu(menu: &Menu) {
   match menu.kind.clone() {
-    crate::menu::MenuKind::Main => {
+    crate::menu::MenuKind::PauseMain => {
       draw_rectangle(
         screen_width() * 0.1,
         screen_height() * 0.1,
@@ -260,7 +260,6 @@ fn draw_menu(menu: &Menu) {
         });
     }
     crate::menu::MenuKind::InventoryConfirmEdit(_) => {}
-    crate::menu::MenuKind::PauseMain => {}
     crate::menu::MenuKind::SaveConfirm(_) => {
       draw_rectangle(
         screen_width() * 0.3,

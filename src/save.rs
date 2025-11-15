@@ -28,6 +28,8 @@ fn save_data_path(file_name: String) -> String {
 
 const INITIAL_SAVE_FILE_PATH: &str = "./assets/save_initial.json";
 
+const SAVE_DIR_PATH: &str = "./storage/";
+
 pub struct SaveSystem {
   pub loaded_save_data: Option<SaveData>,
   pub available_save_data: Vec<String>,
@@ -38,14 +40,15 @@ impl System for SaveSystem {
   where
     Self: Sized,
   {
-    let available_save_data = fs::read_dir("./")
+    let available_save_data = fs::read_dir(SAVE_DIR_PATH)
       .unwrap()
       .flatten()
       .map(|dir_entry| dir_entry.file_name().into_string())
       .flatten()
       .collect::<Vec<_>>();
     return Rc::new(SaveSystem {
-      loaded_save_data: None,
+      loaded_save_data: serde_json::from_str(&fs::read_to_string(INITIAL_SAVE_FILE_PATH).unwrap())
+        .expect("JSON was not well-formatted"),
       available_save_data,
     });
   }
@@ -56,14 +59,16 @@ impl System for SaveSystem {
 
     /* Load save data */
     let loaded_save_data: Option<SaveData> = menu_system.map_to_load.as_ref().map(|map_to_load| {
-      serde_json::from_str(
-        &fs::read_to_string(match map_to_load {
-          crate::menu::MapToLoad::Initial => INITIAL_SAVE_FILE_PATH,
-          crate::menu::MapToLoad::SaveData(path) => &path,
-        })
-        .unwrap(),
-      )
-      .expect("JSON was not well-formatted")
+      let path = match map_to_load {
+        crate::menu::MapToLoad::Initial => INITIAL_SAVE_FILE_PATH.to_string(),
+        crate::menu::MapToLoad::SaveData(path) => {
+          format!("{}{}", SAVE_DIR_PATH.to_string(), *path)
+        }
+      };
+
+      println!("{}", path);
+
+      serde_json::from_str(&fs::read_to_string(path).unwrap()).expect("JSON was not well-formatted")
     });
 
     /* Save current progress */

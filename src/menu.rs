@@ -25,7 +25,6 @@ pub struct InventoryUpdateData {
 
 #[derive(Clone)]
 pub enum MenuKind {
-  Main,
   PauseMain,
   InventoryMain,
   InventoryPickSlot(Option<WeaponModuleKind>, InventoryUpdateData),
@@ -200,8 +199,8 @@ fn next_menus(
   }
 
   match current_menu.kind.clone() {
-    MenuKind::Main => {
-      let (menus, map_to_load) = main_menu(current_menu.cursor_position, available_saves, input);
+    MenuKind::PauseMain => {
+      let (menus, map_to_load) = pause_main(current_menu.cursor_position, available_saves, input);
       NextMenuUpdate {
         menus,
         map_to_load,
@@ -234,10 +233,6 @@ fn next_menus(
       menus: vec![current_menu.clone()],
       ..Default::default()
     },
-    MenuKind::PauseMain => NextMenuUpdate {
-      menus: vec![current_menu.clone()],
-      ..Default::default()
-    },
     MenuKind::SaveConfirm(id) => {
       let (menus, save_point_confirmed_id) = save_confirm(current_menu.cursor_position, input, id);
       NextMenuUpdate {
@@ -249,7 +244,7 @@ fn next_menus(
   }
 }
 
-fn main_menu(
+fn pause_main(
   cursor_position: Vector2<i32>,
   available_saves: &Vec<String>,
   input: &MenuInput,
@@ -270,7 +265,7 @@ fn main_menu(
     return (
       vec![Menu {
         cursor_position,
-        kind: MenuKind::Main,
+        kind: MenuKind::PauseMain,
       }],
       None,
     );
@@ -290,9 +285,11 @@ fn main_menu(
   };
 
   if continue_game {
+    available_saves.iter().for_each(|save| println!("{}", save));
     let most_recent_save = available_saves
       .iter()
       .fold("", |init, elem| if *init > **elem { init } else { elem });
+    println!("{}", most_recent_save);
     return (
       vec![],
       Some(MapToLoad::SaveData(most_recent_save.to_string())),
