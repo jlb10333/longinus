@@ -12,7 +12,7 @@ use crate::{
   },
   menu::MenuSystem,
   physics::PhysicsSystem,
-  save::SaveSystem,
+  save::{self, SaveSystem},
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
