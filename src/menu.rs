@@ -6,7 +6,7 @@ use rapier2d::{na::Vector2, parry::utils::hashmap::HashMap};
 
 use crate::combat::Direction;
 use crate::physics::PhysicsSystem;
-use crate::save::{SaveData, SaveSystem};
+use crate::save::SaveSystem;
 use crate::{
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, EquippedModules, UnequippedModules,

@@ -12,10 +12,10 @@ use crate::{
   f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
-    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapSystem, MapTile,
+    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapTile,
   },
   menu::MenuSystem,
-  system::{Context, System},
+  system::Context,
   units::UnitConvert2,
 };
 

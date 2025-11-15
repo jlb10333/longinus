@@ -11,6 +11,7 @@ use crate::{
     COLLISION_GROUP_WALL,
   },
   physics::PhysicsSystem,
+  save::SaveSystem,
   system::System,
   units::{PhysicsVector, UnitConvert},
 };
@@ -36,15 +37,25 @@ impl System for EnemySystem {
   }
 
   fn run(&self, ctx: &crate::system::Context) -> std::rc::Rc<dyn System> {
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-
-    let decisions = physics_system
-      .entities
-      .iter()
-      .cloned()
-      .map(enemy_behavior(&physics_system.frame_count))
-      .flatten()
-      .collect::<Vec<_>>();
+    let decisions = ctx
+      .get::<SaveSystem>()
+      .unwrap()
+      .active_game_state
+      .as_ref()
+      .map(|active_game_state| {
+        active_game_state
+          .map_system
+          .physics_system
+          .entities
+          .iter()
+          .cloned()
+          .map(enemy_behavior(
+            &active_game_state.map_system.physics_system.frame_count,
+          ))
+          .flatten()
+          .collect::<Vec<_>>()
+      })
+      .unwrap_or(vec![]);
 
     return Rc::new(Self { decisions });
   }
