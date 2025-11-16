@@ -70,12 +70,31 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
   type Input = Input;
 
   fn start(_: &GameState<Input>) -> Rc<dyn System<Input = Self::Input>> {
+    let device_state = DeviceState::new();
+    let keys: Vec<Keycode> = device_state.get_keys();
+
     Rc::new(Self {
-      left_stick: PhysicsVector::zero(),
-      right_stick: PhysicsVector::zero(),
-      firing: false,
-      inventory: false,
-      pause: false,
+      left_stick: handle_stick_input(
+        &keys,
+        KeyBindings {
+          up: Keycode::Up,
+          down: Keycode::Down,
+          left: Keycode::Left,
+          right: Keycode::Right,
+        },
+      ),
+      right_stick: handle_stick_input(
+        &keys,
+        KeyBindings {
+          up: Keycode::W,
+          down: Keycode::S,
+          left: Keycode::A,
+          right: Keycode::D,
+        },
+      ),
+      firing: keys.contains(&Keycode::Space),
+      inventory: keys.contains(&Keycode::E),
+      pause: keys.contains(&Keycode::Enter),
       last_frame: None,
       phantom: PhantomData,
     })
