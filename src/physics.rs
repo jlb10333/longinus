@@ -15,6 +15,7 @@ use crate::{
     COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapSystem, MapTile,
   },
   menu::MenuSystem,
+  save::SaveData,
   system::System,
   units::UnitConvert2,
 };
@@ -199,7 +200,8 @@ fn load_new_map(
 }
 
 impl System for PhysicsSystem {
-  fn start(ctx: crate::system::Context) -> Rc<dyn System>
+  type Input = SaveData;
+  fn start(ctx: &crate::system::GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
@@ -216,7 +218,10 @@ impl System for PhysicsSystem {
     )
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
+  fn run(
+    &self,
+    ctx: &crate::system::GameState<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
     let map_system = ctx.get::<MapSystem>().unwrap();
 
     let combat_system = ctx.get::<CombatSystem>().unwrap();
@@ -271,7 +276,7 @@ impl System for PhysicsSystem {
     }
 
     /* Move the player */
-    let controls_system = ctx.get::<ControlsSystem>().unwrap();
+    let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
     rigid_body_set[self.player_handle].apply_impulse(controls_system.left_stick.into_vec(), true);
 

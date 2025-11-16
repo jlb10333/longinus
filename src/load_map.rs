@@ -7,7 +7,7 @@ use crate::{
   combat::WeaponModuleKind,
   f::{Monad, MonadTranslate},
   physics::PhysicsSystem,
-  save::SaveSystem,
+  save::{SaveData, SaveSystem},
   system::System,
   units::{PhysicsScalar, PhysicsVector, UnitConvert2},
 };
@@ -552,13 +552,14 @@ fn map_read_path(map_name: &String) -> String {
 }
 
 impl System for MapSystem {
-  fn start(ctx: crate::system::Context) -> std::rc::Rc<dyn System>
+  type Input = SaveData;
+  fn start(
+    ctx: &crate::system::GameState<Self::Input>,
+  ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
-    let save_system = ctx.get::<SaveSystem>().unwrap();
-
-    let save_data = save_system.loaded_save_data.as_ref().unwrap();
+    let save_data = &ctx.input;
 
     let map = load(&map_read_path(&save_data.map_name));
     return Rc::new(Self {
@@ -568,7 +569,10 @@ impl System for MapSystem {
     });
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> std::rc::Rc<dyn System> {
+  fn run(
+    &self,
+    ctx: &crate::system::GameState<Self::Input>,
+  ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
     let load_new_map = physics_system.load_new_map.as_ref();

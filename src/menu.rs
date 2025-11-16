@@ -64,7 +64,10 @@ pub struct MenuSystem {
 }
 
 impl System for MenuSystem {
-  fn start(_: crate::system::Context) -> std::rc::Rc<dyn System>
+  type Input = SaveData;
+  fn start(
+    _: &crate::system::GameState<Self::Input>,
+  ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
@@ -74,8 +77,11 @@ impl System for MenuSystem {
     });
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
-    let controls_system = ctx.get::<ControlsSystem>().unwrap();
+  fn run(
+    &self,
+    ctx: &crate::system::GameState<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
     if controls_system.last_frame.is_none() {
       return Rc::new(self.clone());
@@ -103,7 +109,7 @@ impl System for MenuSystem {
     }
 
     let combat_system = ctx.get::<CombatSystem>().unwrap();
-    let save_system = ctx.get::<SaveSystem>().unwrap();
+    let save_system = ctx.get::<SaveSystem<_>>().unwrap();
 
     if self.active_menus.iter().count() > 0 {
       let NextMenuUpdate {

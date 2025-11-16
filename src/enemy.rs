@@ -1,16 +1,14 @@
 use std::{f32::consts::PI, rc::Rc};
 
-use rapier2d::prelude::{ColliderBuilder, Group, InteractionGroups, RigidBodyHandle, RigidBodySet};
+use rapier2d::prelude::{ColliderBuilder, InteractionGroups, RigidBodyHandle};
 
 use crate::{
   combat::{Projectile, distance_projection_physics},
   ecs::{Enemy, Entity},
   f::Monad,
-  load_map::{
-    COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
-    COLLISION_GROUP_WALL,
-  },
+  load_map::{COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL},
   physics::PhysicsSystem,
+  save::SaveData,
   system::System,
   units::{PhysicsVector, UnitConvert},
 };
@@ -26,7 +24,10 @@ pub struct EnemySystem {
 }
 
 impl System for EnemySystem {
-  fn start(_: crate::system::Context) -> std::rc::Rc<dyn System>
+  type Input = SaveData;
+  fn start(
+    _: &crate::system::GameState<Self::Input>,
+  ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
@@ -35,7 +36,10 @@ impl System for EnemySystem {
     })
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> std::rc::Rc<dyn System> {
+  fn run(
+    &self,
+    ctx: &crate::system::GameState<Self::Input>,
+  ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
     let decisions = physics_system

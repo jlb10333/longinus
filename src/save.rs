@@ -1,4 +1,4 @@
-use std::{fs, rc::Rc, time};
+use std::{fs, marker::PhantomData, rc::Rc, time};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,7 @@ use crate::{
   system::System,
 };
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct SaveData {
   pub player_spawn_id: i32,
   pub map_name: String,
@@ -30,13 +30,18 @@ const INITIAL_SAVE_FILE_PATH: &str = "./assets/save_initial.json";
 
 const SAVE_DIR_PATH: &str = "./storage/";
 
-pub struct SaveSystem {
+pub struct SaveSystem<Input> {
   pub loaded_save_data: Option<SaveData>,
   pub available_save_data: Vec<String>,
+  phantom: PhantomData<Input>,
 }
 
-impl System for SaveSystem {
-  fn start(_: crate::system::Context) -> std::rc::Rc<dyn System>
+impl<Input: Clone + 'static> System for SaveSystem<Input> {
+  type Input = Input;
+
+  fn start(
+    _: &crate::system::GameState<Self::Input>,
+  ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
@@ -46,64 +51,78 @@ impl System for SaveSystem {
       .map(|dir_entry| dir_entry.file_name().into_string())
       .flatten()
       .collect::<Vec<_>>();
-    return Rc::new(SaveSystem {
+    return Rc::new(Self {
       loaded_save_data: serde_json::from_str(&fs::read_to_string(INITIAL_SAVE_FILE_PATH).unwrap())
         .expect("JSON was not well-formatted"),
       available_save_data,
+      phantom: PhantomData,
     });
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
-    let menu_system = ctx.get::<MenuSystem>().unwrap();
-    let map_system = ctx.get::<MapSystem>().unwrap();
+  fn run(
+    &self,
+    ctx: &crate::system::GameState<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    let (loaded_save_data, new_save_data) = if let Some(ctx) = ctx.downcast::<SaveData>() {
+      let menu_system = ctx.get::<MenuSystem>().unwrap();
+      let map_system = ctx.get::<MapSystem>().unwrap();
 
-    /* Load save data */
-    let loaded_save_data: Option<SaveData> = menu_system.map_to_load.as_ref().map(|map_to_load| {
-      let path = match map_to_load {
-        crate::menu::MapToLoad::Initial => INITIAL_SAVE_FILE_PATH.to_string(),
-        crate::menu::MapToLoad::SaveData(path) => {
-          format!("{}{}", SAVE_DIR_PATH.to_string(), *path)
-        }
-      };
+      /* Load save data */
+      let loaded_save_data: Option<SaveData> =
+        menu_system.map_to_load.as_ref().map(|map_to_load| {
+          let path = match map_to_load {
+            crate::menu::MapToLoad::Initial => INITIAL_SAVE_FILE_PATH.to_string(),
+            crate::menu::MapToLoad::SaveData(path) => {
+              format!("{}{}", SAVE_DIR_PATH.to_string(), *path)
+            }
+          };
 
-      println!("{}", path);
+          println!("{}", path);
 
-      serde_json::from_str(&fs::read_to_string(path).unwrap()).expect("JSON was not well-formatted")
-    });
+          serde_json::from_str(&fs::read_to_string(path).unwrap())
+            .expect("JSON was not well-formatted")
+        });
 
-    /* Save current progress */
-    if let Some(player_spawn_id) = menu_system.save_point_confirmed_id {
-      let combat_system = ctx.get::<CombatSystem>().unwrap();
+      /* Save current progress */
+      if let Some(player_spawn_id) = menu_system.save_point_confirmed_id {
+        let combat_system = ctx.get::<CombatSystem>().unwrap();
 
-      let save_data = SaveData {
-        player_spawn_id,
-        map_name: map_system.current_map_name.clone(),
-        unequipped_modules: combat_system.unequipped_modules.clone(),
-        equipped_modules: combat_system.equipped_modules.data.0.clone(),
-        acquired_items: combat_system.acquired_items.clone(),
-      };
+        let save_data = SaveData {
+          player_spawn_id,
+          map_name: map_system.current_map_name.clone(),
+          unequipped_modules: combat_system.unequipped_modules.clone(),
+          equipped_modules: combat_system.equipped_modules.data.0.clone(),
+          acquired_items: combat_system.acquired_items.clone(),
+        };
 
-      let sys_time: DateTime<Utc> = time::SystemTime::now().into();
+        let sys_time: DateTime<Utc> = time::SystemTime::now().into();
 
-      fs::write(
-        save_data_path(format!("save_{}", sys_time.format("%+"))),
-        serde_json::to_string_pretty(&save_data).unwrap(),
+        fs::write(
+          save_data_path(format!("save_{}", sys_time.format("%+"))),
+          serde_json::to_string_pretty(&save_data).unwrap(),
+        )
+        .unwrap();
+      }
+
+      (
+        loaded_save_data,
+        menu_system
+          .save_point_confirmed_id
+          .map(|_| map_system.current_map_name.clone()),
       )
-      .unwrap();
-    }
+    } else {
+      (None, None)
+    };
 
     return Rc::new(SaveSystem {
       loaded_save_data,
       available_save_data: self
         .available_save_data
         .iter()
-        .chain(
-          menu_system
-            .save_point_confirmed_id
-            .map(|_| &map_system.current_map_name),
-        )
+        .chain(new_save_data.iter())
         .cloned()
         .collect(),
+      phantom: PhantomData,
     });
   }
 }

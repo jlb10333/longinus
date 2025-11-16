@@ -1,10 +1,10 @@
-use std::{f32::consts::PI, rc::Rc};
+use std::{f32::consts::PI, marker::PhantomData, rc::Rc};
 
 use device_query::{DeviceQuery, DeviceState, Keycode};
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
-  system::{Context, System},
+  system::{GameState, System},
   units::{PhysicsVector, UnitConvert, UnitConvert2},
 };
 
@@ -46,13 +46,14 @@ fn handle_stick_input(keys: &Vec<Keycode>, bindings: KeyBindings) -> PhysicsVect
 }
 
 #[derive(Clone)]
-pub struct ControlsSystem {
+pub struct ControlsSystem<Input> {
   pub left_stick: PhysicsVector,
   pub right_stick: PhysicsVector,
   pub firing: bool,
   pub inventory: bool,
   pub pause: bool,
-  pub last_frame: Option<Rc<ControlsSystem>>,
+  pub last_frame: Option<Rc<ControlsSystem<Input>>>,
+  phantom: PhantomData<Input>,
 }
 
 pub fn angle_from_vec(direction: PhysicsVector) -> f32 {
@@ -65,19 +66,22 @@ pub fn angle_from_vec(direction: PhysicsVector) -> f32 {
   }
 }
 
-impl System for ControlsSystem {
-  fn start(_: Context) -> Rc<dyn System> {
-    return Rc::new(Self {
+impl<Input: Clone + 'static> System for ControlsSystem<Input> {
+  type Input = Input;
+
+  fn start(_: &GameState<Input>) -> Rc<dyn System<Input = Self::Input>> {
+    Rc::new(Self {
       left_stick: PhysicsVector::zero(),
       right_stick: PhysicsVector::zero(),
       firing: false,
       inventory: false,
       pause: false,
       last_frame: None,
-    });
+      phantom: PhantomData,
+    })
   }
 
-  fn run(&self, _: &Context) -> Rc<dyn System> {
+  fn run(&self, _: &GameState<Input>) -> Rc<dyn System<Input = Self::Input>> {
     let device_state = DeviceState::new();
     let keys: Vec<Keycode> = device_state.get_keys();
 
@@ -104,6 +108,7 @@ impl System for ControlsSystem {
       inventory: keys.contains(&Keycode::E),
       pause: keys.contains(&Keycode::Enter),
       last_frame: Some(Rc::new(self.clone())),
+      phantom: PhantomData,
     });
   }
 }

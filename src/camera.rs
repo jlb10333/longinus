@@ -9,6 +9,7 @@ use rapier2d::{na::Vector2, prelude::*};
 use crate::{
   load_map::MapSystem,
   physics::PhysicsSystem,
+  save::SaveData,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert2, vec_zero},
 };
@@ -47,7 +48,8 @@ pub struct CameraSystem {
 }
 
 impl System for CameraSystem {
-  fn start(ctx: crate::system::Context) -> Rc<dyn System>
+  type Input = SaveData;
+  fn start(ctx: &crate::system::GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
@@ -69,7 +71,10 @@ impl System for CameraSystem {
     });
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
+  fn run(
+    &self,
+    ctx: &crate::system::GameState<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
     let map_system = ctx.get::<MapSystem>().unwrap();
 
     if let Some(map) = map_system.map.as_ref() {

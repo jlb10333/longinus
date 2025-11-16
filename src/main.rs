@@ -1,3 +1,5 @@
+use macroquad::window::next_frame;
+
 use crate::camera::CameraSystem;
 use crate::combat::CombatSystem;
 use crate::controls::ControlsSystem;
@@ -6,8 +8,8 @@ use crate::graphics::GraphicsSystem;
 use crate::load_map::MapSystem;
 use crate::menu::MenuSystem;
 use crate::physics::PhysicsSystem;
-use crate::save::SaveSystem;
-use crate::system::{Game, System};
+use crate::save::{SaveData, SaveSystem};
+use crate::system::{Game, GameState, System};
 
 mod camera;
 mod combat;
@@ -26,7 +28,17 @@ mod units;
 
 #[macroquad::main("MyGame")]
 async fn main() {
-  Game::new()
+  let initial_save = &Game::new(&())
+    .add_system(SaveSystem::start)
+    .start()
+    .get::<SaveSystem<_>>()
+    .unwrap()
+    .loaded_save_data
+    .as_ref()
+    .unwrap()
+    .clone();
+
+  let mut context = Game::new(initial_save)
     .add_system(SaveSystem::start)
     .add_system(CombatSystem::start)
     .add_system(MapSystem::start)
@@ -36,6 +48,11 @@ async fn main() {
     .add_system(MenuSystem::start)
     .add_system(GraphicsSystem::start)
     .add_system(EnemySystem::start)
-    .run()
-    .await;
+    .start();
+
+  loop {
+    context = Game::run(&context, |_| None::<()>).unwrap_right(); // return Context
+
+    next_frame().await;
+  }
 }

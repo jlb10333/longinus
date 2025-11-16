@@ -12,7 +12,7 @@ use crate::{
   },
   menu::MenuSystem,
   physics::PhysicsSystem,
-  save::{self, SaveSystem},
+  save::{self, SaveData, SaveSystem},
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -511,13 +511,13 @@ pub struct CombatSystem {
 }
 
 impl System for CombatSystem {
-  fn start(ctx: crate::system::Context) -> Rc<dyn System>
+  type Input = SaveData;
+
+  fn start(ctx: &crate::system::GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
-    let save_system = ctx.get::<SaveSystem>().unwrap();
-
-    let save_data = save_system.loaded_save_data.as_ref().unwrap().clone();
+    let save_data = ctx.input.clone();
 
     /* Initialize default equipped weapons */
     let equipped_modules = &EquippedModules::from_data(ArrayStorage(save_data.equipped_modules));
@@ -532,7 +532,10 @@ impl System for CombatSystem {
     });
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
+  fn run(
+    &self,
+    ctx: &crate::system::GameState<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
     let menu_system = ctx.get::<MenuSystem>().unwrap();
 
     if menu_system.active_menus.len() > 0 {
@@ -587,7 +590,7 @@ impl System for CombatSystem {
       .map(Weapon::reduce_cooldown)
       .collect();
 
-    let controls_system = ctx.get::<ControlsSystem>().unwrap();
+    let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
     let reticle_angle = if controls_system.right_stick.into_vec() == vector![0.0, 0.0] {
       self.reticle_angle

@@ -1,4 +1,4 @@
-use std::{rc::Rc, thread::sleep, time::Duration};
+use std::{marker::PhantomData, rc::Rc, thread::sleep, time::Duration};
 
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
@@ -13,6 +13,7 @@ use crate::{
   graphics_utils::draw_collider,
   menu::{INVENTORY_WRAP_WIDTH, Menu, MenuSystem},
   physics::PhysicsSystem,
+  save::SaveData,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -26,94 +27,101 @@ const RETICLE_SIZE: f32 = 3.0;
 const SHOW_COLLIDERS: bool = true;
 const SHOW_SLOTS: bool = true;
 
-pub struct GraphicsSystem;
+pub struct GraphicsSystem<Input>(PhantomData<Input>);
 
-impl System for GraphicsSystem {
-  fn start(_: crate::system::Context) -> Rc<dyn System>
+impl<Input: Clone + 'static> System for GraphicsSystem<Input> {
+  type Input = Input;
+
+  fn start(_: &crate::system::GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
-    return Rc::new(GraphicsSystem);
+    return Rc::new(GraphicsSystem(PhantomData));
   }
 
-  fn run(&self, ctx: &crate::system::Context) -> Rc<dyn System> {
-    let camera_system = ctx.get::<CameraSystem>().unwrap();
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-    let combat_system = ctx.get::<CombatSystem>().unwrap();
-
+  fn run(
+    &self,
+    ctx: &crate::system::GameState<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
     /* Background */
     clear_background(RED);
 
-    /* Debug */
-    if SHOW_COLLIDERS {
-      physics_system
-        .collider_set
-        .iter()
-        .for_each(|(_, collider)| draw_collider(collider, camera_system.translation, None, None));
-    }
+    if let Some(ctx) = ctx.downcast::<_>() {
+      let camera_system = ctx.get::<CameraSystem>().unwrap();
+      let combat_system = ctx.get::<CombatSystem>().unwrap();
+      let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
-    /* Draw entities */
-    physics_system.sensors.iter().for_each(|sensor| {
-      let label = if let Some(map_transition) = sensor.components.get::<MapTransitionOnCollision>()
-      {
-        Some(map_transition.map_name.clone())
-      } else {
-        None
-      };
+      /* Debug */
+      if SHOW_COLLIDERS {
+        physics_system
+          .collider_set
+          .iter()
+          .for_each(|(_, collider)| draw_collider(collider, camera_system.translation, None, None));
+      }
 
-      draw_collider(
-        &physics_system.collider_set[sensor.handle],
-        camera_system.translation,
-        label,
-        Some(GREEN),
-      )
-    });
+      /* Draw entities */
+      physics_system.sensors.iter().for_each(|sensor| {
+        let label =
+          if let Some(map_transition) = sensor.components.get::<MapTransitionOnCollision>() {
+            Some(map_transition.map_name.clone())
+          } else {
+            None
+          };
 
-    /* Draw player */
-    let player_screen_pos = PhysicsVector::from_vec(
-      *physics_system.rigid_body_set[physics_system.player_handle].translation(),
-    )
-    .into_pos(camera_system.translation);
-
-    draw_circle(player_screen_pos.x(), player_screen_pos.y(), 12.5, GREEN);
-
-    /* Draw reticle */
-    let reticle_pos = get_reticle_pos(combat_system.reticle_angle);
-
-    draw_circle(
-      player_screen_pos.x() + reticle_pos.x(),
-      player_screen_pos.y() + reticle_pos.y(),
-      RETICLE_SIZE,
-      BLACK,
-    );
-
-    /* DEBUG - Draw slots */
-    if SHOW_SLOTS {
-      let slot_positions = get_slot_positions(combat_system.reticle_angle);
-      slot_positions.iter().for_each(|(_, slot)| {
-        let slot_screen_offset = slot.offset.convert();
-
-        let slot_screen_pos =
-          ScreenVector::from_vec(player_screen_pos.into_vec() + slot_screen_offset.into_vec());
-
-        let slot_next_screen_pos = ScreenVector::from_vec(
-          slot_screen_pos.into_vec() + distance_projection_screen(slot.angle, 7.0).into_vec(),
-        );
-
-        draw_circle(slot_screen_pos.x(), slot_screen_pos.y(), 2.0, BLUE);
-        draw_circle(
-          slot_next_screen_pos.x(),
-          slot_next_screen_pos.y(),
-          2.0,
-          WHITE,
-        );
+        draw_collider(
+          &physics_system.collider_set[sensor.handle],
+          camera_system.translation,
+          label,
+          Some(GREEN),
+        )
       });
+
+      /* Draw player */
+      let player_screen_pos = PhysicsVector::from_vec(
+        *physics_system.rigid_body_set[physics_system.player_handle].translation(),
+      )
+      .into_pos(camera_system.translation);
+
+      draw_circle(player_screen_pos.x(), player_screen_pos.y(), 12.5, GREEN);
+
+      /* Draw reticle */
+      let reticle_pos = get_reticle_pos(combat_system.reticle_angle);
+
+      draw_circle(
+        player_screen_pos.x() + reticle_pos.x(),
+        player_screen_pos.y() + reticle_pos.y(),
+        RETICLE_SIZE,
+        BLACK,
+      );
+
+      /* DEBUG - Draw slots */
+      if SHOW_SLOTS {
+        let slot_positions = get_slot_positions(combat_system.reticle_angle);
+        slot_positions.iter().for_each(|(_, slot)| {
+          let slot_screen_offset = slot.offset.convert();
+
+          let slot_screen_pos =
+            ScreenVector::from_vec(player_screen_pos.into_vec() + slot_screen_offset.into_vec());
+
+          let slot_next_screen_pos = ScreenVector::from_vec(
+            slot_screen_pos.into_vec() + distance_projection_screen(slot.angle, 7.0).into_vec(),
+          );
+
+          draw_circle(slot_screen_pos.x(), slot_screen_pos.y(), 2.0, BLUE);
+          draw_circle(
+            slot_next_screen_pos.x(),
+            slot_next_screen_pos.y(),
+            2.0,
+            WHITE,
+          );
+        });
+      }
+
+      /* Draw the scuffed menu */
+      let menu_system = ctx.get::<MenuSystem>().unwrap();
+
+      menu_system.active_menus.iter().rev().for_each(draw_menu);
     }
-
-    /* Draw the scuffed menu */
-    let menu_system = ctx.get::<MenuSystem>().unwrap();
-
-    menu_system.active_menus.iter().rev().for_each(draw_menu);
 
     /* Maintain target fps */
     let frame_time = get_frame_time();
@@ -123,7 +131,7 @@ impl System for GraphicsSystem {
       sleep(Duration::from_millis(time_to_sleep as u64)); // Sleep
     }
 
-    return Rc::new(GraphicsSystem);
+    return Rc::new(GraphicsSystem(PhantomData));
   }
 }
 
