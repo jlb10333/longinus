@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use macroquad::window::next_frame;
 
 use crate::camera::CameraSystem;
@@ -6,10 +8,10 @@ use crate::controls::ControlsSystem;
 use crate::enemy::EnemySystem;
 use crate::graphics::GraphicsSystem;
 use crate::load_map::MapSystem;
-use crate::menu::MenuSystem;
+use crate::menu::{MenuSystem, QuitDecision};
 use crate::physics::PhysicsSystem;
-use crate::save::{SaveData, SaveSystem};
-use crate::system::{Game, GameState, System};
+use crate::save::{SaveSystem, load_save};
+use crate::system::{Game, System};
 
 mod camera;
 mod combat;
@@ -26,33 +28,46 @@ mod save;
 mod system;
 mod units;
 
+#[derive(Clone, Default)]
+pub struct ProcessStart;
+
 #[macroquad::main("MyGame")]
 async fn main() {
-  let initial_save = &Game::new(&())
-    .add_system(SaveSystem::start)
-    .start()
-    .get::<SaveSystem<_>>()
-    .unwrap()
-    .loaded_save_data
-    .as_ref()
-    .unwrap()
-    .clone();
-
-  let mut context = Game::new(initial_save)
-    .add_system(SaveSystem::start)
-    .add_system(CombatSystem::start)
-    .add_system(MapSystem::start)
-    .add_system(PhysicsSystem::start)
-    .add_system(CameraSystem::start)
-    .add_system(ControlsSystem::start)
-    .add_system(MenuSystem::start)
-    .add_system(GraphicsSystem::start)
-    .add_system(EnemySystem::start)
-    .start();
-
   loop {
-    context = Game::run(&context, |_| None::<()>).unwrap_right(); // return Context
+    let save_data = Game::new(&ProcessStart)
+      .add_system(ControlsSystem::start)
+      .add_system(SaveSystem::start)
+      .add_system(MenuSystem::start)
+      .add_system(GraphicsSystem::start)
+      .start()
+      .run_move(|ctx| {
+        ctx
+          .get::<MenuSystem<_>>()
+          .unwrap()
+          .save_to_load
+          .as_ref()
+          .map(load_save)
+      })
+      .await;
 
-    next_frame().await;
+    let quit_decision = &Rc::new(
+      Game::new(&save_data)
+        .add_system(SaveSystem::start)
+        .add_system(CombatSystem::start)
+        .add_system(MapSystem::start)
+        .add_system(PhysicsSystem::start)
+        .add_system(CameraSystem::start)
+        .add_system(ControlsSystem::start)
+        .add_system(MenuSystem::start)
+        .add_system(GraphicsSystem::start)
+        .add_system(EnemySystem::start)
+        .start(),
+    )
+    .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())
+    .await;
+
+    if let QuitDecision::ToDesktop = quit_decision {
+      break;
+    }
   }
 }

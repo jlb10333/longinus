@@ -1,9 +1,11 @@
 use std::collections::HashSet;
+use std::marker::PhantomData;
 use std::rc::Rc;
 
 use rapier2d::prelude::*;
 use rapier2d::{na::Vector2, parry::utils::hashmap::HashMap};
 
+use crate::ProcessStart;
 use crate::combat::Direction;
 use crate::physics::PhysicsSystem;
 use crate::save::{SaveData, SaveSystem};
@@ -24,19 +26,29 @@ pub struct InventoryUpdateData {
 }
 
 #[derive(Clone)]
-pub enum MenuKind {
+pub enum GameMenuKind {
   PauseMain,
   InventoryMain,
   InventoryPickSlot(Option<WeaponModuleKind>, InventoryUpdateData),
-  InventoryConfirmEdit(InventoryUpdateData),
   SaveConfirm(i32),
 }
 
 #[derive(Clone)]
-pub struct Menu {
-  pub kind: MenuKind,
+pub struct Menu<Kind> {
+  pub kind: Kind,
   pub cursor_position: Vector2<i32>,
 }
+
+pub type GameMenu = Menu<GameMenuKind>;
+
+#[derive(Clone)]
+pub enum MainMenuKind {
+  Main(bool),
+  MainLoadSave,
+  MainLoadSaveConfirm,
+}
+
+pub type MainMenu = Menu<MainMenuKind>;
 
 struct MenuInput {
   pub up: bool,
@@ -49,28 +61,43 @@ struct MenuInput {
   pub pause: bool,
 }
 
-#[derive(Clone)]
-pub enum MapToLoad {
+#[derive(Clone, Debug)]
+pub enum SaveToLoad {
   Initial,
   SaveData(String),
 }
 
 #[derive(Clone, Default)]
-pub struct MenuSystem {
-  pub active_menus: Vec<Menu>,
+pub struct MenuSystem<Input> {
+  pub active_menus: Vec<GameMenu>,
+  pub active_main_menus: Vec<MainMenu>,
   pub inventory_update: Option<InventoryUpdateData>,
   pub save_point_confirmed_id: Option<i32>,
-  pub map_to_load: Option<MapToLoad>,
+  pub save_to_load: Option<SaveToLoad>,
+  pub quit_decision: Option<QuitDecision>,
+  phantom: PhantomData<Input>,
 }
 
-impl System for MenuSystem {
-  type Input = SaveData;
+impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
+  type Input = Input;
   fn start(
-    _: &crate::system::GameState<Self::Input>,
+    ctx: &crate::system::GameState<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
+    if ctx.downcast::<ProcessStart>().is_some() {
+      let save_system = ctx.get::<SaveSystem<_>>().unwrap();
+
+      return Rc::new(Self {
+        active_main_menus: vec![MainMenu {
+          cursor_position: vector![0, 0],
+          kind: MainMenuKind::Main(save_system.available_save_data.len() > 0),
+        }],
+        ..Default::default()
+      });
+    }
+
     return Rc::new(Self {
       active_menus: vec![],
       ..Default::default()
@@ -108,66 +135,94 @@ impl System for MenuSystem {
       );
     }
 
-    let combat_system = ctx.get::<CombatSystem>().unwrap();
     let save_system = ctx.get::<SaveSystem<_>>().unwrap();
 
-    if self.active_menus.iter().count() > 0 {
-      let NextMenuUpdate {
-        menus: next_menus,
-        inventory_update,
-        save_point_confirmed_id,
-        map_to_load,
-      } = next_menus(
-        &self.active_menus[0],
-        &input,
-        &combat_system.unequipped_modules,
-        &combat_system.equipped_modules,
-        &save_system.available_save_data,
-      );
+    if let Some(ctx) = ctx.downcast::<SaveData>() {
+      let combat_system = ctx.get::<CombatSystem>().unwrap();
+
+      if self.active_menus.iter().count() > 0 {
+        let NextMenuUpdate {
+          menus: next_menus,
+          inventory_update,
+          save_point_confirmed_id,
+          save_to_load,
+          quit_decision,
+        } = next_menus(
+          &self.active_menus[0],
+          &input,
+          &combat_system.unequipped_modules,
+          &combat_system.equipped_modules,
+        );
+        return Rc::new(Self {
+          active_menus: next_menus
+            .iter()
+            .chain(self.active_menus.clone()[1..].iter())
+            .cloned()
+            .collect(),
+          inventory_update,
+          save_point_confirmed_id,
+          save_to_load,
+          quit_decision,
+          ..Default::default()
+        });
+      }
+
+      let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+
       return Rc::new(Self {
-        active_menus: next_menus
-          .iter()
-          .chain(self.active_menus.clone()[1..].iter())
-          .cloned()
-          .collect(),
-        inventory_update,
-        save_point_confirmed_id,
-        map_to_load,
+        active_menus: match open_menu(&input, physics_system) {
+          Some(menu) => vec![menu],
+          None => vec![],
+        },
+        ..Default::default()
       });
     }
 
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+    if ctx.downcast::<ProcessStart>().is_some() {
+      let NextMainMenuUpdate {
+        menus: next_menus,
+        save_to_load,
+      } = next_main_menus(
+        &self.active_main_menus[0],
+        &input,
+        &save_system.available_save_data,
+      );
 
-    Rc::new(Self {
-      active_menus: match open_menu(&input, physics_system) {
-        Some(menu) => vec![menu],
-        None => vec![],
-      },
-      ..Default::default()
-    })
+      return Rc::new(Self {
+        active_main_menus: next_menus
+          .iter()
+          .chain(self.active_main_menus.clone()[1..].iter())
+          .cloned()
+          .collect(),
+        save_to_load,
+        ..Default::default()
+      });
+    }
+
+    panic!("Expected to be in either a SaveData or ProcessStart GameState");
   }
 }
 
-fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Option<Menu> {
+fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Option<GameMenu> {
   if let Some(id) = physics_system.save_point_contact
     && physics_system.save_point_contact_last_frame.is_none()
   {
-    return Some(Menu {
-      kind: MenuKind::SaveConfirm(id),
+    return Some(GameMenu {
+      kind: GameMenuKind::SaveConfirm(id),
       cursor_position: vector![0, 0],
     });
   }
 
   if input.inventory {
-    return Some(Menu {
-      kind: MenuKind::InventoryMain,
+    return Some(GameMenu {
+      kind: GameMenuKind::InventoryMain,
       cursor_position: vector![0, 0],
     });
   }
 
   if input.pause {
-    return Some(Menu {
-      kind: MenuKind::PauseMain,
+    return Some(GameMenu {
+      kind: GameMenuKind::PauseMain,
       cursor_position: vector![0, 0],
     });
   }
@@ -176,19 +231,54 @@ fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Option<Men
 }
 
 #[derive(Default)]
+struct NextMainMenuUpdate {
+  menus: Vec<MainMenu>,
+  save_to_load: Option<SaveToLoad>,
+}
+
+fn next_main_menus(
+  current_menu: &MainMenu,
+  input: &MenuInput,
+  available_saves: &Vec<String>,
+) -> NextMainMenuUpdate {
+  if !(input.up || input.down || input.left || input.right || input.confirm || input.cancel) {
+    return NextMainMenuUpdate {
+      menus: vec![current_menu.clone()],
+      ..Default::default()
+    };
+  }
+
+  match current_menu.kind {
+    MainMenuKind::Main(should_include_continue_option) => {
+      let (menus, save_to_load) = menu_main(
+        current_menu.cursor_position,
+        available_saves,
+        input,
+        should_include_continue_option,
+      );
+      NextMainMenuUpdate {
+        menus,
+        save_to_load,
+      }
+    }
+    _ => todo!("Unimplemented"),
+  }
+}
+
+#[derive(Default)]
 struct NextMenuUpdate {
-  menus: Vec<Menu>,
+  menus: Vec<GameMenu>,
   inventory_update: Option<InventoryUpdateData>,
   save_point_confirmed_id: Option<i32>,
-  map_to_load: Option<MapToLoad>,
+  save_to_load: Option<SaveToLoad>,
+  quit_decision: Option<QuitDecision>,
 }
 
 fn next_menus(
-  current_menu: &Menu,
+  current_menu: &GameMenu,
   input: &MenuInput,
   unequipped_modules: &UnequippedModules,
   equipped_modules: &EquippedModules,
-  available_saves: &Vec<String>,
 ) -> NextMenuUpdate {
   if !(input.up || input.down || input.left || input.right || input.confirm || input.cancel) {
     return NextMenuUpdate {
@@ -205,15 +295,16 @@ fn next_menus(
   }
 
   match current_menu.kind.clone() {
-    MenuKind::PauseMain => {
-      let (menus, map_to_load) = pause_main(current_menu.cursor_position, available_saves, input);
+    GameMenuKind::PauseMain => {
+      let (menus, save_to_load, quit_decision) = pause_main(current_menu.cursor_position, input);
       NextMenuUpdate {
         menus,
-        map_to_load,
+        save_to_load,
+        quit_decision,
         ..Default::default()
       }
     }
-    MenuKind::InventoryMain => NextMenuUpdate {
+    GameMenuKind::InventoryMain => NextMenuUpdate {
       menus: inventory_main(
         current_menu.cursor_position,
         input,
@@ -222,7 +313,7 @@ fn next_menus(
       ),
       ..Default::default()
     },
-    MenuKind::InventoryPickSlot(currently_holding, inventory_update) => {
+    GameMenuKind::InventoryPickSlot(currently_holding, inventory_update) => {
       let (menus, inventory_update) = inventory_pick_slot(
         current_menu.cursor_position,
         input,
@@ -235,11 +326,7 @@ fn next_menus(
         ..Default::default()
       }
     }
-    MenuKind::InventoryConfirmEdit(_) => NextMenuUpdate {
-      menus: vec![current_menu.clone()],
-      ..Default::default()
-    },
-    MenuKind::SaveConfirm(id) => {
+    GameMenuKind::SaveConfirm(id) => {
       let (menus, save_point_confirmed_id) = save_confirm(current_menu.cursor_position, input, id);
       NextMenuUpdate {
         menus,
@@ -250,13 +337,12 @@ fn next_menus(
   }
 }
 
-fn pause_main(
+fn menu_main(
   cursor_position: Vector2<i32>,
   available_saves: &Vec<String>,
   input: &MenuInput,
-) -> (Vec<Menu>, Option<MapToLoad>) {
-  let should_include_continue_option = available_saves.len() > 0;
-
+  should_include_continue_option: bool,
+) -> (Vec<MainMenu>, Option<SaveToLoad>) {
   let cursor_position = handle_cursor_movement(
     cursor_position,
     0,
@@ -269,9 +355,9 @@ fn pause_main(
   /* No change if confirm is not input */
   if !input.confirm {
     return (
-      vec![Menu {
+      vec![MainMenu {
         cursor_position,
-        kind: MenuKind::PauseMain,
+        kind: MainMenuKind::Main(should_include_continue_option),
       }],
       None,
     );
@@ -298,16 +384,60 @@ fn pause_main(
     println!("{}", most_recent_save);
     return (
       vec![],
-      Some(MapToLoad::SaveData(most_recent_save.to_string())),
+      Some(SaveToLoad::SaveData(most_recent_save.to_string())),
     );
   }
 
   if new_game {
-    return (vec![], Some(MapToLoad::Initial));
+    return (vec![], Some(SaveToLoad::Initial));
   }
 
   if load_game {
     todo!();
+  }
+
+  panic!("Unhandled cursor positon {}", cursor_position);
+}
+
+#[derive(Clone)]
+pub enum QuitDecision {
+  ToMainMenu,
+  ToDesktop,
+}
+
+fn pause_main(
+  cursor_position: Vector2<i32>,
+  input: &MenuInput,
+) -> (Vec<GameMenu>, Option<SaveToLoad>, Option<QuitDecision>) {
+  let cursor_position = handle_cursor_movement(cursor_position, 0, 0, 2, input, None);
+
+  /* No change if confirm is not input */
+  if !input.confirm {
+    return (
+      vec![GameMenu {
+        cursor_position,
+        kind: GameMenuKind::PauseMain,
+      }],
+      None,
+      None,
+    );
+  }
+
+  /* Transition to next menu */
+  let cancel = cursor_position == vector![0, 0];
+  let load_game = cursor_position == vector![0, 1];
+  let quit_to_menu = cursor_position == vector![0, 2];
+
+  if cancel {
+    return (vec![], None, None);
+  }
+
+  if load_game {
+    todo!();
+  }
+
+  if quit_to_menu {
+    return (vec![], None, Some(QuitDecision::ToMainMenu));
   }
 
   panic!("Unhandled cursor positon {}", cursor_position);
@@ -321,14 +451,14 @@ fn inventory_main(
   input: &MenuInput,
   unequipped_modules: &UnequippedModules,
   equipped_modules: &EquippedModules,
-) -> Vec<Menu> {
+) -> Vec<GameMenu> {
   let cursor_position = handle_cursor_movement(cursor_position, 0, 1, 0, input, None);
 
   if cursor_position == EDIT_CURSOR && input.confirm {
     return vec![
-      Menu {
+      GameMenu {
         cursor_position: vector![0, 0],
-        kind: MenuKind::InventoryPickSlot(
+        kind: GameMenuKind::InventoryPickSlot(
           None,
           InventoryUpdateData {
             equipped_modules: equipped_modules.clone(),
@@ -336,9 +466,9 @@ fn inventory_main(
           },
         ),
       },
-      Menu {
+      GameMenu {
         cursor_position,
-        kind: MenuKind::InventoryMain,
+        kind: GameMenuKind::InventoryMain,
       },
     ];
   }
@@ -347,9 +477,9 @@ fn inventory_main(
     return vec![];
   }
 
-  return vec![Menu {
+  return vec![GameMenu {
     cursor_position,
-    kind: MenuKind::InventoryMain,
+    kind: GameMenuKind::InventoryMain,
   }];
 }
 
@@ -360,7 +490,7 @@ fn inventory_pick_slot(
   input: &MenuInput,
   currently_holding: Option<WeaponModuleKind>,
   inventory_update: &InventoryUpdateData,
-) -> (Vec<Menu>, Option<InventoryUpdateData>) {
+) -> (Vec<GameMenu>, Option<InventoryUpdateData>) {
   let unequipped_modules_count: i32 = inventory_update
     .unequipped_modules
     .len()
@@ -421,9 +551,9 @@ fn inventory_pick_slot(
   if input.confirm && cursor_position != vector![0, -1] {
     return if cursor_position.x < EQUIP_SLOTS_WIDTH {
       (
-        vec![Menu {
+        vec![GameMenu {
           cursor_position,
-          kind: MenuKind::InventoryPickSlot(
+          kind: GameMenuKind::InventoryPickSlot(
             inventory_update.equipped_modules.data.0[cursor_position.y as usize]
               [cursor_position.x as usize]
               .clone(),
@@ -484,9 +614,9 @@ fn inventory_pick_slot(
         };
 
       (
-        vec![Menu {
+        vec![GameMenu {
           cursor_position,
-          kind: MenuKind::InventoryPickSlot(
+          kind: GameMenuKind::InventoryPickSlot(
             inventory_update
               .unequipped_modules
               .get(accessing_index)
@@ -523,9 +653,9 @@ fn inventory_pick_slot(
   }
 
   return (
-    vec![Menu {
+    vec![GameMenu {
       cursor_position,
-      kind: MenuKind::InventoryPickSlot(currently_holding, inventory_update.clone()),
+      kind: GameMenuKind::InventoryPickSlot(currently_holding, inventory_update.clone()),
     }],
     None,
   );
@@ -535,14 +665,14 @@ fn save_confirm(
   cursor_position: Vector2<i32>,
   input: &MenuInput,
   id: i32,
-) -> (Vec<Menu>, Option<i32>) {
+) -> (Vec<GameMenu>, Option<i32>) {
   let cursor_position = handle_cursor_movement(cursor_position, 0, 1, 0, input, None);
 
   if !input.confirm {
     return (
-      vec![Menu {
+      vec![GameMenu {
         cursor_position,
-        kind: MenuKind::SaveConfirm(id),
+        kind: GameMenuKind::SaveConfirm(id),
       }],
       None,
     );

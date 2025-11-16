@@ -250,7 +250,7 @@ impl System for PhysicsSystem {
     let sensors = self.sensors.clone();
 
     /* Don't do physics if currently in menu */
-    let menu_system = ctx.get::<MenuSystem>().unwrap();
+    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
 
     if menu_system.active_menus.iter().count() > 0 {
       return Rc::new(Self {

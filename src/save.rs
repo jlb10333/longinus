@@ -8,7 +8,7 @@ use crate::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, UnequippedModules, WeaponModuleKind,
   },
   load_map::MapSystem,
-  menu::MenuSystem,
+  menu::{MenuSystem, SaveToLoad},
   system::System,
 };
 
@@ -22,7 +22,7 @@ pub struct SaveData {
   pub acquired_items: Vec<(String, i32)>,
 }
 
-fn save_data_path(file_name: String) -> String {
+fn save_data_path(file_name: &str) -> String {
   format!("./storage/{}.json", file_name)
 }
 
@@ -30,8 +30,18 @@ const INITIAL_SAVE_FILE_PATH: &str = "./assets/save_initial.json";
 
 const SAVE_DIR_PATH: &str = "./storage/";
 
+pub fn load_save(save_to_load: &SaveToLoad) -> SaveData {
+  serde_json::from_str(
+    &fs::read_to_string(match save_to_load {
+      SaveToLoad::Initial => INITIAL_SAVE_FILE_PATH.to_string(),
+      SaveToLoad::SaveData(path) => format!("{}{}", SAVE_DIR_PATH, path),
+    })
+    .unwrap(),
+  )
+  .expect("JSON was not well-formatted")
+}
+
 pub struct SaveSystem<Input> {
-  pub loaded_save_data: Option<SaveData>,
   pub available_save_data: Vec<String>,
   phantom: PhantomData<Input>,
 }
@@ -52,8 +62,6 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
       .flatten()
       .collect::<Vec<_>>();
     return Rc::new(Self {
-      loaded_save_data: serde_json::from_str(&fs::read_to_string(INITIAL_SAVE_FILE_PATH).unwrap())
-        .expect("JSON was not well-formatted"),
       available_save_data,
       phantom: PhantomData,
     });
@@ -63,59 +71,40 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
     &self,
     ctx: &crate::system::GameState<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    let (loaded_save_data, new_save_data) = if let Some(ctx) = ctx.downcast::<SaveData>() {
-      let menu_system = ctx.get::<MenuSystem>().unwrap();
-      let map_system = ctx.get::<MapSystem>().unwrap();
+    let new_save_data = ctx
+      .downcast::<SaveData>()
+      .map(|ctx| {
+        let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+        let map_system = ctx.get::<MapSystem>().unwrap();
 
-      /* Load save data */
-      let loaded_save_data: Option<SaveData> =
-        menu_system.map_to_load.as_ref().map(|map_to_load| {
-          let path = match map_to_load {
-            crate::menu::MapToLoad::Initial => INITIAL_SAVE_FILE_PATH.to_string(),
-            crate::menu::MapToLoad::SaveData(path) => {
-              format!("{}{}", SAVE_DIR_PATH.to_string(), *path)
-            }
+        /* Save current progress */
+        menu_system.save_point_confirmed_id.map(|player_spawn_id| {
+          let combat_system = ctx.get::<CombatSystem>().unwrap();
+
+          let save_data = SaveData {
+            player_spawn_id,
+            map_name: map_system.current_map_name.clone(),
+            unequipped_modules: combat_system.unequipped_modules.clone(),
+            equipped_modules: combat_system.equipped_modules.data.0.clone(),
+            acquired_items: combat_system.acquired_items.clone(),
           };
 
-          println!("{}", path);
+          let sys_time: DateTime<Utc> = time::SystemTime::now().into();
 
-          serde_json::from_str(&fs::read_to_string(path).unwrap())
-            .expect("JSON was not well-formatted")
-        });
+          let new_save_path = format!("save_{}", sys_time.format("%+"));
 
-      /* Save current progress */
-      if let Some(player_spawn_id) = menu_system.save_point_confirmed_id {
-        let combat_system = ctx.get::<CombatSystem>().unwrap();
+          fs::write(
+            save_data_path(&new_save_path),
+            serde_json::to_string_pretty(&save_data).unwrap(),
+          )
+          .unwrap();
 
-        let save_data = SaveData {
-          player_spawn_id,
-          map_name: map_system.current_map_name.clone(),
-          unequipped_modules: combat_system.unequipped_modules.clone(),
-          equipped_modules: combat_system.equipped_modules.data.0.clone(),
-          acquired_items: combat_system.acquired_items.clone(),
-        };
-
-        let sys_time: DateTime<Utc> = time::SystemTime::now().into();
-
-        fs::write(
-          save_data_path(format!("save_{}", sys_time.format("%+"))),
-          serde_json::to_string_pretty(&save_data).unwrap(),
-        )
-        .unwrap();
-      }
-
-      (
-        loaded_save_data,
-        menu_system
-          .save_point_confirmed_id
-          .map(|_| map_system.current_map_name.clone()),
-      )
-    } else {
-      (None, None)
-    };
+          new_save_path
+        })
+      })
+      .flatten();
 
     return Rc::new(SaveSystem {
-      loaded_save_data,
       available_save_data: self
         .available_save_data
         .iter()

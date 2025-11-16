@@ -1,5 +1,6 @@
 use std::{any::Any, rc::Rc};
 
+use macroquad::window::next_frame;
 use rapier2d::parry::either::Either::{self, Left, Right};
 
 pub trait System: Any {
@@ -35,14 +36,40 @@ impl<Input: Clone + 'static> GameState<Input> {
       .flatten();
   }
 
-  pub fn downcast<'a, Target: Clone + 'static>(&'a self) -> Option<&'a GameState<Target>> {
+  pub fn downcast<Target: Clone + 'static>(&self) -> Option<&GameState<Target>> {
     (self as &dyn Any).downcast_ref::<GameState<Target>>()
   }
 
-  pub fn input_as<Target: 'static>(&self) -> Option<Rc<Target>> {
-    return (Rc::new(self.input.clone()) as Rc<dyn Any>)
-      .downcast::<Target>()
-      .ok();
+  pub async fn run<Output, Terminator>(self: &Rc<Self>, terminator: Terminator) -> Output
+  where
+    Terminator: Fn(&GameState<Input>) -> Option<Output>,
+  {
+    let mut game_state = Rc::clone(self);
+    loop {
+      let result = terminator(&game_state);
+
+      if let Some(output) = result {
+        return output;
+      }
+
+      game_state = Rc::new(GameState {
+        systems: game_state
+          .systems
+          .iter()
+          .map(|system| system.run(&game_state))
+          .collect(),
+        input: game_state.input.clone(),
+      });
+
+      next_frame().await
+    }
+  }
+
+  pub async fn run_move<Output, Terminator>(self, terminator: Terminator) -> Output
+  where
+    Terminator: Fn(&GameState<Input>) -> Option<Output>,
+  {
+    Rc::new(self).run(terminator).await
   }
 }
 
@@ -89,20 +116,5 @@ impl<Input: Clone + 'static> Game<Input> {
         };
       },
     )
-  }
-
-  pub fn run<Output, Terminator>(
-    ctx: &GameState<Input>,
-    terminator: Terminator,
-  ) -> Either<Output, GameState<Input>>
-  where
-    Terminator: Fn(&GameState<Input>) -> Option<Output>,
-  {
-    terminator(ctx)
-      .map(|output| Left(output))
-      .unwrap_or(Right(GameState {
-        systems: ctx.systems.iter().map(|system| system.run(&ctx)).collect(),
-        input: ctx.input.clone(),
-      }))
   }
 }

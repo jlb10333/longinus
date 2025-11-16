@@ -11,9 +11,8 @@ use crate::{
   },
   ecs::MapTransitionOnCollision,
   graphics_utils::draw_collider,
-  menu::{INVENTORY_WRAP_WIDTH, Menu, MenuSystem},
+  menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
-  save::SaveData,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -29,7 +28,7 @@ const SHOW_SLOTS: bool = true;
 
 pub struct GraphicsSystem<Input>(PhantomData<Input>);
 
-impl<Input: Clone + 'static> System for GraphicsSystem<Input> {
+impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   type Input = Input;
 
   fn start(_: &crate::system::GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
@@ -116,12 +115,17 @@ impl<Input: Clone + 'static> System for GraphicsSystem<Input> {
           );
         });
       }
-
-      /* Draw the scuffed menu */
-      let menu_system = ctx.get::<MenuSystem>().unwrap();
-
-      menu_system.active_menus.iter().rev().for_each(draw_menu);
     }
+
+    /* Draw the scuffed menu */
+    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+
+    menu_system
+      .active_main_menus
+      .iter()
+      .rev()
+      .for_each(draw_main_menu);
+    menu_system.active_menus.iter().rev().for_each(draw_menu);
 
     /* Maintain target fps */
     let frame_time = get_frame_time();
@@ -135,9 +139,84 @@ impl<Input: Clone + 'static> System for GraphicsSystem<Input> {
   }
 }
 
-fn draw_menu(menu: &Menu) {
+fn draw_main_menu(menu: &MainMenu) {
   match menu.kind.clone() {
-    crate::menu::MenuKind::PauseMain => {
+    crate::menu::MainMenuKind::Main(should_include_continue_option) => {
+      draw_rectangle(
+        screen_width() * 0.1,
+        screen_height() * 0.1,
+        screen_width() * 0.8,
+        screen_height() * 0.8,
+        GREEN,
+      );
+
+      draw_text(
+        "LONGINUS",
+        screen_width() * 0.2,
+        screen_height() * 0.3,
+        40.0,
+        WHITE,
+      );
+
+      draw_text(
+        &format!(
+          "{}{}",
+          if should_include_continue_option {
+            "continue"
+          } else {
+            "new_game"
+          },
+          if menu.cursor_position == vector![0, 0] {
+            "-"
+          } else {
+            ""
+          }
+        ),
+        screen_width() * 0.2,
+        screen_height() * 0.6,
+        40.0,
+        WHITE,
+      );
+      draw_text(
+        &format!(
+          "{}{}",
+          if should_include_continue_option {
+            "new_game"
+          } else {
+            "load_game"
+          },
+          if menu.cursor_position == vector![0, 1] {
+            "-"
+          } else {
+            ""
+          }
+        ),
+        screen_width() * 0.45,
+        screen_height() * 0.6,
+        40.0,
+        WHITE,
+      );
+      if should_include_continue_option {
+        draw_text(
+          if menu.cursor_position == vector![0, 2] {
+            "load_game-"
+          } else {
+            "load_game"
+          },
+          screen_width() * 0.7,
+          screen_height() * 0.6,
+          40.0,
+          WHITE,
+        );
+      }
+    }
+    _ => todo!("Unimplemented"),
+  }
+}
+
+fn draw_menu(menu: &GameMenu) {
+  match menu.kind.clone() {
+    crate::menu::GameMenuKind::PauseMain => {
       draw_rectangle(
         screen_width() * 0.1,
         screen_height() * 0.1,
@@ -177,7 +256,7 @@ fn draw_menu(menu: &Menu) {
         WHITE,
       );
     }
-    crate::menu::MenuKind::InventoryMain => {
+    crate::menu::GameMenuKind::InventoryMain => {
       draw_rectangle(
         screen_width() * 0.1,
         screen_height() * 0.1,
@@ -217,7 +296,7 @@ fn draw_menu(menu: &Menu) {
         WHITE,
       );
     }
-    crate::menu::MenuKind::InventoryPickSlot(_, inventory_update) => {
+    crate::menu::GameMenuKind::InventoryPickSlot(_, inventory_update) => {
       draw_rectangle(
         screen_width() * 0.45,
         screen_height() * 0.45,
@@ -267,8 +346,7 @@ fn draw_menu(menu: &Menu) {
           );
         });
     }
-    crate::menu::MenuKind::InventoryConfirmEdit(_) => {}
-    crate::menu::MenuKind::SaveConfirm(_) => {
+    crate::menu::GameMenuKind::SaveConfirm(_) => {
       draw_rectangle(
         screen_width() * 0.3,
         screen_height() * 0.45,

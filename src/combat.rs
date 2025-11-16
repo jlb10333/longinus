@@ -536,7 +536,7 @@ impl System for CombatSystem {
     &self,
     ctx: &crate::system::GameState<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    let menu_system = ctx.get::<MenuSystem>().unwrap();
+    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
 
     if menu_system.active_menus.len() > 0 {
       if let Some(inventory_update) = &menu_system.inventory_update {
