@@ -9,7 +9,7 @@ use crate::{
     CombatSystem, EQUIP_SLOTS_WIDTH, WeaponModuleKind, distance_projection_screen, get_reticle_pos,
     get_slot_positions,
   },
-  ecs::MapTransitionOnCollision,
+  ecs::{Damageable, Entity, MapTransitionOnCollision},
   graphics_utils::draw_collider,
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
@@ -115,6 +115,26 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           );
         });
       }
+
+      /* Draw overlays */
+      let player = physics_system
+        .entities
+        .iter()
+        .find(|Entity { handle, .. }| *handle == physics_system.player_handle)
+        .unwrap();
+
+      let player_damageable = player.components.get::<Damageable>().unwrap();
+
+      draw_text(
+        &format!(
+          "{}/{}",
+          player_damageable.health, player_damageable.max_health
+        ),
+        screen_width() * 0.01,
+        screen_height() * 0.9,
+        40.0,
+        BLACK,
+      );
     }
 
     /* Draw the scuffed menu */

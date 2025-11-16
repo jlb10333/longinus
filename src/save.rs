@@ -7,8 +7,10 @@ use crate::{
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, UnequippedModules, WeaponModuleKind,
   },
+  ecs::{Damageable, Entity},
   load_map::MapSystem,
   menu::{MenuSystem, SaveToLoad},
+  physics::PhysicsSystem,
   system::System,
 };
 
@@ -20,6 +22,8 @@ pub struct SaveData {
   pub equipped_modules:
     [[Option<WeaponModuleKind>; EQUIP_SLOTS_HEIGHT as usize]; EQUIP_SLOTS_WIDTH as usize],
   pub acquired_items: Vec<(String, i32)>,
+  pub player_health: f32,
+  pub player_max_health: f32,
 }
 
 fn save_data_path(file_name: &str) -> String {
@@ -76,10 +80,18 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
       .map(|ctx| {
         let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
         let map_system = ctx.get::<MapSystem>().unwrap();
+        let combat_system = ctx.get::<CombatSystem>().unwrap();
+        let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
         /* Save current progress */
         menu_system.save_point_confirmed_id.map(|player_spawn_id| {
-          let combat_system = ctx.get::<CombatSystem>().unwrap();
+          let player_entity = physics_system
+            .entities
+            .iter()
+            .find(|Entity { handle, .. }| *handle == physics_system.player_handle)
+            .unwrap();
+
+          let player_damageable = player_entity.components.get::<Damageable>().unwrap();
 
           let save_data = SaveData {
             player_spawn_id,
@@ -87,6 +99,8 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
             unequipped_modules: combat_system.unequipped_modules.clone(),
             equipped_modules: combat_system.equipped_modules.data.0.clone(),
             acquired_items: combat_system.acquired_items.clone(),
+            player_health: player_damageable.health,
+            player_max_health: player_damageable.max_health,
           };
 
           let sys_time: DateTime<Utc> = time::SystemTime::now().into();

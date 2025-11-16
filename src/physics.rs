@@ -46,6 +46,8 @@ fn load_new_map(
   map_name: &str,
   acquired_modules: &Vec<(String, i32)>,
   target_player_spawn_id: i32,
+  player_health: f32,
+  player_max_health: f32,
 ) -> Rc<PhysicsSystem> {
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
@@ -76,7 +78,8 @@ fn load_new_map(
   let player = Entity {
     handle: player_handle,
     components: ComponentSet::new().insert(Damageable {
-      health: 100.0,
+      health: player_health,
+      max_health: player_max_health,
       destroy_on_zero_health: false,
       current_hitstun: 0.0,
       max_hitstun: 30.0,
@@ -95,6 +98,7 @@ fn load_new_map(
         components: ComponentSet::new()
           .insert(Damageable {
             health: 100.0,
+            max_health: 100.0,
             destroy_on_zero_health: true,
             current_hitstun: 0.0,
             max_hitstun: 0.0,
@@ -215,6 +219,8 @@ impl System for PhysicsSystem {
       &map_system.current_map_name,
       &combat_system.acquired_items,
       map_system.target_player_spawn_id,
+      ctx.input.player_health,
+      ctx.input.player_max_health,
     )
   }
 
@@ -227,12 +233,21 @@ impl System for PhysicsSystem {
     let combat_system = ctx.get::<CombatSystem>().unwrap();
 
     if let Some(map) = map_system.map.as_ref() {
+      let player_entity = self
+        .entities
+        .iter()
+        .find(|Entity { handle, .. }| *handle == self.player_handle)
+        .unwrap();
+      let player_damageable = player_entity.components.get::<Damageable>().unwrap();
+
       // TODO: give the ability to specify which player spawn to start from
       return load_new_map(
         map,
         &map_system.current_map_name,
         &combat_system.acquired_items,
         map_system.target_player_spawn_id,
+        player_damageable.health,
+        player_damageable.max_health,
       );
     }
 
@@ -383,10 +398,8 @@ impl System for PhysicsSystem {
           return Entity {
             handle: entity.handle,
             components: entity.components.with(Damageable {
-              health: damageable.health,
-              destroy_on_zero_health: damageable.destroy_on_zero_health,
               current_hitstun: damageable.current_hitstun - 1.0,
-              max_hitstun: damageable.max_hitstun,
+              ..*damageable
             }),
           };
         }
@@ -432,14 +445,12 @@ impl System for PhysicsSystem {
           return Entity {
             handle: entity.handle,
             components: entity.components.with(Damageable {
-              health: damageable.health,
-              destroy_on_zero_health: damageable.destroy_on_zero_health,
               current_hitstun: if damageable.current_hitstun > 0.0 {
                 damageable.current_hitstun - 1.0
               } else {
                 0.0
               },
-              max_hitstun: damageable.max_hitstun,
+              ..*damageable
             }),
           };
         }
@@ -450,9 +461,7 @@ impl System for PhysicsSystem {
           handle: entity.handle,
           components: entity.components.with(Damageable {
             health: damageable.health - incoming_damage,
-            destroy_on_zero_health: damageable.destroy_on_zero_health,
-            current_hitstun: damageable.max_hitstun,
-            max_hitstun: damageable.max_hitstun,
+            ..*damageable
           }),
         };
       })

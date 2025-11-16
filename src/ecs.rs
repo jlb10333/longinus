@@ -90,6 +90,7 @@ pub trait Component: Any {}
 
 pub struct Damageable {
   pub health: f32,
+  pub max_health: f32,
   pub destroy_on_zero_health: bool,
   pub current_hitstun: f32,
   pub max_hitstun: f32,

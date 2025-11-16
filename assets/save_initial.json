@@ -28,5 +28,7 @@
       "Plasma"
     ]
   ],
-  "acquired_items": []
+  "acquired_items": [],
+  "player_health": 100.0,
+  "player_max_health": 100.0
 }
