@@ -2,22 +2,13 @@ use rapier2d::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-  combat::{CombatSystem, WeaponModuleKind},
-  controls::ControlsSystem,
-  ecs::{
+  ability::AbilitySystem, combat::{CombatSystem, WeaponModuleKind}, controls::ControlsSystem, ecs::{
     ComponentSet, Damageable, Damager, DestroyOnCollision, Enemy, Entity, GivesItemOnCollision,
     MapTransitionOnCollision, SaveMenuOnCollision, Sensor,
-  },
-  enemy::EnemySystem,
-  f::Monad,
-  load_map::{
+  }, enemy::EnemySystem, f::Monad, load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
     COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapSystem, MapTile,
-  },
-  menu::MenuSystem,
-  save::SaveData,
-  system::System,
-  units::UnitConvert2,
+  }, menu::MenuSystem, save::SaveData, system::System, units::UnitConvert2
 };
 
 const PLAYER_SPEED_LIMIT: f32 = 10.0;
@@ -301,26 +292,27 @@ impl System for PhysicsSystem {
     let velocity_change = attempted_acceleration * player_mass;
 
     let safe_acceleration_x =
-      if attempted_acceleration.x == 0.0 || player_velocity.x.abs() + velocity_change.x.abs() < PLAYER_SPEED_LIMIT {
+      if attempted_acceleration.x == 0.0 || velocity_change.x.signum() != player_velocity.x.signum() || player_velocity.x.abs() < PLAYER_SPEED_LIMIT {
         attempted_acceleration.x
       } else {
-        let acceleration_x_exceeding_limit = (velocity_change.x + player_velocity.x - (player_velocity.x.signum() * PLAYER_SPEED_LIMIT)) * player_mass;
-
-        attempted_acceleration.x - acceleration_x_exceeding_limit
+        0.0
       };
 
     let safe_acceleration_y =
-      if attempted_acceleration.y == 0.0 || player_velocity.y.abs() + velocity_change.y.abs() < PLAYER_SPEED_LIMIT {
+      if attempted_acceleration.y == 0.0 || velocity_change.y.signum() != player_velocity.y.signum() || player_velocity.y.abs() < PLAYER_SPEED_LIMIT {
         attempted_acceleration.y
       } else {
-        let acceleration_y_exceeding_limit = (velocity_change.y + player_velocity.y - (player_velocity.y.signum() * PLAYER_SPEED_LIMIT)) * player_mass;
-
-        attempted_acceleration.y - acceleration_y_exceeding_limit
+        0.0
       };
-
-    if player_velocity.magnitude() > 30.0 || safe_acceleration_x > 1.0 || safe_acceleration_y > 1.0 { panic!() }
     
     rigid_body_set[self.player_handle].apply_impulse(vector![safe_acceleration_x, safe_acceleration_y], true);
+
+    /* MARK: Perform boost */
+    let ability_system = ctx.get::<AbilitySystem>().unwrap();
+
+    if let Some(boost_force) = ability_system.boost_force {
+      rigid_body_set[self.player_handle].apply_impulse(boost_force * player_mass, true);
+    }
 
     /* MARK: Fire all weapons */
     let new_projectiles: Vec<Entity> = combat_system

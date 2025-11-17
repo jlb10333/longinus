@@ -48,7 +48,7 @@ impl UnitConvert<PhysicsScalar> for ScreenScalar {
 
 /* PhysicsScalar */
 
-#[derive(Sub, Add, Mul, Div, Clone, Copy)]
+#[derive(Sub, Add, Mul, Div, Clone, Copy, PartialEq)]
 pub struct PhysicsScalar(pub f32);
 
 impl Deref for PhysicsScalar {

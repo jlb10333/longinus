@@ -1,7 +1,6 @@
 use std::{any::Any, rc::Rc};
 
 use macroquad::window::next_frame;
-use rapier2d::parry::either::Either::{self, Left, Right};
 
 pub trait System: Any {
   type Input: Clone + 'static;

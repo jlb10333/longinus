@@ -5,7 +5,7 @@ use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
   system::{GameState, System},
-  units::{PhysicsVector, UnitConvert, UnitConvert2},
+  units::{PhysicsVector, UnitConvert2},
 };
 
 const INPUT_FORCE: f32 = 0.1;
@@ -52,6 +52,7 @@ pub struct ControlsSystem<Input> {
   pub firing: bool,
   pub inventory: bool,
   pub pause: bool,
+  pub boost: bool,
   pub last_frame: Option<Rc<ControlsSystem<Input>>>,
   phantom: PhantomData<Input>,
 }
@@ -95,6 +96,7 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
       firing: keys.contains(&Keycode::Space),
       inventory: keys.contains(&Keycode::E),
       pause: keys.contains(&Keycode::Enter),
+      boost: keys.contains(&Keycode::LControl),
       last_frame: None,
       phantom: PhantomData,
     })
@@ -127,6 +129,7 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
       inventory: keys.contains(&Keycode::E),
       pause: keys.contains(&Keycode::Enter),
       last_frame: Some(Rc::new(self.clone())),
+      boost: keys.contains(&Keycode::LControl),
       phantom: PhantomData,
     });
   }

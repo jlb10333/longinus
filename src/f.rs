@@ -1,8 +1,6 @@
 pub trait Monad<T> {
   type SelfType<A>: Monad<A>;
 
-  fn unit<A>(a: A) -> Self::SelfType<A>;
-
   fn bind<B, F>(self, transform: F) -> Self::SelfType<B>
   where
     F: Fn(&T) -> B;
@@ -10,10 +8,6 @@ pub trait Monad<T> {
 
 impl<T> Monad<T> for Option<T> {
   type SelfType<A> = Option<A>;
-
-  fn unit<A>(a: A) -> Self::SelfType<A> {
-    Some(a)
-  }
 
   fn bind<B, F>(self, transform: F) -> Self::SelfType<B>
   where
@@ -28,10 +22,6 @@ impl<T> Monad<T> for Option<T> {
 
 impl<T, E> Monad<T> for Result<T, E> {
   type SelfType<A> = Result<A, E>;
-
-  fn unit<A>(a: A) -> Self::SelfType<A> {
-    Ok(a)
-  }
 
   fn bind<B, F>(self, transform: F) -> Self::SelfType<B>
   where

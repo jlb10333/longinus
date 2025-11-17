@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
-use macroquad::window::next_frame;
-
+use crate::ability::AbilitySystem;
 use crate::camera::CameraSystem;
 use crate::combat::CombatSystem;
 use crate::controls::ControlsSystem;
@@ -13,6 +12,7 @@ use crate::physics::PhysicsSystem;
 use crate::save::{SaveSystem, load_save};
 use crate::system::{Game, System};
 
+mod ability;
 mod camera;
 mod combat;
 mod controls;
@@ -61,6 +61,7 @@ async fn main() {
         .add_system(MenuSystem::start)
         .add_system(GraphicsSystem::start)
         .add_system(EnemySystem::start)
+        .add_system(AbilitySystem::start)
         .start(),
     )
     .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())
