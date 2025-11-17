@@ -1,4 +1,4 @@
-use std::{fs, marker::PhantomData, rc::Rc, time};
+use std::{ffi::OsStr, fs, marker::PhantomData, path::Path, rc::Rc, time};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -26,19 +26,23 @@ pub struct SaveData {
   pub player_max_health: f32,
 }
 
-fn save_data_path(file_name: &str) -> String {
-  format!("./storage/{}.json", file_name)
+fn initital_save_file_path() -> String {
+  Path::new(".").join("assets").join("save_initial.json").as_os_str().to_str().unwrap().to_string()
 }
 
-const INITIAL_SAVE_FILE_PATH: &str = "./assets/save_initial.json";
+fn save_data_path(save_filename: &str) -> String {
+  Path::new(".").join("storage").join(save_filename).as_os_str().to_str().unwrap().to_string()
+}
 
-const SAVE_DIR_PATH: &str = "./storage/";
+fn save_dir_path() -> String {
+  Path::new(".").join("storage").as_os_str().to_str().unwrap().to_string()
+}
 
 pub fn load_save(save_to_load: &SaveToLoad) -> SaveData {
   serde_json::from_str(
     &fs::read_to_string(match save_to_load {
-      SaveToLoad::Initial => INITIAL_SAVE_FILE_PATH.to_string(),
-      SaveToLoad::SaveData(path) => format!("{}{}", SAVE_DIR_PATH, path),
+      SaveToLoad::Initial => initital_save_file_path(),
+      SaveToLoad::SaveData(path) => save_data_path(path),
     })
     .unwrap(),
   )
@@ -59,7 +63,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
   where
     Self: Sized,
   {
-    let available_save_data = fs::read_dir(SAVE_DIR_PATH)
+    let available_save_data = fs::read_dir(save_dir_path())
       .unwrap()
       .flatten()
       .map(|dir_entry| dir_entry.file_name().into_string())
