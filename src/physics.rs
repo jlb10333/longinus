@@ -17,10 +17,10 @@ use crate::{
   menu::MenuSystem,
   save::SaveData,
   system::System,
-  units::{UnitConvert2, vec_zero},
+  units::UnitConvert2,
 };
 
-const PLAYER_SPEED_LIMIT: f32 = 15.0;
+const PLAYER_SPEED_LIMIT: f32 = 10.0;
 
 pub struct PhysicsSystem {
   pub rigid_body_set: RigidBodySet,
@@ -60,7 +60,7 @@ fn load_new_map(
     .find(|&player_spawn| player_spawn.id == target_player_spawn_id)
     .unwrap();
 
-  /* #region Create the player. */
+  /* MARK: Create the player. */
   let mut player_rigid_body = RigidBodyBuilder::dynamic()
     .translation(player_spawn.translation.into_vec())
     .build();
@@ -88,9 +88,8 @@ fn load_new_map(
       max_hitstun: 30.0,
     }),
   };
-  /* #endregion */
 
-  /* #region Spawn enemies. */
+  /* MARK: Spawn enemies. */
   let enemies: Vec<_> = map
     .enemy_spawns
     .iter()
@@ -114,9 +113,8 @@ fn load_new_map(
       }
     })
     .collect();
-  /* #endregion */
 
-  /* #region Spawn item pickups. */
+  /* MARK: Spawn item pickups. */
   let item_pickups = map
     .item_pickups
     .iter()
@@ -134,9 +132,8 @@ fn load_new_map(
       }
     })
     .collect::<Vec<_>>();
-  /* #endregion */
 
-  /* #region Spawn map transitions. */
+  /* MARK: Spawn map transitions. */
   let map_transitions = map
     .map_transitions
     .iter()
@@ -148,9 +145,8 @@ fn load_new_map(
       }),
     })
     .collect::<Vec<_>>();
-  /* #endregion */
 
-  /* #region Spawn save points. */
+  /* MARK: Spawn save points. */
   let save_points = map
     .save_points
     .iter()
@@ -161,17 +157,15 @@ fn load_new_map(
       }),
     })
     .collect::<Vec<_>>();
-  /* #endregion */
 
-  /* #region Create the map colliders. */
+  /* MARK: Create the map colliders. */
   map.colliders.iter().for_each(|map_tile| {
     match map_tile {
       MapTile::Wall(wall) => collider_set.insert(wall.collider.clone()),
     };
   });
-  /* #endregion */
 
-  /* #region Create other structures necessary for the simulation. */
+  /* MARK: Create other structures necessary for the simulation. */
   let integration_parameters = IntegrationParameters::default();
   let physics_pipeline = Rc::new(RefCell::new(PhysicsPipeline::new()));
   let island_manager = IslandManager::new();
@@ -187,7 +181,6 @@ fn load_new_map(
     .chain(map_transitions)
     .chain(save_points)
     .collect();
-  /* #endregion */
 
   return Rc::new(PhysicsSystem {
     rigid_body_set,
@@ -272,7 +265,7 @@ impl System for PhysicsSystem {
     let entities = self.entities.clone();
     let sensors = self.sensors.clone();
 
-    /* #region Don't do physics if currently in menu */
+    /* MARK: Don't do physics if currently in menu */
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
 
     if menu_system.active_menus.iter().count() > 0 {
@@ -297,37 +290,39 @@ impl System for PhysicsSystem {
         save_point_contact_last_frame: self.save_point_contact_last_frame,
       });
     }
-    /* #endregion */
 
-    /* #region Move the player */
+    /* MARK: Move the player */
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
     let attempted_acceleration = controls_system.left_stick.into_vec();
     let player = &rigid_body_set[self.player_handle];
-    let player_velocity = player.linvel();
     let player_mass = player.mass();
+    let player_velocity = player.linvel();
+    let velocity_change = attempted_acceleration * player_mass;
 
-    println!("attempted_acceleration {}", attempted_acceleration);
-    let safe_acceleration =
-      if attempted_acceleration == vec_zero() || *player_velocity == vec_zero() {
-        attempted_acceleration
+    let safe_acceleration_x =
+      if attempted_acceleration.x == 0.0 || player_velocity.x.abs() + velocity_change.x.abs() < PLAYER_SPEED_LIMIT {
+        attempted_acceleration.x
       } else {
-        let acceleration_component_in_current_velocity =
-          player_velocity.dot(&attempted_acceleration) / player_velocity.magnitude_squared()
-            * player_velocity;
-        let velocity_component_after_acceleration =
-          player_velocity + (acceleration_component_in_current_velocity / player_mass);
-        let next_velocity_component_exceeding_limit =
-          ((velocity_component_after_acceleration.magnitude() - PLAYER_SPEED_LIMIT).max(0.0)
-            / PLAYER_SPEED_LIMIT)
-            * velocity_component_after_acceleration;
-        attempted_acceleration - (next_velocity_component_exceeding_limit * player_mass)
+        let acceleration_x_exceeding_limit = (velocity_change.x + player_velocity.x - (player_velocity.x.signum() * PLAYER_SPEED_LIMIT)) * player_mass;
+
+        attempted_acceleration.x - acceleration_x_exceeding_limit
       };
 
-    rigid_body_set[self.player_handle].apply_impulse(safe_acceleration, true);
-    /* #endregion */
+    let safe_acceleration_y =
+      if attempted_acceleration.y == 0.0 || player_velocity.y.abs() + velocity_change.y.abs() < PLAYER_SPEED_LIMIT {
+        attempted_acceleration.y
+      } else {
+        let acceleration_y_exceeding_limit = (velocity_change.y + player_velocity.y - (player_velocity.y.signum() * PLAYER_SPEED_LIMIT)) * player_mass;
 
-    /* #region Fire all weapons */
+        attempted_acceleration.y - acceleration_y_exceeding_limit
+      };
+
+    if player_velocity.magnitude() > 30.0 || safe_acceleration_x > 1.0 || safe_acceleration_y > 1.0 { panic!() }
+    
+    rigid_body_set[self.player_handle].apply_impulse(vector![safe_acceleration_x, safe_acceleration_y], true);
+
+    /* MARK: Fire all weapons */
     let new_projectiles: Vec<Entity> = combat_system
       .new_projectiles
       .iter()
@@ -355,9 +350,8 @@ impl System for PhysicsSystem {
       .collect();
 
     let entities: Vec<Entity> = entities.iter().cloned().chain(new_projectiles).collect();
-    /* #endregion */
 
-    /* #region Carry out enemy behavior */
+    /* MARK: Carry out enemy behavior */
     let enemy_system = ctx.get::<EnemySystem>().unwrap();
 
     let entities = entities
@@ -415,9 +409,8 @@ impl System for PhysicsSystem {
           .collect::<Vec<_>>()
       })
       .collect::<Vec<_>>();
-    /* #endregion */
 
-    /* #region Damage all entities colliding with damagers */
+    /* MARK: Damage all entities colliding with damagers */
     let entities: Vec<_> = entities
       .iter()
       .map(|entity| {
@@ -500,9 +493,8 @@ impl System for PhysicsSystem {
         };
       })
       .collect();
-    /* #endregion */
 
-    /* #region Destroy entities with 0 health marked as destroy on 0 health */
+    /* MARK: Destroy entities with 0 health marked as destroy on 0 health */
     let entities = entities
       .iter()
       .cloned()
@@ -529,9 +521,8 @@ impl System for PhysicsSystem {
         return !entity_destroyed;
       })
       .collect::<Vec<_>>();
-    /* #endregion */
 
-    /* #region Remove colliding entities marked as destroy on collision */
+    /* MARK: Remove colliding entities marked as destroy on collision */
     let entities = entities
       .iter()
       .cloned()
@@ -563,9 +554,8 @@ impl System for PhysicsSystem {
         return !entity_destroyed;
       })
       .collect();
-    /* #endregion */
 
-    /* #region Give items on collision */
+    /* MARK: Give items on collision */
     let new_weapon_modules = sensors.iter().cloned().fold(vec![], |acc, sensor| {
       if let Some(gives_item) = sensor.components.get::<GivesItemOnCollision>()
         && rigid_body_set[self.player_handle]
@@ -586,9 +576,8 @@ impl System for PhysicsSystem {
         acc
       }
     });
-    /* #endregion */
 
-    /* #region Load new map */
+    /* MARK: Load new map */
     let load_new_map = sensors.iter().find_map(|sensor| {
       if narrow_phase
         .intersection_pairs_with(sensor.handle)
@@ -609,9 +598,8 @@ impl System for PhysicsSystem {
           )
         })
     });
-    /* #endregion */
 
-    /* #region Save point interaction */
+    /* MARK: Save point interaction */
     let save_point_contact = sensors.iter().find_map(|sensor| {
       if narrow_phase
         .intersection_pairs_with(sensor.handle)
@@ -627,9 +615,8 @@ impl System for PhysicsSystem {
         .get::<SaveMenuOnCollision>()
         .map(|save_menu_on_collision| save_menu_on_collision.id)
     });
-    /* #endregion */
 
-    /* #region Remove colliding sensors marked as destroy on collision */
+    /* MARK: Remove colliding sensors marked as destroy on collision */
     let sensors = sensors
       .iter()
       .cloned()
@@ -656,9 +643,8 @@ impl System for PhysicsSystem {
         return !entity_destroyed;
       })
       .collect::<Vec<_>>();
-    /* #endregion */
 
-    /* #region Step physics */
+    /* MARK: Step physics */
     physics_pipeline.step(
       &vector![0.0, 0.0],
       &self.integration_parameters,
@@ -673,7 +659,6 @@ impl System for PhysicsSystem {
       &(),
       &(),
     );
-    /* #endregion */
 
     return Rc::new(Self {
       rigid_body_set: rigid_body_set.clone(),

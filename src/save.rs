@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, fs, marker::PhantomData, path::Path, rc::Rc, time};
+use std::{fs, marker::PhantomData, path::Path, rc::Rc, time};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -87,7 +87,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
         let combat_system = ctx.get::<CombatSystem>().unwrap();
         let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
-        /* Save current progress */
+        /* MARK: Save current progress */
         menu_system.save_point_confirmed_id.map(|player_spawn_id| {
           let player_entity = physics_system
             .entities
