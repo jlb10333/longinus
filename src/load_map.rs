@@ -554,7 +554,7 @@ fn map_read_path(map_name: &String) -> String {
 impl System for MapSystem {
   type Input = SaveData;
   fn start(
-    ctx: &crate::system::GameState<Self::Input>,
+    ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
@@ -571,7 +571,7 @@ impl System for MapSystem {
 
   fn run(
     &self,
-    ctx: &crate::system::GameState<Self::Input>,
+    ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 

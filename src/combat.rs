@@ -513,7 +513,7 @@ pub struct CombatSystem {
 impl System for CombatSystem {
   type Input = SaveData;
 
-  fn start(ctx: &crate::system::GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
+  fn start(ctx: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
@@ -534,7 +534,7 @@ impl System for CombatSystem {
 
   fn run(
     &self,
-    ctx: &crate::system::GameState<Self::Input>,
+    ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
 

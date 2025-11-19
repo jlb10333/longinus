@@ -4,17 +4,10 @@ use macroquad::prelude::*;
 use rapier2d::prelude::*;
 
 use crate::{
-  camera::CameraSystem,
-  combat::{
+  camera::CameraSystem, combat::{
     CombatSystem, EQUIP_SLOTS_WIDTH, WeaponModuleKind, distance_projection_screen, get_reticle_pos,
     get_slot_positions,
-  },
-  ecs::{Damageable, Entity, MapTransitionOnCollision},
-  graphics_utils::draw_collider,
-  menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
-  physics::PhysicsSystem,
-  system::System,
-  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
+  }, ecs::{Damageable, Entity, MapTransitionOnCollision}, graphics_utils::draw_collider, menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem}, physics::PhysicsSystem, save::SaveSystem, system::System, units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2}
 };
 
 const TARGET_FPS: f32 = 60.0;
@@ -31,7 +24,7 @@ pub struct GraphicsSystem<Input>(PhantomData<Input>);
 impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   type Input = Input;
 
-  fn start(_: &crate::system::GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
+  fn start(_: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
@@ -40,7 +33,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
   fn run(
     &self,
-    ctx: &crate::system::GameState<Self::Input>,
+    ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     /* Background */
     clear_background(RED);
@@ -139,13 +132,14 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
     /* Draw the scuffed menu */
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+    let save_system = ctx.get::<SaveSystem<_>>().unwrap();
 
     menu_system
       .active_main_menus
       .iter()
       .rev()
       .for_each(draw_main_menu);
-    menu_system.active_menus.iter().rev().for_each(draw_menu);
+    menu_system.active_menus.iter().rev().for_each(|menu| draw_menu(menu, &save_system.available_save_data));
 
     /* Maintain target fps */
     let frame_time = get_frame_time();
@@ -161,13 +155,14 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
 fn draw_main_menu(menu: &MainMenu) {
   match menu.kind.clone() {
+    /* MARK: Menu Main */
     crate::menu::MainMenuKind::Main(should_include_continue_option) => {
       draw_rectangle(
-        screen_width() * 0.1,
-        screen_height() * 0.1,
-        screen_width() * 0.8,
-        screen_height() * 0.8,
-        GREEN,
+        0.0,
+        0.0,
+        screen_width(),
+        screen_height(),
+        BLACK,
       );
 
       draw_text(
@@ -234,8 +229,9 @@ fn draw_main_menu(menu: &MainMenu) {
   }
 }
 
-fn draw_menu(menu: &GameMenu) {
+fn draw_menu(menu: &GameMenu, available_sava_data: &Vec<String>) {
   match menu.kind.clone() {
+    /* MARK: Pause Main */
     crate::menu::GameMenuKind::PauseMain => {
       draw_rectangle(
         screen_width() * 0.1,
@@ -246,18 +242,10 @@ fn draw_menu(menu: &GameMenu) {
       );
 
       draw_text(
-        "LONGINUS",
-        screen_width() * 0.2,
-        screen_height() * 0.3,
-        40.0,
-        WHITE,
-      );
-
-      draw_text(
         if menu.cursor_position == vector![0, 0] {
-          "new game-"
+          "cancel-"
         } else {
-          "new game"
+          "cancel"
         },
         screen_width() * 0.2,
         screen_height() * 0.6,
@@ -265,17 +253,59 @@ fn draw_menu(menu: &GameMenu) {
         WHITE,
       );
       draw_text(
-        if menu.cursor_position == vector![1, 0] {
+        if menu.cursor_position == vector![0, 1] {
           "load game-"
         } else {
           "load game"
         },
-        screen_width() * 0.5,
-        screen_height() * 0.6,
+        screen_width() * 0.2,
+        screen_height() * 0.65,
+        40.0,
+        WHITE,
+      );
+      draw_text(
+        if menu.cursor_position == vector![0, 2] {
+          "quit to menu-"
+        } else {
+          "quit to menu"
+        },
+        screen_width() * 0.2,
+        screen_height() * 0.7,
         40.0,
         WHITE,
       );
     }
+    /* MARK: Pause Load Save */
+    crate::menu::GameMenuKind::PauseLoadSave => {
+      draw_rectangle(
+        screen_width() * 0.45,
+        screen_height() * 0.45,
+        screen_width() * 0.5,
+        screen_height() * 0.5,
+        LIGHTGRAY,
+      );
+      draw_text(
+        if menu.cursor_position == vector![0, 0] {
+          "-cancel"
+        } else {
+          "cancel"
+        },
+        screen_width() * 0.5,
+        screen_height() * 0.5,
+        40.0,
+        WHITE,
+      );
+      available_sava_data.iter().enumerate().for_each(|(index, save)| {
+        draw_text(
+          &format!("{}{}", if menu.cursor_position.y - 1 == index as i32 {"-"} else {""}, save),
+          screen_width() * 0.5,
+          screen_height() * (0.55 + (index as f32 * 0.05)),
+          40.0,
+          WHITE
+        );
+      });
+    }
+    /* MARK: Inventory Main */
     crate::menu::GameMenuKind::InventoryMain => {
       draw_rectangle(
         screen_width() * 0.1,
@@ -316,6 +346,7 @@ fn draw_menu(menu: &GameMenu) {
         WHITE,
       );
     }
+    /* MARK: Inventory pick slot */
     crate::menu::GameMenuKind::InventoryPickSlot(_, inventory_update) => {
       draw_rectangle(
         screen_width() * 0.45,
@@ -366,6 +397,7 @@ fn draw_menu(menu: &GameMenu) {
           );
         });
     }
+    /* MARK: Save Confirm */
     crate::menu::GameMenuKind::SaveConfirm(_) => {
       draw_rectangle(
         screen_width() * 0.3,

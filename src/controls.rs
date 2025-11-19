@@ -4,7 +4,7 @@ use device_query::{DeviceQuery, DeviceState, Keycode};
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
-  system::{GameState, System},
+  system::{ProcessContext, System},
   units::{PhysicsVector, UnitConvert2},
 };
 
@@ -70,7 +70,7 @@ pub fn angle_from_vec(direction: PhysicsVector) -> f32 {
 impl<Input: Clone + 'static> System for ControlsSystem<Input> {
   type Input = Input;
 
-  fn start(_: &GameState<Input>) -> Rc<dyn System<Input = Self::Input>> {
+  fn start(_: &ProcessContext<Input>) -> Rc<dyn System<Input = Self::Input>> {
     let device_state = DeviceState::new();
     let keys: Vec<Keycode> = device_state.get_keys();
 
@@ -102,7 +102,7 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
     })
   }
 
-  fn run(&self, _: &GameState<Input>) -> Rc<dyn System<Input = Self::Input>> {
+  fn run(&self, _: &ProcessContext<Input>) -> Rc<dyn System<Input = Self::Input>> {
     let device_state = DeviceState::new();
     let keys: Vec<Keycode> = device_state.get_keys();
 

@@ -26,7 +26,7 @@ pub struct EnemySystem {
 impl System for EnemySystem {
   type Input = SaveData;
   fn start(
-    _: &crate::system::GameState<Self::Input>,
+    _: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
@@ -38,7 +38,7 @@ impl System for EnemySystem {
 
   fn run(
     &self,
-    ctx: &crate::system::GameState<Self::Input>,
+    ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 

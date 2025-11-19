@@ -5,20 +5,20 @@ use macroquad::window::next_frame;
 pub trait System: Any {
   type Input: Clone + 'static;
 
-  fn start(_: &GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
+  fn start(_: &ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized;
 
-  fn run(&self, _: &GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>;
+  fn run(&self, _: &ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>;
 }
 
 #[derive(Clone)]
-pub struct GameState<Input: Clone + 'static> {
+pub struct ProcessContext<Input: Clone + 'static> {
   pub systems: Vec<Rc<dyn System<Input = Input>>>,
   pub input: Input,
 }
 
-impl<Input: Clone + 'static> GameState<Input> {
+impl<Input: Clone + 'static> ProcessContext<Input> {
   pub fn get<Target>(&self) -> Option<Rc<Target>>
   where
     Target: System<Input = Input>,
@@ -35,13 +35,13 @@ impl<Input: Clone + 'static> GameState<Input> {
       .flatten();
   }
 
-  pub fn downcast<Target: Clone + 'static>(&self) -> Option<&GameState<Target>> {
-    (self as &dyn Any).downcast_ref::<GameState<Target>>()
+  pub fn downcast<Target: Clone + 'static>(&self) -> Option<&ProcessContext<Target>> {
+    (self as &dyn Any).downcast_ref::<ProcessContext<Target>>()
   }
 
   pub async fn run<Output, Terminator>(self: &Rc<Self>, terminator: Terminator) -> Output
   where
-    Terminator: Fn(&GameState<Input>) -> Option<Output>,
+    Terminator: Fn(&ProcessContext<Input>) -> Option<Output>,
   {
     let mut game_state = Rc::clone(self);
     loop {
@@ -51,7 +51,7 @@ impl<Input: Clone + 'static> GameState<Input> {
         return output;
       }
 
-      game_state = Rc::new(GameState {
+      game_state = Rc::new(ProcessContext {
         systems: game_state
           .systems
           .iter()
@@ -66,21 +66,21 @@ impl<Input: Clone + 'static> GameState<Input> {
 
   pub async fn run_move<Output, Terminator>(self, terminator: Terminator) -> Output
   where
-    Terminator: Fn(&GameState<Input>) -> Option<Output>,
+    Terminator: Fn(&ProcessContext<Input>) -> Option<Output>,
   {
     Rc::new(self).run(terminator).await
   }
 }
 
-type ContextInitializer<Input> = fn(&GameState<Input>) -> Rc<dyn System<Input = Input>>;
-pub struct Game<Input: Clone + 'static> {
+type ContextInitializer<Input> = fn(&ProcessContext<Input>) -> Rc<dyn System<Input = Input>>;
+pub struct Process<Input: Clone + 'static> {
   input: Input,
   ctx_initializers: Vec<ContextInitializer<Input>>,
 }
 
-impl<Input: Clone + 'static> Game<Input> {
+impl<Input: Clone + 'static> Process<Input> {
   pub fn new(input: &Input) -> Self {
-    return Game {
+    return Process {
       input: input.clone(),
       ctx_initializers: Vec::new(),
     };
@@ -90,26 +90,26 @@ impl<Input: Clone + 'static> Game<Input> {
     let mut new_vec = self.ctx_initializers.clone();
     new_vec.push(system_initializer);
 
-    return Game {
+    return Process {
       input: self.input.clone(),
       ctx_initializers: new_vec,
     };
   }
 
-  pub fn start(&self) -> GameState<Input> {
+  pub fn start(&self) -> ProcessContext<Input> {
     self.ctx_initializers.iter().fold(
-      GameState {
+      ProcessContext {
         systems: vec![],
         input: self.input.clone(),
       },
-      |ctx: GameState<Input>, initializer| {
+      |ctx: ProcessContext<Input>, initializer| {
         let new_vec = ctx
           .systems
           .iter()
           .map(Rc::clone)
           .chain(vec![initializer(&ctx)])
           .collect();
-        return GameState {
+        return ProcessContext {
           systems: new_vec,
           input: ctx.input,
         };

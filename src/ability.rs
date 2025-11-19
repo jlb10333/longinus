@@ -16,7 +16,7 @@ pub struct AbilitySystem {
 impl System for AbilitySystem {
   type Input = SaveData;
 
-  fn start(_: &crate::system::GameState<Self::Input>) -> std::rc::Rc<dyn System<Input = Self::Input>>
+  fn start(_: &crate::system::ProcessContext<Self::Input>) -> std::rc::Rc<dyn System<Input = Self::Input>>
     where
       Self: Sized {
     Rc::new(AbilitySystem {
@@ -27,7 +27,7 @@ impl System for AbilitySystem {
     })
   }
 
-  fn run(&self, ctx: &crate::system::GameState<Self::Input>) -> std::rc::Rc<dyn System<Input = Self::Input>> {
+  fn run(&self, ctx: &crate::system::ProcessContext<Self::Input>) -> std::rc::Rc<dyn System<Input = Self::Input>> {
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
     let (boost_force, current_boost_cooldown) = if controls_system.boost && controls_system.left_stick != PhysicsVector::zero() && self.acquired_boost && self.current_boost_cooldown == 0.0 { (Some(controls_system.left_stick.into_vec().normalize() * BOOST_MOD), self.max_boost_cooldown) } else { (None, (self.current_boost_cooldown - 1.0).max(0.0) )};

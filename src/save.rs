@@ -27,15 +27,32 @@ pub struct SaveData {
 }
 
 fn initital_save_file_path() -> String {
-  Path::new(".").join("assets").join("save_initial.json").as_os_str().to_str().unwrap().to_string()
+  Path::new(".")
+    .join("assets")
+    .join("save_initial.json")
+    .as_os_str()
+    .to_str()
+    .unwrap()
+    .to_string()
 }
 
 fn save_data_path(save_filename: &str) -> String {
-  Path::new(".").join("storage").join(save_filename).as_os_str().to_str().unwrap().to_string()
+  Path::new(".")
+    .join("storage")
+    .join(save_filename)
+    .as_os_str()
+    .to_str()
+    .unwrap()
+    .to_string()
 }
 
 fn save_dir_path() -> String {
-  Path::new(".").join("storage").as_os_str().to_str().unwrap().to_string()
+  Path::new(".")
+    .join("storage")
+    .as_os_str()
+    .to_str()
+    .unwrap()
+    .to_string()
 }
 
 pub fn load_save(save_to_load: &SaveToLoad) -> SaveData {
@@ -58,17 +75,18 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
   type Input = Input;
 
   fn start(
-    _: &crate::system::GameState<Self::Input>,
+    _: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
-    let available_save_data = fs::read_dir(save_dir_path())
+    let mut available_save_data = fs::read_dir(save_dir_path())
       .unwrap()
       .flatten()
       .map(|dir_entry| dir_entry.file_name().into_string())
       .flatten()
       .collect::<Vec<_>>();
+    available_save_data.sort();
     return Rc::new(Self {
       available_save_data,
       phantom: PhantomData,
@@ -77,7 +95,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
 
   fn run(
     &self,
-    ctx: &crate::system::GameState<Self::Input>,
+    ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     let new_save_data = ctx
       .downcast::<SaveData>()

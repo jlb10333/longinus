@@ -197,7 +197,7 @@ fn load_new_map(
 
 impl System for PhysicsSystem {
   type Input = SaveData;
-  fn start(ctx: &crate::system::GameState<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
+  fn start(ctx: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
@@ -218,7 +218,7 @@ impl System for PhysicsSystem {
 
   fn run(
     &self,
-    ctx: &crate::system::GameState<Self::Input>,
+    ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     let map_system = ctx.get::<MapSystem>().unwrap();
 
