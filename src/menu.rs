@@ -153,7 +153,7 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
           &input,
           &combat_system.unequipped_modules,
           &combat_system.equipped_modules,
-          &save_system.available_save_data
+          &save_system.available_save_data,
         );
         return Rc::new(Self {
           active_menus: next_menus
@@ -263,6 +263,14 @@ fn next_main_menus(
         save_to_load,
       }
     }
+    MainMenuKind::MainLoadSave => {
+      let (menus, save_to_load) =
+        menu_load_game(current_menu.cursor_position, input, available_saves);
+      NextMainMenuUpdate {
+        menus,
+        save_to_load: save_to_load.map(SaveToLoad::SaveData),
+      }
+    }
     _ => todo!("Unimplemented"),
   }
 }
@@ -307,7 +315,8 @@ fn next_menus(
       }
     }
     GameMenuKind::PauseLoadSave => {
-      let (menus, save_to_load) = pause_load_game(current_menu.cursor_position, input, available_saves);
+      let (menus, save_to_load) =
+        pause_load_game(current_menu.cursor_position, input, available_saves);
       NextMenuUpdate {
         menus,
         quit_decision: save_to_load.map(|save_to_load| QuitDecision::LoadSave(save_to_load)),
@@ -403,7 +412,19 @@ fn menu_main(
   }
 
   if load_game {
-    todo!();
+    return (
+      vec![
+        MainMenu {
+          cursor_position: vector![0, 0],
+          kind: MainMenuKind::MainLoadSave,
+        },
+        MainMenu {
+          cursor_position,
+          kind: MainMenuKind::Main(should_include_continue_option),
+        },
+      ],
+      None,
+    );
   }
 
   panic!("Unhandled cursor positon {}", cursor_position);
@@ -414,6 +435,41 @@ pub enum QuitDecision {
   ToMainMenu,
   ToDesktop,
   LoadSave(String),
+}
+
+fn menu_load_game(
+  cursor_position: Vector2<i32>,
+  input: &MenuInput,
+  available_saves: &Vec<String>,
+) -> (Vec<MainMenu>, Option<String>) {
+  let cursor_position = handle_cursor_movement(
+    cursor_position,
+    0,
+    0,
+    available_saves.len() as i32,
+    input,
+    None,
+  );
+  /* No change if confirm is not input */
+  if !input.confirm {
+    return (
+      vec![MainMenu {
+        cursor_position,
+        kind: MainMenuKind::MainLoadSave,
+      }],
+      None,
+    );
+  }
+
+  let cancel = cursor_position == vector![0, 0];
+
+  if cancel {
+    return (vec![], None);
+  }
+
+  let save_index_to_load = (cursor_position.y - 1) as usize;
+
+  return (vec![], Some(available_saves[save_index_to_load].clone()));
 }
 
 fn pause_main(
@@ -443,16 +499,19 @@ fn pause_main(
   }
 
   if load_game {
-    return (vec![
-      Menu {
-        cursor_position: vector![0, 0],
-        kind: GameMenuKind::PauseLoadSave
-      },
-      Menu {
-        cursor_position,
-        kind: GameMenuKind::PauseMain
-      }
-    ], None)
+    return (
+      vec![
+        Menu {
+          cursor_position: vector![0, 0],
+          kind: GameMenuKind::PauseLoadSave,
+        },
+        Menu {
+          cursor_position,
+          kind: GameMenuKind::PauseMain,
+        },
+      ],
+      None,
+    );
   }
 
   if quit_to_menu {
@@ -467,7 +526,14 @@ fn pause_load_game(
   input: &MenuInput,
   available_saves: &Vec<String>,
 ) -> (Vec<GameMenu>, Option<String>) {
-let cursor_position = handle_cursor_movement(cursor_position, 0, 0, available_saves.len() as i32, input, None);
+  let cursor_position = handle_cursor_movement(
+    cursor_position,
+    0,
+    0,
+    available_saves.len() as i32,
+    input,
+    None,
+  );
   /* No change if confirm is not input */
   if !input.confirm {
     return (
@@ -482,7 +548,7 @@ let cursor_position = handle_cursor_movement(cursor_position, 0, 0, available_sa
   let cancel = cursor_position == vector![0, 0];
 
   if cancel {
-    return (vec![], None)
+    return (vec![], None);
   }
 
   let save_index_to_load = (cursor_position.y - 1) as usize;

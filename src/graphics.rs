@@ -4,10 +4,18 @@ use macroquad::prelude::*;
 use rapier2d::prelude::*;
 
 use crate::{
-  camera::CameraSystem, combat::{
+  camera::CameraSystem,
+  combat::{
     CombatSystem, EQUIP_SLOTS_WIDTH, WeaponModuleKind, distance_projection_screen, get_reticle_pos,
     get_slot_positions,
-  }, ecs::{Damageable, Entity, MapTransitionOnCollision}, graphics_utils::draw_collider, menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem}, physics::PhysicsSystem, save::SaveSystem, system::System, units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2}
+  },
+  ecs::{Damageable, Entity, MapTransitionOnCollision},
+  graphics_utils::draw_collider,
+  menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
+  physics::PhysicsSystem,
+  save::SaveSystem,
+  system::System,
+  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 
 const TARGET_FPS: f32 = 60.0;
@@ -138,8 +146,12 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       .active_main_menus
       .iter()
       .rev()
-      .for_each(draw_main_menu);
-    menu_system.active_menus.iter().rev().for_each(|menu| draw_menu(menu, &save_system.available_save_data));
+      .for_each(|menu| draw_main_menu(menu, &save_system.available_save_data));
+    menu_system
+      .active_menus
+      .iter()
+      .rev()
+      .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
 
     /* Maintain target fps */
     let frame_time = get_frame_time();
@@ -153,17 +165,11 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   }
 }
 
-fn draw_main_menu(menu: &MainMenu) {
+fn draw_main_menu(menu: &MainMenu, available_sava_data: &Vec<String>) {
   match menu.kind.clone() {
     /* MARK: Menu Main */
     crate::menu::MainMenuKind::Main(should_include_continue_option) => {
-      draw_rectangle(
-        0.0,
-        0.0,
-        screen_width(),
-        screen_height(),
-        BLACK,
-      );
+      draw_rectangle(0.0, 0.0, screen_width(), screen_height(), BLACK);
 
       draw_text(
         "LONGINUS",
@@ -224,6 +230,46 @@ fn draw_main_menu(menu: &MainMenu) {
           WHITE,
         );
       }
+    }
+    crate::menu::MainMenuKind::MainLoadSave => {
+      draw_rectangle(
+        screen_width() * 0.45,
+        screen_height() * 0.45,
+        screen_width() * 0.5,
+        screen_height() * 0.5,
+        LIGHTGRAY,
+      );
+      draw_text(
+        if menu.cursor_position == vector![0, 0] {
+          "-cancel"
+        } else {
+          "cancel"
+        },
+        screen_width() * 0.5,
+        screen_height() * 0.5,
+        40.0,
+        WHITE,
+      );
+      available_sava_data
+        .iter()
+        .enumerate()
+        .for_each(|(index, save)| {
+          draw_text(
+            &format!(
+              "{}{}",
+              if menu.cursor_position.y - 1 == index as i32 {
+                "-"
+              } else {
+                ""
+              },
+              save
+            ),
+            screen_width() * 0.5,
+            screen_height() * (0.55 + (index as f32 * 0.05)),
+            40.0,
+            WHITE,
+          );
+        });
     }
     _ => todo!("Unimplemented"),
   }
@@ -295,15 +341,26 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &Vec<String>) {
         40.0,
         WHITE,
       );
-      available_sava_data.iter().enumerate().for_each(|(index, save)| {
-        draw_text(
-          &format!("{}{}", if menu.cursor_position.y - 1 == index as i32 {"-"} else {""}, save),
-          screen_width() * 0.5,
-          screen_height() * (0.55 + (index as f32 * 0.05)),
-          40.0,
-          WHITE
-        );
-      });
+      available_sava_data
+        .iter()
+        .enumerate()
+        .for_each(|(index, save)| {
+          draw_text(
+            &format!(
+              "{}{}",
+              if menu.cursor_position.y - 1 == index as i32 {
+                "-"
+              } else {
+                ""
+              },
+              save
+            ),
+            screen_width() * 0.5,
+            screen_height() * (0.55 + (index as f32 * 0.05)),
+            40.0,
+            WHITE,
+          );
+        });
     }
     /* MARK: Inventory Main */
     crate::menu::GameMenuKind::InventoryMain => {
