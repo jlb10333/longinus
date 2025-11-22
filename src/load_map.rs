@@ -5,6 +5,7 @@ use serde::Deserialize;
 
 use crate::{
   combat::WeaponModuleKind,
+  ecs::Enemy,
   f::{Monad, MonadTranslate},
   physics::PhysicsSystem,
   save::SaveData,
@@ -26,25 +27,12 @@ struct TileLayer {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub enum EnemyName {
-  Defender(i32),
-}
-
-impl EnemyName {
-  fn default_from_map(map_enemy: MapEnemyName) -> EnemyName {
-    match map_enemy {
-      MapEnemyName::Defender => Self::Defender(0),
-    }
-  }
-}
-
-#[derive(Clone, Debug, Deserialize)]
 pub enum MapEnemySpawnClass {
   EnemySpawn,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-enum MapEnemyName {
+pub enum MapEnemyName {
   Defender,
 }
 
@@ -174,7 +162,7 @@ struct RawMap {
 }
 
 fn deser_map(raw: &str) -> RawMap {
-  return serde_json::from_str(raw).expect("JSON was not well-formatted");
+  serde_json::from_str(raw).expect("JSON was not well-formatted")
 }
 
 pub const COLLISION_GROUP_WALL: Group = Group::GROUP_1;
@@ -186,7 +174,7 @@ pub const COLLISION_GROUP_PLAYER_INTERACTIBLE: Group = Group::GROUP_6;
 
 #[derive(Clone)]
 pub struct EnemySpawn {
-  pub name: EnemyName,
+  pub name: Enemy,
   pub collider: Collider,
   pub rigid_body: RigidBody,
 }
@@ -222,7 +210,7 @@ pub struct Wall {
   pub collider: Collider,
 }
 
-pub fn collider_from_enemy_name(name: MapEnemyName) -> Collider {
+fn collider_from_enemy_name(name: MapEnemyName) -> Collider {
   match name {
     MapEnemyName::Defender => ColliderBuilder::cuboid(0.5, 0.5)
       .collision_groups(InteractionGroups {
@@ -261,7 +249,7 @@ impl Object {
           .translation(translation.into_vec())
           .build();
         MapComponent::Enemy(EnemySpawn {
-          name: EnemyName::default_from_map(enemy_spawn.name.clone()),
+          name: Enemy::default_from_map(enemy_spawn.name.clone()),
           collider,
           rigid_body,
         })
@@ -352,10 +340,10 @@ pub enum MapTile {
 }
 
 pub fn translation_vector_from_index(index: i32, map_dimensions: Vector2<i32>) -> Vector<f32> {
-  return vector![
+  vector![
     ((index % map_dimensions.x) as f32 + 0.5) * TILE_DIMENSION_PHYSICS,
     ((map_dimensions.y - (index / map_dimensions.x)) as f32 - 0.5) * TILE_DIMENSION_PHYSICS
-  ];
+  ]
 }
 
 impl TileLayer {
@@ -391,8 +379,7 @@ impl TileLayer {
         }
         todo!()
       })
-      .filter(Option::is_some)
-      .map(Option::unwrap)
+      .flatten()
       .collect();
   }
 }

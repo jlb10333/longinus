@@ -2,7 +2,11 @@ use std::{any::Any, rc::Rc};
 
 use rapier2d::prelude::{ColliderHandle, RigidBodyHandle};
 
-use crate::{combat::WeaponModuleKind, load_map::EnemyName};
+use crate::{
+  combat::WeaponModuleKind,
+  enemy::{EnemyDefender, EnemySeeker},
+  load_map::MapEnemyName,
+};
 
 #[derive(Clone)]
 pub struct Entity {
@@ -105,8 +109,17 @@ impl Component for Damager {}
 pub struct DestroyOnCollision;
 impl Component for DestroyOnCollision {}
 
-pub struct Enemy {
-  pub name: EnemyName,
+#[derive(Clone)]
+pub enum Enemy {
+  Defender(EnemyDefender),
+  Seeker(EnemySeeker),
+}
+impl Enemy {
+  pub fn default_from_map(map_enemy: MapEnemyName) -> Enemy {
+    match map_enemy {
+      MapEnemyName::Defender => Self::Defender(EnemyDefender { cooldown: 0 }),
+    }
+  }
 }
 impl Component for Enemy {}
 

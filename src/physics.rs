@@ -91,7 +91,7 @@ fn load_new_map(
   };
 
   /* MARK: Spawn enemies. */
-  let enemies: Vec<_> = map
+  let enemies = map
     .enemy_spawns
     .iter()
     .map(|enemy_spawn| {
@@ -108,12 +108,10 @@ fn load_new_map(
             max_hitstun: 0.0,
           })
           .insert(Damager { damage: 20.0 })
-          .insert(Enemy {
-            name: enemy_spawn.name.clone(),
-          }),
+          .insert(enemy_spawn.name.clone()),
       }
     })
-    .collect();
+    .collect::<Vec<_>>();
 
   /* MARK: Spawn item pickups. */
   let item_pickups = map
@@ -272,15 +270,15 @@ impl System for PhysicsSystem {
     if menu_system.active_menus.iter().count() > 0 {
       return Rc::new(Self {
         rigid_body_set: rigid_body_set.clone(),
-        collider_set: collider_set,
+        collider_set,
         integration_parameters: self.integration_parameters,
         physics_pipeline: Rc::clone(&self.physics_pipeline),
-        island_manager: island_manager,
-        broad_phase: broad_phase,
-        narrow_phase: narrow_phase,
-        impulse_joint_set: impulse_joint_set,
-        multibody_joint_set: multibody_joint_set,
-        ccd_solver: ccd_solver,
+        island_manager,
+        broad_phase,
+        narrow_phase,
+        impulse_joint_set,
+        multibody_joint_set,
+        ccd_solver,
         player_handle: self.player_handle,
         entities: self.entities.clone(),
         sensors: self.sensors.clone(),
@@ -381,9 +379,7 @@ impl System for PhysicsSystem {
 
         [Entity {
           handle: entity.handle,
-          components: entity.components.with(Enemy {
-            name: relevant_decision.enemy.clone(),
-          }),
+          components: entity.components.with(relevant_decision.enemy.clone()),
         }]
         .iter()
         .cloned()
