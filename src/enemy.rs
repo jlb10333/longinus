@@ -6,7 +6,9 @@ use crate::{
   combat::{Projectile, distance_projection_physics},
   ecs::{Enemy, Entity},
   f::Monad,
-  load_map::{COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL},
+  load_map::{
+    COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL, EnemyName,
+  },
   physics::PhysicsSystem,
   save::SaveData,
   system::System,
@@ -17,6 +19,7 @@ pub struct EnemyDecision {
   pub handle: RigidBodyHandle,
   pub projectiles: Vec<Projectile>,
   pub movement_force: PhysicsVector,
+  pub enemy: EnemyName,
 }
 
 pub struct EnemySystem {
@@ -41,37 +44,35 @@ impl System for EnemySystem {
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-
     let decisions = physics_system
       .entities
       .iter()
       .cloned()
-      .map(enemy_behavior(&physics_system.frame_count))
-      .flatten()
+      .filter_map(enemy_behavior)
       .collect::<Vec<_>>();
 
-    return Rc::new(Self { decisions });
+    Rc::new(Self { decisions })
   }
 }
 
-fn enemy_behavior(frame_count: &i64) -> impl Fn(Entity) -> Option<EnemyDecision> {
-  |entity| {
+fn enemy_behavior(entity: Entity) -> Option<EnemyDecision> {
+  {
     entity
       .components
       .get::<Enemy>()
       .bind(|enemy| match enemy.name {
-        crate::load_map::EnemyName::Defender => {
-          defender_behavior(frame_count.clone(), entity.handle)
+        crate::load_map::EnemyName::Defender(cooldown) => {
+          defender_behavior(cooldown, entity.handle)
         }
       })
   }
 }
 
-fn defender_behavior(frame_count: i64, handle: RigidBodyHandle) -> EnemyDecision {
+fn defender_behavior(cooldown: i32, handle: RigidBodyHandle) -> EnemyDecision {
   EnemyDecision {
     handle,
     movement_force: PhysicsVector::zero(),
-    projectiles: if frame_count % 50 == 0 {
+    projectiles: if cooldown % 50 == 0 {
       let projectile = |offset: f32| Projectile {
         collider: ColliderBuilder::ball(0.2)
           .collision_groups(InteractionGroups {
@@ -80,7 +81,7 @@ fn defender_behavior(frame_count: i64, handle: RigidBodyHandle) -> EnemyDecision
           })
           .build(),
         damage: 5.0,
-        initial_force: distance_projection_physics(offset + frame_count as f32 / 120.0, 0.7),
+        initial_force: distance_projection_physics(offset + cooldown as f32 / 120.0, 0.7),
         offset: PhysicsVector::zero(),
       };
       Vec::from([
@@ -92,5 +93,6 @@ fn defender_behavior(frame_count: i64, handle: RigidBodyHandle) -> EnemyDecision
     } else {
       Vec::new()
     },
+    enemy: EnemyName::Defender(cooldown - 1),
   }
 }

@@ -2,13 +2,23 @@ use rapier2d::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-  ability::AbilitySystem, combat::{CombatSystem, WeaponModuleKind}, controls::ControlsSystem, ecs::{
+  ability::AbilitySystem,
+  combat::{CombatSystem, WeaponModuleKind},
+  controls::ControlsSystem,
+  ecs::{
     ComponentSet, Damageable, Damager, DestroyOnCollision, Enemy, Entity, GivesItemOnCollision,
     MapTransitionOnCollision, SaveMenuOnCollision, Sensor,
-  }, enemy::EnemySystem, f::Monad, load_map::{
+  },
+  enemy::EnemySystem,
+  f::Monad,
+  load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
     COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapSystem, MapTile,
-  }, menu::MenuSystem, save::SaveData, system::System, units::UnitConvert2
+  },
+  menu::MenuSystem,
+  save::SaveData,
+  system::System,
+  units::UnitConvert2,
 };
 
 const PLAYER_SPEED_LIMIT: f32 = 10.0;
@@ -291,21 +301,26 @@ impl System for PhysicsSystem {
     let player_velocity = player.linvel();
     let velocity_change = attempted_acceleration * player_mass;
 
-    let safe_acceleration_x =
-      if attempted_acceleration.x == 0.0 || velocity_change.x.signum() != player_velocity.x.signum() || player_velocity.x.abs() < PLAYER_SPEED_LIMIT {
-        attempted_acceleration.x
-      } else {
-        0.0
-      };
+    let safe_acceleration_x = if attempted_acceleration.x == 0.0
+      || velocity_change.x.signum() != player_velocity.x.signum()
+      || player_velocity.x.abs() < PLAYER_SPEED_LIMIT
+    {
+      attempted_acceleration.x
+    } else {
+      0.0
+    };
 
-    let safe_acceleration_y =
-      if attempted_acceleration.y == 0.0 || velocity_change.y.signum() != player_velocity.y.signum() || player_velocity.y.abs() < PLAYER_SPEED_LIMIT {
-        attempted_acceleration.y
-      } else {
-        0.0
-      };
-    
-    rigid_body_set[self.player_handle].apply_impulse(vector![safe_acceleration_x, safe_acceleration_y], true);
+    let safe_acceleration_y = if attempted_acceleration.y == 0.0
+      || velocity_change.y.signum() != player_velocity.y.signum()
+      || player_velocity.y.abs() < PLAYER_SPEED_LIMIT
+    {
+      attempted_acceleration.y
+    } else {
+      0.0
+    };
+
+    rigid_body_set[self.player_handle]
+      .apply_impulse(vector![safe_acceleration_x, safe_acceleration_y], true);
 
     /* MARK: Perform boost */
     let ability_system = ctx.get::<AbilitySystem>().unwrap();
@@ -364,41 +379,42 @@ impl System for PhysicsSystem {
         rigid_body_set[entity.handle]
           .apply_impulse(relevant_decision.movement_force.into_vec(), true);
 
-        [entity.clone()]
-          .iter()
-          .cloned()
-          .chain(
-            relevant_decision
-              .projectiles
-              .iter()
-              .map(|projectile| {
-                let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
-                  *rigid_body_set[entity.handle].translation() + projectile.offset.into_vec(),
-                ));
-                collider_set.insert_with_parent(
-                  projectile.collider.clone(),
-                  handle,
-                  rigid_body_set,
-                );
+        [Entity {
+          handle: entity.handle,
+          components: entity.components.with(Enemy {
+            name: relevant_decision.enemy.clone(),
+          }),
+        }]
+        .iter()
+        .cloned()
+        .chain(
+          relevant_decision
+            .projectiles
+            .iter()
+            .map(|projectile| {
+              let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
+                *rigid_body_set[entity.handle].translation() + projectile.offset.into_vec(),
+              ));
+              collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
 
-                let rbs_clone = rigid_body_set.clone();
-                let enemy_velocity = rbs_clone[entity.handle].linvel();
-                rigid_body_set[handle].set_linvel(*enemy_velocity, true);
+              let rbs_clone = rigid_body_set.clone();
+              let enemy_velocity = rbs_clone[entity.handle].linvel();
+              rigid_body_set[handle].set_linvel(*enemy_velocity, true);
 
-                rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
+              rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
 
-                Entity {
-                  handle,
-                  components: ComponentSet::new()
-                    .insert(DestroyOnCollision)
-                    .insert(Damager {
-                      damage: projectile.damage,
-                    }),
-                }
-              })
-              .collect::<Vec<_>>(),
-          )
-          .collect::<Vec<_>>()
+              Entity {
+                handle,
+                components: ComponentSet::new()
+                  .insert(DestroyOnCollision)
+                  .insert(Damager {
+                    damage: projectile.damage,
+                  }),
+              }
+            })
+            .collect::<Vec<_>>(),
+        )
+        .collect::<Vec<_>>()
       })
       .collect::<Vec<_>>();
 
@@ -449,8 +465,7 @@ impl System for PhysicsSystem {
               .bind(|rigid_body_handle| {
                 entities
                   .iter()
-                  .cloned()
-                  .find(|entity| entity.handle == *rigid_body_handle)
+                  .find(|entity| entity.clone().handle == *rigid_body_handle)
               })
               .flatten()
               .bind(|entity| entity.components.get::<Damager>())

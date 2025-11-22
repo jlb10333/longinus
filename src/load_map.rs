@@ -7,7 +7,7 @@ use crate::{
   combat::WeaponModuleKind,
   f::{Monad, MonadTranslate},
   physics::PhysicsSystem,
-  save::{SaveData, SaveSystem},
+  save::SaveData,
   system::System,
   units::{PhysicsScalar, PhysicsVector, UnitConvert2},
 };
@@ -27,7 +27,15 @@ struct TileLayer {
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum EnemyName {
-  Defender,
+  Defender(i32),
+}
+
+impl EnemyName {
+  fn default_from_map(map_enemy: MapEnemyName) -> EnemyName {
+    match map_enemy {
+      MapEnemyName::Defender => Self::Defender(0),
+    }
+  }
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -36,10 +44,15 @@ pub enum MapEnemySpawnClass {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapEnemyName {
+  Defender,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 struct MapEnemySpawn {
   x: f32,
   y: f32,
-  name: EnemyName,
+  name: MapEnemyName,
   #[serde(rename = "type")]
   _class: MapEnemySpawnClass,
 }
@@ -209,9 +222,9 @@ pub struct Wall {
   pub collider: Collider,
 }
 
-pub fn collider_from_enemy_name(name: EnemyName) -> Collider {
+pub fn collider_from_enemy_name(name: MapEnemyName) -> Collider {
   match name {
-    EnemyName::Defender => ColliderBuilder::cuboid(0.5, 0.5)
+    MapEnemyName::Defender => ColliderBuilder::cuboid(0.5, 0.5)
       .collision_groups(InteractionGroups {
         memberships: COLLISION_GROUP_ENEMY,
         filter: COLLISION_GROUP_PLAYER
@@ -248,11 +261,12 @@ impl Object {
           .translation(translation.into_vec())
           .build();
         MapComponent::Enemy(EnemySpawn {
-          name: enemy_spawn.name.clone(),
+          name: EnemyName::default_from_map(enemy_spawn.name.clone()),
           collider,
           rigid_body,
         })
       }
+
       Object::PlayerSpawn(player_spawn) => MapComponent::Player(PlayerSpawn {
         id: player_spawn.id,
         translation: PhysicsVector::from_vec(vector![
@@ -260,6 +274,7 @@ impl Object {
           (map_height - player_spawn.y) * 0.125 * TILE_DIMENSION_PHYSICS
         ]),
       }),
+
       Object::ItemPickup(item_pickup) => MapComponent::ItemPickup(ItemPickup {
         id: item_pickup.id,
         weapon_module_kind: item_pickup.name.clone(),
@@ -278,6 +293,7 @@ impl Object {
           })
           .build(),
       }),
+
       Object::MapTransition(map_transition) => MapComponent::MapTransition(MapTransition {
         target_player_spawn_id: map_transition.properties.0.value,
         map_name: map_transition.name.clone(),
@@ -296,6 +312,7 @@ impl Object {
         })
         .build(),
       }),
+
       Object::SavePoint(save_point) => MapComponent::SavePoint(SavePoint {
         player_spawn_id: save_point.properties.0.value,
         collider: ColliderBuilder::ball(1.0)
