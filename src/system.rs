@@ -39,6 +39,28 @@ impl<Input: Clone + 'static> ProcessContext<Input> {
     (self as &dyn Any).downcast_ref::<ProcessContext<Target>>()
   }
 
+  fn with(
+    self: &Rc<Self>,
+    target_index: usize,
+    target_system: &Rc<dyn System<Input = Input>>,
+  ) -> Rc<Self> {
+    Rc::new(Self {
+      systems: self
+        .systems
+        .iter()
+        .enumerate()
+        .map(|(index, system)| {
+          Rc::clone(if index == target_index {
+            target_system
+          } else {
+            system
+          })
+        })
+        .collect(),
+      input: self.input.clone(),
+    })
+  }
+
   pub async fn run<Output, Terminator>(self: &Rc<Self>, terminator: Terminator) -> Output
   where
     Terminator: Fn(&ProcessContext<Input>) -> Option<Output>,
@@ -51,14 +73,13 @@ impl<Input: Clone + 'static> ProcessContext<Input> {
         return output;
       }
 
-      game_state = Rc::new(ProcessContext {
-        systems: game_state
-          .systems
-          .iter()
-          .map(|system| system.run(&game_state))
-          .collect(),
-        input: game_state.input.clone(),
-      });
+      game_state = game_state
+        .systems
+        .iter()
+        .enumerate()
+        .fold(Rc::clone(&game_state), |temp_state, (index, system)| {
+          temp_state.with(index, &system.run(&temp_state))
+        });
 
       next_frame().await
     }

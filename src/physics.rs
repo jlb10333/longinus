@@ -90,6 +90,8 @@ fn load_new_map(
     }),
   };
 
+  println!("spawning {} enemies", map.enemy_spawns.len());
+
   /* MARK: Spawn enemies. */
   let enemies = map
     .enemy_spawns
@@ -216,6 +218,7 @@ impl System for PhysicsSystem {
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
+    println!("running");
     let map_system = ctx.get::<MapSystem>().unwrap();
 
     let combat_system = ctx.get::<CombatSystem>().unwrap();
@@ -342,10 +345,14 @@ impl System for PhysicsSystem {
       })
       .collect();
 
+    println!("{} entities", entities.len());
+
     let entities: Vec<Entity> = entities.iter().cloned().chain(new_projectiles).collect();
 
     /* MARK: Carry out enemy behavior */
     let enemy_system = ctx.get::<EnemySystem>().unwrap();
+
+    println!("{} decisions", enemy_system.decisions.len());
 
     let entities = entities
       .iter()
@@ -355,8 +362,7 @@ impl System for PhysicsSystem {
         let relevant_decision = enemy_system
           .decisions
           .iter()
-          .find(|&decision| decision.handle == entity.handle)
-          .bind(|&decision| decision);
+          .find(|&decision| decision.handle == entity.handle);
         if relevant_decision.is_none() {
           return Vec::from([entity.clone()]);
         }
@@ -449,25 +455,24 @@ impl System for PhysicsSystem {
                   [contact_pairs.collider1, contact_pairs.collider2]
                     .iter()
                     .cloned()
-                    .filter(|&handle| collider_handle != handle.clone())
+                    .filter(|&handle| collider_handle != handle)
                     .collect::<Vec<_>>()
                 }
               })
               .collect::<Vec<_>>()
           })
-          .map(|collider_handle| {
+          .flat_map(|collider_handle| {
             collider_set[collider_handle]
               .parent()
               .bind(|rigid_body_handle| {
                 entities
                   .iter()
-                  .find(|entity| entity.clone().handle == *rigid_body_handle)
+                  .find(|entity| entity.handle == *rigid_body_handle)
               })
               .flatten()
               .bind(|entity| entity.components.get::<Damager>())
               .flatten()
-          })
-          .flatten();
+          });
 
         let incoming_damage = damagers.fold(0.0, |sum, damager| sum + damager.damage);
 

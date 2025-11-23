@@ -67,6 +67,8 @@ impl System for EnemySystem {
       .filter_map(enemy_behavior)
       .collect::<Vec<_>>();
 
+    println!("test from enemy sys {}", physics_system.frame_count);
+
     Rc::new(Self { decisions })
   }
 }
@@ -134,7 +136,7 @@ impl EnemyDefender {
 #[derive(Clone)]
 pub struct EnemySeeker;
 
-const SEEKER_SPEED_CAP: f32 = 10.0;
+const SEEKER_SPEED_CAP: f32 = 5.0;
 const SEEKER_SPEED: f32 = 0.3;
 
 impl EnemySeeker {
@@ -174,7 +176,7 @@ pub struct EnemySeekerGenerator {
 }
 
 const SEEKER_GENERATOR_INITIAL_FORCE: f32 = 5.0;
-const SEEKER_SPAWN_COOLDOWN: i32 = 1000;
+const SEEKER_SPAWN_COOLDOWN: i32 = 120;
 
 impl EnemySeekerGenerator {
   pub fn behavior(
@@ -184,6 +186,7 @@ impl EnemySeekerGenerator {
     physics_rigid_bodies: &RigidBodySet,
   ) -> EnemyDecision {
     let should_spawn_enemy = self.cooldown % SEEKER_SPAWN_COOLDOWN == 0;
+    println!("{}, {}", self.cooldown, should_spawn_enemy);
     EnemyDecision {
       movement_force: PhysicsVector::zero(),
       handle,

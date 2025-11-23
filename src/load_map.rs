@@ -596,7 +596,7 @@ impl RawMap {
 pub fn load(file_path: &str) -> Option<Map> {
   fs::read_to_string(file_path)
     .translate()
-    .bind(|raw_file| (&deser_map(&raw_file)).into())
+    .bind(|raw_file| (&deser_map(raw_file)).into())
     .flatten()
 }
 
@@ -607,7 +607,7 @@ pub struct MapSystem {
 }
 
 fn map_read_path(map_name: &String) -> String {
-  return format!("./assets/maps/{map_name}.json");
+  format!("./assets/maps/{map_name}.json")
 }
 
 impl System for MapSystem {
@@ -621,11 +621,11 @@ impl System for MapSystem {
     let save_data = &ctx.input;
 
     let map = load(&map_read_path(&save_data.map_name));
-    return Rc::new(Self {
+    Rc::new(Self {
       map,
       current_map_name: save_data.map_name.clone(),
       target_player_spawn_id: save_data.player_spawn_id,
-    });
+    })
   }
 
   fn run(
@@ -636,20 +636,18 @@ impl System for MapSystem {
 
     let load_new_map = physics_system.load_new_map.as_ref();
 
-    return Rc::new(Self {
+    Rc::new(Self {
       map: physics_system
         .load_new_map
         .as_ref()
-        .map(|(new_map_name, _)| load(&map_read_path(&new_map_name.to_string())))
-        .flatten(),
+        .and_then(|(new_map_name, _)| load(&map_read_path(&new_map_name.to_string()))),
       current_map_name: load_new_map
         .map(|(map_name, _)| map_name)
         .unwrap_or(&self.current_map_name)
         .clone(),
-      target_player_spawn_id: load_new_map
+      target_player_spawn_id: *load_new_map
         .map(|(_, id)| id)
-        .unwrap_or(&self.target_player_spawn_id)
-        .clone(),
-    });
+        .unwrap_or(&self.target_player_spawn_id),
+    })
   }
 }
