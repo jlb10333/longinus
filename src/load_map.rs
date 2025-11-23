@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::{
   combat::WeaponModuleKind,
-  ecs::Enemy,
+  ecs::{ComponentSet, Damageable, Damager, Enemy, Entity},
   f::{Monad, MonadTranslate},
   physics::PhysicsSystem,
   save::SaveData,
@@ -34,6 +34,8 @@ pub enum MapEnemySpawnClass {
 #[derive(Clone, Debug, Deserialize)]
 pub enum MapEnemyName {
   Defender,
+  Seeker,
+  SeekerGenerator,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -43,6 +45,16 @@ struct MapEnemySpawn {
   name: MapEnemyName,
   #[serde(rename = "type")]
   _class: MapEnemySpawnClass,
+}
+
+impl MapEnemySpawn {
+  pub fn into(&self, map_height: f32) -> EnemySpawn {
+    let translation = PhysicsVector::from_vec(vector![
+      self.x * 0.125 * TILE_DIMENSION_PHYSICS,
+      (map_height - self.y) * 0.125 * TILE_DIMENSION_PHYSICS
+    ]);
+    EnemySpawn::new(&self.name, translation.into_vec())
+  }
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -179,6 +191,59 @@ pub struct EnemySpawn {
   pub rigid_body: RigidBody,
 }
 
+impl EnemySpawn {
+  pub fn new(name: &MapEnemyName, translation: Vector2<f32>) -> Self {
+    let collider = collider_from_enemy_name(name.clone());
+    let rigid_body_builder = match name {
+      MapEnemyName::Defender => RigidBodyBuilder::fixed(),
+      MapEnemyName::Seeker => RigidBodyBuilder::dynamic(),
+      MapEnemyName::SeekerGenerator => RigidBodyBuilder::fixed(),
+    };
+    let mut rigid_body = rigid_body_builder.translation(translation).build();
+    rigid_body.wake_up(true);
+    EnemySpawn {
+      name: Enemy::default_from_map(name.clone()),
+      collider,
+      rigid_body,
+    }
+  }
+
+  pub fn into_entity(&self, handle: RigidBodyHandle) -> Entity {
+    let components = (match self.name {
+      Enemy::Defender(_) => ComponentSet::new()
+        .insert(Damageable {
+          health: 100.0,
+          max_health: 100.0,
+          destroy_on_zero_health: true,
+          current_hitstun: 0.0,
+          max_hitstun: 0.0,
+        })
+        .insert(Damager { damage: 10.0 }),
+      Enemy::Seeker(_) => ComponentSet::new()
+        .insert(Damageable {
+          health: 30.0,
+          max_health: 30.0,
+          destroy_on_zero_health: true,
+          current_hitstun: 0.0,
+          max_hitstun: 0.0,
+        })
+        .insert(Damager { damage: 25.0 }),
+      Enemy::SeekerGenerator(_) => ComponentSet::new()
+        .insert(Damageable {
+          health: 120.0,
+          max_health: 120.0,
+          destroy_on_zero_health: true,
+          current_hitstun: 0.0,
+          max_hitstun: 0.0,
+        })
+        .insert(Damager { damage: 10.0 }),
+    })
+    .insert(self.name.clone());
+
+    Entity { handle, components }
+  }
+}
+
 #[derive(Clone)]
 pub struct PlayerSpawn {
   pub id: i32,
@@ -211,16 +276,20 @@ pub struct Wall {
 }
 
 fn collider_from_enemy_name(name: MapEnemyName) -> Collider {
-  match name {
-    MapEnemyName::Defender => ColliderBuilder::cuboid(0.5, 0.5)
-      .collision_groups(InteractionGroups {
-        memberships: COLLISION_GROUP_ENEMY,
-        filter: COLLISION_GROUP_PLAYER
-          .union(COLLISION_GROUP_PLAYER_PROJECTILE)
-          .union(COLLISION_GROUP_WALL),
-      })
-      .build(),
-  }
+  let collider_builder = match name {
+    MapEnemyName::Defender => ColliderBuilder::cuboid(0.5, 0.5),
+    MapEnemyName::Seeker => ColliderBuilder::cuboid(0.2, 0.2).mass(1.0),
+    MapEnemyName::SeekerGenerator => ColliderBuilder::cuboid(0.7, 0.7),
+  };
+
+  let collision_groups = InteractionGroups {
+    memberships: COLLISION_GROUP_ENEMY,
+    filter: COLLISION_GROUP_PLAYER
+      .union(COLLISION_GROUP_PLAYER_PROJECTILE)
+      .union(COLLISION_GROUP_WALL),
+  };
+
+  collider_builder.collision_groups(collision_groups).build()
 }
 
 #[derive(Clone)]
@@ -239,21 +308,7 @@ fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
 impl Object {
   pub fn into(&self, map_height: f32) -> MapComponent {
     match self {
-      Object::EnemySpawn(enemy_spawn) => {
-        let translation = PhysicsVector::from_vec(vector![
-          enemy_spawn.x * 0.125 * TILE_DIMENSION_PHYSICS,
-          (map_height - enemy_spawn.y) * 0.125 * TILE_DIMENSION_PHYSICS
-        ]);
-        let collider = collider_from_enemy_name(enemy_spawn.name.clone());
-        let rigid_body = RigidBodyBuilder::fixed()
-          .translation(translation.into_vec())
-          .build();
-        MapComponent::Enemy(EnemySpawn {
-          name: Enemy::default_from_map(enemy_spawn.name.clone()),
-          collider,
-          rigid_body,
-        })
-      }
+      Object::EnemySpawn(enemy_spawn) => MapComponent::Enemy(enemy_spawn.into(map_height)),
 
       Object::PlayerSpawn(player_spawn) => MapComponent::Player(PlayerSpawn {
         id: player_spawn.id,

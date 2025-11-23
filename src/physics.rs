@@ -97,19 +97,7 @@ fn load_new_map(
     .map(|enemy_spawn| {
       let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
       collider_set.insert_with_parent(enemy_spawn.collider.clone(), handle, &mut rigid_body_set);
-      Entity {
-        handle,
-        components: ComponentSet::new()
-          .insert(Damageable {
-            health: 100.0,
-            max_health: 100.0,
-            destroy_on_zero_health: true,
-            current_hitstun: 0.0,
-            max_hitstun: 0.0,
-          })
-          .insert(Damager { damage: 20.0 })
-          .insert(enemy_spawn.name.clone()),
-      }
+      enemy_spawn.into_entity(handle)
     })
     .collect::<Vec<_>>();
 
@@ -383,34 +371,46 @@ impl System for PhysicsSystem {
         }]
         .iter()
         .cloned()
+        .chain(relevant_decision.projectiles.iter().map(|projectile| {
+          let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
+            *rigid_body_set[entity.handle].translation() + projectile.offset.into_vec(),
+          ));
+          collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
+
+          let rbs_clone = rigid_body_set.clone();
+          let enemy_velocity = rbs_clone[entity.handle].linvel();
+          rigid_body_set[handle].set_linvel(*enemy_velocity, true);
+
+          rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
+
+          Entity {
+            handle,
+            components: ComponentSet::new()
+              .insert(DestroyOnCollision)
+              .insert(Damager {
+                damage: projectile.damage,
+              }),
+          }
+        }))
+        .collect::<Vec<_>>()
+        .iter()
+        .cloned()
         .chain(
           relevant_decision
-            .projectiles
+            .enemies_to_spawn
             .iter()
-            .map(|projectile| {
-              let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
-                *rigid_body_set[entity.handle].translation() + projectile.offset.into_vec(),
-              ));
-              collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
-
-              let rbs_clone = rigid_body_set.clone();
-              let enemy_velocity = rbs_clone[entity.handle].linvel();
-              rigid_body_set[handle].set_linvel(*enemy_velocity, true);
-
-              rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
-
-              Entity {
+            .map(|enemy_to_spawn| {
+              let handle = rigid_body_set.insert(enemy_to_spawn.enemy_spawn.rigid_body.clone());
+              collider_set.insert_with_parent(
+                enemy_to_spawn.enemy_spawn.collider.clone(),
                 handle,
-                components: ComponentSet::new()
-                  .insert(DestroyOnCollision)
-                  .insert(Damager {
-                    damage: projectile.damage,
-                  }),
-              }
-            })
-            .collect::<Vec<_>>(),
+                rigid_body_set,
+              );
+              rigid_body_set[handle].apply_impulse(enemy_to_spawn.initial_force, true);
+              enemy_to_spawn.enemy_spawn.into_entity(handle)
+            }),
         )
-        .collect::<Vec<_>>()
+        .collect()
       })
       .collect::<Vec<_>>();
 

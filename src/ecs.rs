@@ -4,7 +4,7 @@ use rapier2d::prelude::{ColliderHandle, RigidBodyHandle};
 
 use crate::{
   combat::WeaponModuleKind,
-  enemy::{EnemyDefender, EnemySeeker},
+  enemy::{EnemyDefender, EnemySeeker, EnemySeekerGenerator},
   load_map::MapEnemyName,
 };
 
@@ -113,11 +113,14 @@ impl Component for DestroyOnCollision {}
 pub enum Enemy {
   Defender(EnemyDefender),
   Seeker(EnemySeeker),
+  SeekerGenerator(EnemySeekerGenerator),
 }
 impl Enemy {
   pub fn default_from_map(map_enemy: MapEnemyName) -> Enemy {
     match map_enemy {
       MapEnemyName::Defender => Self::Defender(EnemyDefender { cooldown: 0 }),
+      MapEnemyName::Seeker => Self::Seeker(EnemySeeker),
+      MapEnemyName::SeekerGenerator => Self::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 }),
     }
   }
 }

@@ -99,7 +99,7 @@
                 {
                  "height":0,
                  "id":3,
-                 "name":"Defender",
+                 "name":"SeekerGenerator",
                  "rotation":0,
                  "type":"EnemySpawn",
                  "visible":true,
