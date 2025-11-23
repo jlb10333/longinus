@@ -67,8 +67,6 @@ impl System for EnemySystem {
       .filter_map(enemy_behavior)
       .collect::<Vec<_>>();
 
-    println!("test from enemy sys {}", physics_system.frame_count);
-
     Rc::new(Self { decisions })
   }
 }
@@ -165,7 +163,7 @@ impl EnemySeeker {
       handle,
       projectiles: vec![],
       enemies_to_spawn: vec![],
-      enemy: Enemy::Seeker(self.clone()),
+      enemy: Enemy::Seeker(Self),
     }
   }
 }
@@ -186,7 +184,6 @@ impl EnemySeekerGenerator {
     physics_rigid_bodies: &RigidBodySet,
   ) -> EnemyDecision {
     let should_spawn_enemy = self.cooldown % SEEKER_SPAWN_COOLDOWN == 0;
-    println!("{}, {}", self.cooldown, should_spawn_enemy);
     EnemyDecision {
       movement_force: PhysicsVector::zero(),
       handle,

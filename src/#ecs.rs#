@@ -27,9 +27,9 @@ pub struct ComponentSet {
 
 impl ComponentSet {
   pub fn new() -> Self {
-    ComponentSet {
+    return ComponentSet {
       components: Vec::new(),
-    }
+    };
   }
 
   pub fn insert<Item>(&self, item: Item) -> Self
@@ -110,7 +110,7 @@ pub struct DestroyOnCollision;
 impl Component for DestroyOnCollision {}
 
 #[derive(Clone)]
-pub enum Enemy {
+pub enum Enemy {xxxx
   Defender(EnemyDefender),
   Seeker(EnemySeeker),
   SeekerGenerator(EnemySeekerGenerator),
@@ -147,8 +147,7 @@ pub struct DropHealthOnDestroy {
   pub amount: f32,
   pub chance: f32,
 }
-impl Component for DropHealthOnDestroy {}
-
+sasx
 pub struct HealOnCollision {
   pub amount: f32,
 }

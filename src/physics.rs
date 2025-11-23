@@ -1,3 +1,4 @@
+use macroquad::prelude::rand;
 use rapier2d::prelude::*;
 use std::{cell::RefCell, rc::Rc};
 
@@ -6,8 +7,8 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::ControlsSystem,
   ecs::{
-    ComponentSet, Damageable, Damager, DestroyOnCollision, Enemy, Entity, GivesItemOnCollision,
-    MapTransitionOnCollision, SaveMenuOnCollision, Sensor,
+    ComponentSet, Damageable, Damager, DestroyOnCollision, DropHealthOnDestroy, Enemy, Entity,
+    GivesItemOnCollision, HealOnCollision, MapTransitionOnCollision, SaveMenuOnCollision, Sensor,
   },
   enemy::EnemySystem,
   f::Monad,
@@ -99,7 +100,10 @@ fn load_new_map(
     .map(|enemy_spawn| {
       let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
       collider_set.insert_with_parent(enemy_spawn.collider.clone(), handle, &mut rigid_body_set);
-      enemy_spawn.into_entity(handle)
+      Entity {
+        handle,
+        components: enemy_spawn.into_entity_components(),
+      }
     })
     .collect::<Vec<_>>();
 
@@ -218,7 +222,6 @@ impl System for PhysicsSystem {
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    println!("running");
     let map_system = ctx.get::<MapSystem>().unwrap();
 
     let combat_system = ctx.get::<CombatSystem>().unwrap();
@@ -258,7 +261,7 @@ impl System for PhysicsSystem {
     /* MARK: Don't do physics if currently in menu */
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
 
-    if menu_system.active_menus.iter().count() > 0 {
+    if !menu_system.active_menus.is_empty() {
       return Rc::new(Self {
         rigid_body_set: rigid_body_set.clone(),
         collider_set,
@@ -345,14 +348,10 @@ impl System for PhysicsSystem {
       })
       .collect();
 
-    println!("{} entities", entities.len());
-
     let entities: Vec<Entity> = entities.iter().cloned().chain(new_projectiles).collect();
 
     /* MARK: Carry out enemy behavior */
     let enemy_system = ctx.get::<EnemySystem>().unwrap();
-
-    println!("{} decisions", enemy_system.decisions.len());
 
     let entities = entities
       .iter()
@@ -413,7 +412,10 @@ impl System for PhysicsSystem {
                 rigid_body_set,
               );
               rigid_body_set[handle].apply_impulse(enemy_to_spawn.initial_force, true);
-              enemy_to_spawn.enemy_spawn.into_entity(handle)
+              Entity {
+                handle,
+                components: enemy_to_spawn.enemy_spawn.into_entity_components(),
+              }
             }),
         )
         .collect()
@@ -502,20 +504,81 @@ impl System for PhysicsSystem {
       })
       .collect();
 
+    let rng = rand::RandGenerator::new();
+    rng.srand(self.frame_count as u64);
+
+    let zero_health_entities = entities
+      .iter()
+      .filter(|entity| {
+        entity
+          .components
+          .get::<Damageable>()
+          .map(|damageable| damageable.health <= 0.0)
+          .unwrap_or(false)
+      })
+      .collect::<Vec<_>>();
+
+    /* MARK: Drop health pickups from entities with 0 health marked as such */
+    let sensors = sensors
+      .iter()
+      .cloned()
+      .chain(
+        zero_health_entities
+          .iter()
+          .flat_map(|entity| {
+            (*entity)
+              .clone()
+              .components
+              .get::<DropHealthOnDestroy>()
+              .map(|drop_health| {
+                let random = rng.gen_range(0.0, 1.0);
+                let should_drop_health = random < drop_health.chance;
+                println!("{} {} {}", drop_health.chance, random, should_drop_health);
+
+                if !should_drop_health {
+                  return None;
+                }
+
+                let handle = collider_set.insert(
+                  ColliderBuilder::ball(0.31)
+                    .collision_groups(InteractionGroups {
+                      memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+                      filter: COLLISION_GROUP_PLAYER,
+                    })
+                    .sensor(true)
+                    .translation(*rigid_body_set[entity.handle].translation())
+                    .build(),
+                );
+                Some(Sensor {
+                  handle,
+                  components: ComponentSet::new().insert(DestroyOnCollision).insert(
+                    HealOnCollision {
+                      amount: drop_health.amount,
+                    },
+                  ),
+                })
+              })
+          })
+          .flatten(),
+      )
+      .collect::<Vec<_>>();
+
     /* MARK: Destroy entities with 0 health marked as destroy on 0 health */
     let entities = entities
       .iter()
-      .cloned()
-      .filter(|entity| {
+      .flat_map(|entity| {
         let damageable = entity.clone().components.get::<Damageable>();
         if damageable.is_none() {
-          return true;
+          return vec![entity.clone()];
         }
         let damageable = damageable.unwrap();
+        if damageable.health > 0.0 {
+          return vec![entity.clone()];
+        }
 
         let entity_destroyed = damageable.health <= 0.0 && damageable.destroy_on_zero_health;
 
-        if entity_destroyed {
+        let entity = if entity_destroyed {
           rigid_body_set.remove(
             entity.handle,
             &mut island_manager,
@@ -524,18 +587,20 @@ impl System for PhysicsSystem {
             &mut multibody_joint_set,
             true,
           );
-        }
+          None
+        } else {
+          Some(entity)
+        };
 
-        return !entity_destroyed;
+        entity.iter().cloned().cloned().collect::<Vec<_>>()
       })
       .collect::<Vec<_>>();
 
     /* MARK: Remove colliding entities marked as destroy on collision */
     let entities = entities
       .iter()
-      .cloned()
       .filter(|entity| {
-        let entity_destroyed = !(entity
+        let entity_destroyed = !((*entity)
           .clone()
           .components
           .get::<DestroyOnCollision>()
@@ -559,9 +624,10 @@ impl System for PhysicsSystem {
             true,
           );
         }
-        return !entity_destroyed;
+        !entity_destroyed
       })
-      .collect();
+      .cloned()
+      .collect::<Vec<_>>();
 
     /* MARK: Give items on collision */
     let new_weapon_modules = sensors.iter().cloned().fold(vec![], |acc, sensor| {
@@ -624,6 +690,60 @@ impl System for PhysicsSystem {
         .map(|save_menu_on_collision| save_menu_on_collision.id)
     });
 
+    /* MARK: Heal from sensor collision mark as such */
+    let entities: Vec<_> = entities
+      .iter()
+      .map(|entity| {
+        let damageable = entity.components.get::<Damageable>();
+
+        if damageable.is_none() {
+          return entity.clone();
+        }
+        let damageable = damageable.unwrap();
+
+        let healing_sensors = rigid_body_set[entity.handle]
+          .colliders()
+          .iter()
+          .cloned()
+          .flat_map(|collider_handle| {
+            narrow_phase
+              .intersection_pairs_with(collider_handle)
+              .flat_map(|(collider1, collider2, has_active_contact)| {
+                if !has_active_contact {
+                  Vec::new()
+                } else {
+                  [collider1, collider2]
+                    .iter()
+                    .cloned()
+                    .filter(|&handle| collider_handle != handle)
+                    .collect::<Vec<_>>()
+                }
+              })
+              .collect::<Vec<_>>()
+          })
+          .flat_map(|collider_handle| {
+            sensors
+              .iter()
+              .find(|sensor| sensor.handle == collider_handle)
+              .and_then(|sensor| sensor.components.get::<HealOnCollision>())
+          });
+
+        let incoming_healing = healing_sensors.fold(0.0, |sum, healing| sum + healing.amount);
+
+        if incoming_healing > 0.0 {
+          println!("+{}", incoming_healing);
+        }
+
+        return Entity {
+          handle: entity.handle,
+          components: entity.components.with(Damageable {
+            health: damageable.health + incoming_healing,
+            ..*damageable
+          }),
+        };
+      })
+      .collect();
+
     /* MARK: Remove colliding sensors marked as destroy on collision */
     let sensors = sensors
       .iter()
@@ -670,15 +790,15 @@ impl System for PhysicsSystem {
 
     return Rc::new(Self {
       rigid_body_set: rigid_body_set.clone(),
-      collider_set: collider_set,
+      collider_set,
       integration_parameters: self.integration_parameters,
       physics_pipeline: Rc::clone(&self.physics_pipeline),
-      island_manager: island_manager,
-      broad_phase: broad_phase,
-      narrow_phase: narrow_phase,
-      impulse_joint_set: impulse_joint_set,
-      multibody_joint_set: multibody_joint_set,
-      ccd_solver: ccd_solver,
+      island_manager,
+      broad_phase,
+      narrow_phase,
+      impulse_joint_set,
+      multibody_joint_set,
+      ccd_solver,
       player_handle: self.player_handle,
       entities,
       sensors,

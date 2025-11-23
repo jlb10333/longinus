@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::{
   combat::WeaponModuleKind,
-  ecs::{ComponentSet, Damageable, Damager, Enemy, Entity},
+  ecs::{ComponentSet, Damageable, Damager, DropHealthOnDestroy, Enemy, Entity},
   f::{Monad, MonadTranslate},
   physics::PhysicsSystem,
   save::SaveData,
@@ -208,8 +208,8 @@ impl EnemySpawn {
     }
   }
 
-  pub fn into_entity(&self, handle: RigidBodyHandle) -> Entity {
-    let components = (match self.name {
+  pub fn into_entity_components(&self) -> ComponentSet {
+    match self.name {
       Enemy::Defender(_) => ComponentSet::new()
         .insert(Damageable {
           health: 100.0,
@@ -218,7 +218,11 @@ impl EnemySpawn {
           current_hitstun: 0.0,
           max_hitstun: 0.0,
         })
-        .insert(Damager { damage: 10.0 }),
+        .insert(Damager { damage: 10.0 })
+        .insert(DropHealthOnDestroy {
+          amount: 20.0,
+          chance: 0.4,
+        }),
       Enemy::Seeker(_) => ComponentSet::new()
         .insert(Damageable {
           health: 30.0,
@@ -227,7 +231,11 @@ impl EnemySpawn {
           current_hitstun: 0.0,
           max_hitstun: 0.0,
         })
-        .insert(Damager { damage: 25.0 }),
+        .insert(Damager { damage: 25.0 })
+        .insert(DropHealthOnDestroy {
+          amount: 10.0,
+          chance: 0.5,
+        }),
       Enemy::SeekerGenerator(_) => ComponentSet::new()
         .insert(Damageable {
           health: 120.0,
@@ -236,11 +244,13 @@ impl EnemySpawn {
           current_hitstun: 0.0,
           max_hitstun: 0.0,
         })
-        .insert(Damager { damage: 10.0 }),
-    })
-    .insert(self.name.clone());
-
-    Entity { handle, components }
+        .insert(Damager { damage: 10.0 })
+        .insert(DropHealthOnDestroy {
+          amount: 35.0,
+          chance: 0.7,
+        }),
+    }
+    .insert(self.name.clone())
   }
 }
 
