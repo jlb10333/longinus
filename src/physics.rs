@@ -761,12 +761,7 @@ impl System for PhysicsSystem {
             > 0;
 
         if entity_destroyed {
-          collider_set.remove(
-            sensor.handle,
-            &mut island_manager,
-            &mut rigid_body_set,
-            true,
-          );
+          collider_set.remove(sensor.handle, &mut island_manager, rigid_body_set, true);
         }
         return !entity_destroyed;
       })
