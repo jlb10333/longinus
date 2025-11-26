@@ -108,28 +108,6 @@
                  "y":72
                 }, 
                 {
-                 "height":0,
-                 "id":4,
-                 "name":"Defender",
-                 "rotation":0,
-                 "type":"EnemySpawn",
-                 "visible":true,
-                 "width":0,
-                 "x":328,
-                 "y":176
-                }, 
-                {
-                 "height":0,
-                 "id":5,
-                 "name":"Defender",
-                 "rotation":0,
-                 "type":"EnemySpawn",
-                 "visible":true,
-                 "width":0,
-                 "x":120,
-                 "y":312
-                }, 
-                {
                  "height":48,
                  "id":6,
                  "name":"map4",
@@ -195,7 +173,7 @@
  "nextobjectid":11,
  "orientation":"orthogonal",
  "renderorder":"right-down",
- "tiledversion":"1.11.1-99-gec89c545",
+ "tiledversion":"1.11.2",
  "tileheight":8,
  "tilesets":[
         {

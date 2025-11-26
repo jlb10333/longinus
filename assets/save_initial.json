@@ -4,7 +4,7 @@
   "unequipped_modules": [],
   "equipped_modules": [
     [
-      "Plasma",
+      null,
       null,
       null,
       null
@@ -12,20 +12,20 @@
     [
       null,
       null,
-      "DoubleDamage",
+      null,
       null
     ],
     [
       null,
       null,
       null,
-      "Front2Slot"
+      null
     ],
     [
       null,
       null,
       null,
-      "Plasma"
+      null
     ]
   ],
   "acquired_items": [],

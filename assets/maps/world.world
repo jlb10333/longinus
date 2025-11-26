@@ -27,6 +27,13 @@
             "width": 80,
             "x": -480,
             "y": 96
+        },
+        {
+            "fileName": "entryway.json",
+            "height": 1600,
+            "width": 2000,
+            "x": -1448,
+            "y": 400
         }
     ],
     "onlyShowAdjacentMaps": false,
