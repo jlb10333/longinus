@@ -283,6 +283,8 @@ pub struct SavePoint {
 #[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
+  pub damaging: Option<f32>,
+  pub damageable: Option<f32>,
 }
 
 fn collider_from_enemy_name(name: MapEnemyName) -> Collider {
@@ -398,6 +400,9 @@ pub const TILE_DIMENSION_PHYSICS: f32 = 0.8;
 
 const EMPTY: i32 = 0;
 const WALL_COLLIDER: i32 = 1;
+const WALL_DESTRUCTIBLE: i32 = 2;
+const WALL_DAMAGING: i32 = 3;
+const WALL: [i32; 3] = [WALL_COLLIDER, WALL_DESTRUCTIBLE, WALL_DAMAGING];
 
 #[derive(Clone)]
 pub enum MapTile {
@@ -411,40 +416,56 @@ pub fn translation_vector_from_index(index: i32, map_dimensions: Vector2<i32>) -
   ]
 }
 
+const DESTRUCTIBLE_WALL_HEALTH: f32 = 1.0;
+const DAMAGING_WALL_DAMAGE: f32 = 10.0;
+
 impl TileLayer {
   pub fn into(&self) -> Vec<MapTile> {
     return self
       .data
       .iter()
       .enumerate()
-      .map(|(uindex, &tile_data)| {
+      .filter_map(|(uindex, tile_data)| {
         let index = uindex.try_into().unwrap();
-        if tile_data == WALL_COLLIDER {
+        if WALL.contains(tile_data) {
+          let collider =
+            ColliderBuilder::cuboid(TILE_DIMENSION_PHYSICS / 2.0, TILE_DIMENSION_PHYSICS / 2.0)
+              .translation(translation_vector_from_index(
+                index,
+                vector![self.width, self.height],
+              ))
+              .collision_groups(InteractionGroups {
+                memberships: COLLISION_GROUP_WALL,
+                filter: COLLISION_GROUP_PLAYER
+                  .union(COLLISION_GROUP_PLAYER_PROJECTILE)
+                  .union(COLLISION_GROUP_ENEMY)
+                  .union(COLLISION_GROUP_ENEMY_PROJECTILE),
+              })
+              .build();
+
+          let damageable = if *tile_data == WALL_DESTRUCTIBLE {
+            Some(DESTRUCTIBLE_WALL_HEALTH)
+          } else {
+            None
+          };
+
+          let damaging = if *tile_data == WALL_DAMAGING {
+            Some(DAMAGING_WALL_DAMAGE)
+          } else {
+            None
+          };
+
           return Some(MapTile::Wall(Wall {
-            collider: ColliderBuilder::cuboid(
-              TILE_DIMENSION_PHYSICS / 2.0,
-              TILE_DIMENSION_PHYSICS / 2.0,
-            )
-            .translation(translation_vector_from_index(
-              index,
-              vector![self.width, self.height],
-            ))
-            .collision_groups(InteractionGroups {
-              memberships: COLLISION_GROUP_WALL,
-              filter: COLLISION_GROUP_PLAYER
-                .union(COLLISION_GROUP_PLAYER_PROJECTILE)
-                .union(COLLISION_GROUP_ENEMY)
-                .union(COLLISION_GROUP_ENEMY_PROJECTILE),
-            })
-            .build(),
+            collider,
+            damageable,
+            damaging,
           }));
         }
-        if tile_data == EMPTY {
+        if *tile_data == EMPTY {
           return None;
         }
-        todo!()
+        todo!("unaccounted wall {}", tile_data);
       })
-      .flatten()
       .collect();
   }
 }
@@ -481,42 +502,38 @@ impl RawMap {
 
     let map_height = tile_layer.bind(|&tile_layer| tile_layer.height as f32 * 8.0);
 
-    let enemy_spawns: Option<Vec<EnemySpawn>> = entities_layer
-      .map(|layer| {
-        map_height.map(|map_height| {
-          layer
-            .into(map_height)
-            .iter()
-            .flat_map(|object| {
-              if let MapComponent::Enemy(enemy_spawn) = object {
-                vec![enemy_spawn.clone()]
-              } else {
-                vec![]
-              }
-            })
-            .collect()
-        })
+    let enemy_spawns: Option<Vec<EnemySpawn>> = entities_layer.and_then(|layer| {
+      map_height.map(|map_height| {
+        layer
+          .into(map_height)
+          .iter()
+          .flat_map(|object| {
+            if let MapComponent::Enemy(enemy_spawn) = object {
+              vec![enemy_spawn.clone()]
+            } else {
+              vec![]
+            }
+          })
+          .collect()
       })
-      .flatten();
+    });
 
-    let player_spawns = entities_layer
-      .map(|layer| {
-        map_height.map(|map_height| {
-          layer
-            .into(map_height)
-            .iter()
-            .flat_map(|object| {
-              if let MapComponent::Player(player_spawn) = object {
-                vec![player_spawn.clone()]
-              } else {
-                vec![]
-              }
-            })
-            .collect::<Vec<_>>()
-            .clone()
-        })
+    let player_spawns = entities_layer.and_then(|layer| {
+      map_height.map(|map_height| {
+        layer
+          .into(map_height)
+          .iter()
+          .flat_map(|object| {
+            if let MapComponent::Player(player_spawn) = object {
+              vec![player_spawn.clone()]
+            } else {
+              vec![]
+            }
+          })
+          .collect::<Vec<_>>()
+          .clone()
       })
-      .flatten();
+    });
 
     let item_pickups = entities_layer
       .map(|layer| {

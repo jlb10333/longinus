@@ -1,0 +1,55 @@
+{
+    "maps": [
+        {
+            "fileName": "map1.json",
+            "height": 320,
+            "width": 400,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "fileName": "map2.json",
+            "height": 160,
+            "width": 400,
+            "x": 400,
+            "y": 32
+        },
+        {
+            "fileName": "map3.json",
+            "height": 400,
+            "width": 400,
+            "x": -400,
+            "y": 0
+        },
+        {
+            "fileName": "map4.json",
+            "height": 80,
+            "width": 80,
+            "x": -480,
+            "y": 96
+        },
+        {
+            "fileName": "entryway.json",
+            "height": 1600,
+            "width": 2000,
+            "x": -1448,
+            "y": 400
+        },
+        {
+            "fileName": "CL5-1.json",
+            "height": 456,
+            "width": 800,
+            "x": 554,
+            "y": 398
+        },
+        {
+            "fileName": "CL5-2.json",
+            "height": 1200,
+            "width": 560,
+            "x": 794,
+            "y": 854
+        }
+    ],
+    "onlyShowAdjacentMaps": false,
+    "type": "world"
+}

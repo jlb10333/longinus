@@ -16,6 +16,21 @@
 
 - IDEA: Add human-readable label to entities/sensors, use to draw labels in debug mode
 
+## GAME DESIGN:
+
+### Keys & Locks:
+
++ Weapon (P)
+  - Destructible blocks
+  + Areas with enemies
++ Boost
+  - Gravity repulsors
+- Shield
+  - Lock-on stun weapon emplacements
+- Chain
+  - Cranks (grab on with chain, spin around to make something in the environment move)
+  - 
+
 ## STORY:
 
 ### Key Terms:
