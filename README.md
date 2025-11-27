@@ -8,6 +8,7 @@
 - Add destructible walls
 - Add kinematic/nonkinematic damaging hazards
 - Add one-directional passageways
+- Add gravity emitter
 
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 

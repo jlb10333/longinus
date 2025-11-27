@@ -25,7 +25,8 @@ use crate::{
   units::UnitConvert2,
 };
 
-const PLAYER_SPEED_LIMIT: f32 = 10.0;
+const PLAYER_SPEED_LIMIT: f32 = 5.0;
+const PLAYER_ACCELERATION_MOD: f32 = 0.5;
 
 pub struct PhysicsSystem {
   pub rigid_body_set: RigidBodySet,
@@ -299,7 +300,7 @@ impl System for PhysicsSystem {
     /* MARK: Move the player */
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
-    let attempted_acceleration = controls_system.left_stick.into_vec();
+    let attempted_acceleration = controls_system.left_stick.into_vec() * PLAYER_ACCELERATION_MOD;
     let player = &rigid_body_set[self.player_handle];
     let player_mass = player.mass();
     let player_velocity = player.linvel();

@@ -536,41 +536,37 @@ impl RawMap {
       })
       .flatten();
 
-    let map_transitions = entities_layer
-      .map(|layer| {
-        map_height.map(|map_height| {
-          layer
-            .into(map_height)
-            .iter()
-            .flat_map(|object| {
-              if let MapComponent::MapTransition(map_transition) = object {
-                vec![map_transition.clone()]
-              } else {
-                vec![]
-              }
-            })
-            .collect::<Vec<_>>()
-        })
+    let map_transitions = entities_layer.and_then(|layer| {
+      map_height.map(|map_height| {
+        layer
+          .into(map_height)
+          .iter()
+          .flat_map(|object| {
+            if let MapComponent::MapTransition(map_transition) = object {
+              vec![map_transition.clone()]
+            } else {
+              vec![]
+            }
+          })
+          .collect::<Vec<_>>()
       })
-      .flatten();
+    });
 
-    let save_points = entities_layer
-      .map(|layer| {
-        map_height.map(|map_height| {
-          layer
-            .into(map_height)
-            .iter()
-            .flat_map(|object| {
-              if let MapComponent::SavePoint(save_point) = object {
-                vec![save_point.clone()]
-              } else {
-                vec![]
-              }
-            })
-            .collect::<Vec<_>>()
-        })
+    let save_points = entities_layer.and_then(|layer| {
+      map_height.map(|map_height| {
+        layer
+          .into(map_height)
+          .iter()
+          .flat_map(|object| {
+            if let MapComponent::SavePoint(save_point) = object {
+              vec![save_point.clone()]
+            } else {
+              vec![]
+            }
+          })
+          .collect::<Vec<_>>()
       })
-      .flatten();
+    });
 
     if let Some(enemy_spawns) = enemy_spawns
       && let Some(player_spawns) = player_spawns
@@ -579,16 +575,6 @@ impl RawMap {
       && let Some(map_transitions) = map_transitions
       && let Some(save_points) = save_points
     {
-      println!("{}", map_transitions[0].collider.translation());
-      println!(
-        "{}",
-        map_transitions[0]
-          .collider
-          .shape()
-          .as_cuboid()
-          .unwrap()
-          .half_extents
-      );
       Some(Map {
         colliders,
         enemy_spawns,
@@ -606,8 +592,8 @@ impl RawMap {
 pub fn load(file_path: &str) -> Option<Map> {
   fs::read_to_string(file_path)
     .translate()
-    .bind(|raw_file| (&deser_map(raw_file)).into())
-    .flatten()
+    .as_ref()
+    .and_then(|raw_file| (&deser_map(raw_file)).into())
 }
 
 pub struct MapSystem {

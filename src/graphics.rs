@@ -36,7 +36,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   where
     Self: Sized,
   {
-    return Rc::new(GraphicsSystem(PhantomData));
+    Rc::new(GraphicsSystem(PhantomData))
   }
 
   fn run(
@@ -45,6 +45,8 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   ) -> Rc<dyn System<Input = Self::Input>> {
     /* Background */
     clear_background(RED);
+
+    draw_fps();
 
     if let Some(ctx) = ctx.downcast::<_>() {
       let camera_system = ctx.get::<CameraSystem>().unwrap();
@@ -61,12 +63,10 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       /* Draw entities */
       physics_system.sensors.iter().for_each(|sensor| {
-        let label =
-          if let Some(map_transition) = sensor.components.get::<MapTransitionOnCollision>() {
-            Some(map_transition.map_name.clone())
-          } else {
-            None
-          };
+        let label = sensor
+          .components
+          .get::<MapTransitionOnCollision>()
+          .map(|map_transition| map_transition.map_name.clone());
 
         draw_collider(
           &physics_system.collider_set[sensor.handle],
@@ -161,11 +161,11 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       sleep(Duration::from_millis(time_to_sleep as u64)); // Sleep
     }
 
-    return Rc::new(GraphicsSystem(PhantomData));
+    Rc::new(GraphicsSystem(PhantomData))
   }
 }
 
-fn draw_main_menu(menu: &MainMenu, available_sava_data: &Vec<String>) {
+fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
   match menu.kind.clone() {
     /* MARK: Menu Main */
     crate::menu::MainMenuKind::Main(should_include_continue_option) => {
@@ -275,7 +275,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &Vec<String>) {
   }
 }
 
-fn draw_menu(menu: &GameMenu, available_sava_data: &Vec<String>) {
+fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
   match menu.kind.clone() {
     /* MARK: Pause Main */
     crate::menu::GameMenuKind::PauseMain => {
@@ -426,7 +426,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &Vec<String>) {
         .iter()
         .enumerate()
         .for_each(|(index, equipped_module)| {
-          equipped_module.clone().map(|module_kind| {
+          if let Some(module_kind) = equipped_module.clone() {
             draw_text(
               debug_module_text(&module_kind),
               (0.5 + ((index as i32 % EQUIP_SLOTS_WIDTH) as f32 * 0.05)) * screen_width(),
@@ -434,7 +434,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &Vec<String>) {
               40.0,
               WHITE,
             );
-          });
+          };
         });
 
       inventory_update
