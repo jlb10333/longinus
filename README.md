@@ -9,7 +9,6 @@
 - Add kinematic/nonkinematic damaging hazards
 - Add one-directional passageways
 
-- BUG: Hitstun cooldown thing doesn't work, player gets damaged forever :(
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
 - CLEANUP: Replace `HealOnCollision` with `Damager` with negative damage
@@ -26,9 +25,11 @@
   - Longinus contains a sentient ship-board control system, referred to as the Spirit. 
 
 - The End of the World
-
+  - TODO
+  
 - Post-Earth Society
-
+  - TODO
+  
 - Angels
   - TODO
 

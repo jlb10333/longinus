@@ -1,5 +1,8 @@
 use macroquad::prelude::rand;
-use rapier2d::prelude::*;
+use rapier2d::{
+  na::{Isometry, Isometry2},
+  prelude::*,
+};
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
@@ -45,6 +48,8 @@ pub struct PhysicsSystem {
   pub save_point_contact_last_frame: Option<i32>,
 }
 
+const PLAYER_MAX_HITSTUN: f32 = 100.0;
+
 fn load_new_map(
   map: &Map,
   map_name: &str,
@@ -87,7 +92,7 @@ fn load_new_map(
       max_health: player_max_health,
       destroy_on_zero_health: false,
       current_hitstun: 0.0,
-      max_hitstun: 30.0,
+      max_hitstun: PLAYER_MAX_HITSTUN,
     }),
   };
 
@@ -152,11 +157,18 @@ fn load_new_map(
     .collect::<Vec<_>>();
 
   /* MARK: Create the map colliders. */
-  map.colliders.iter().for_each(|map_tile| {
-    match map_tile {
-      MapTile::Wall(wall) => collider_set.insert(wall.collider.clone()),
-    };
-  });
+  let map_shapes = map
+    .colliders
+    .iter()
+    .map(|map_tile| match map_tile {
+      MapTile::Wall(wall) => (
+        Isometry2::new(*wall.collider.translation(), 0.0),
+        SharedShape::new(*wall.collider.shape().as_cuboid().unwrap()),
+      ),
+    })
+    .collect::<Vec<_>>();
+
+  collider_set.insert(ColliderBuilder::compound(map_shapes).build());
 
   /* MARK: Create other structures necessary for the simulation. */
   let integration_parameters = IntegrationParameters::default();
@@ -498,6 +510,7 @@ impl System for PhysicsSystem {
           handle: entity.handle,
           components: entity.components.with(Damageable {
             health: damageable.health - incoming_damage,
+            current_hitstun: damageable.max_hitstun,
             ..*damageable
           }),
         };
@@ -737,7 +750,7 @@ impl System for PhysicsSystem {
         return Entity {
           handle: entity.handle,
           components: entity.components.with(Damageable {
-            health: damageable.health + incoming_healing,
+            health: (damageable.health + incoming_healing).min(damageable.max_health),
             ..*damageable
           }),
         };
@@ -774,7 +787,7 @@ impl System for PhysicsSystem {
       &mut island_manager,
       &mut broad_phase,
       &mut narrow_phase,
-      &mut rigid_body_set,
+      rigid_body_set,
       &mut collider_set,
       &mut impulse_joint_set,
       &mut multibody_joint_set,
