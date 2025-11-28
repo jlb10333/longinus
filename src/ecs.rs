@@ -12,6 +12,7 @@ use crate::{
 pub struct Entity {
   pub handle: RigidBodyHandle,
   pub components: ComponentSet,
+  pub label: String,
 }
 
 #[derive(Clone)]

@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::units::{
-  PhysicsScalar, PhysicsVector, ScreenScalar, ScreenVector, UnitConvert, UnitConvert2,
+  PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2,
 };
 
 pub fn draw_collider(

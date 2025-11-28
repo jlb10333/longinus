@@ -1,8 +1,5 @@
 use macroquad::prelude::rand;
-use rapier2d::{
-  na::{Isometry, Isometry2},
-  prelude::*,
-};
+use rapier2d::{na::Isometry2, prelude::*};
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
@@ -10,7 +7,7 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::ControlsSystem,
   ecs::{
-    ComponentSet, Damageable, Damager, DestroyOnCollision, DropHealthOnDestroy, Enemy, Entity,
+    ComponentSet, Damageable, Damager, DestroyOnCollision, DropHealthOnDestroy, Entity,
     GivesItemOnCollision, HealOnCollision, MapTransitionOnCollision, SaveMenuOnCollision, Sensor,
   },
   enemy::EnemySystem,
@@ -95,6 +92,7 @@ fn load_new_map(
       current_hitstun: 0.0,
       max_hitstun: PLAYER_MAX_HITSTUN,
     }),
+    label: "player".to_string(),
   };
 
   println!("spawning {} enemies", map.enemy_spawns.len());
@@ -109,6 +107,7 @@ fn load_new_map(
       Entity {
         handle,
         components: enemy_spawn.into_entity_components(),
+        label: "enemy".to_string(),
       }
     })
     .collect::<Vec<_>>();
@@ -158,18 +157,76 @@ fn load_new_map(
     .collect::<Vec<_>>();
 
   /* MARK: Create the map colliders. */
-  let map_shapes = map
+  let map_tiles = map
     .colliders
     .iter()
     .map(|map_tile| match map_tile {
-      MapTile::Wall(wall) => (
-        Isometry2::new(*wall.collider.translation(), 0.0),
-        SharedShape::new(*wall.collider.shape().as_cuboid().unwrap()),
-      ),
+      MapTile::Wall(wall) => {
+        if wall.damaging.is_none() && wall.damageable.is_none() {
+          (
+            Some((
+              Isometry2::new(*wall.collider.translation(), 0.0),
+              SharedShape::new(*wall.collider.shape().as_cuboid().unwrap()),
+            )),
+            None,
+          )
+        } else {
+          let damager = wall.damaging.map(|damaging| Damager { damage: damaging });
+          let damageable = wall.damageable.map(|damageable| Damageable {
+            health: damageable,
+            max_health: damageable,
+            destroy_on_zero_health: true,
+            current_hitstun: 0.0,
+            max_hitstun: 0.0,
+          });
+          let rigid_body_handle = rigid_body_set.insert(RigidBodyBuilder::fixed());
+          collider_set.insert_with_parent(
+            wall.collider.clone(),
+            rigid_body_handle,
+            &mut rigid_body_set,
+          );
+
+          let label = format!(
+            "{}{}",
+            if damageable.is_some() { "D" } else { "" },
+            if damager.is_some() { "H" } else { "" },
+          );
+
+          let component_set = ComponentSet::new();
+          let component_set = if let Some(damager) = damager {
+            component_set.insert(damager)
+          } else {
+            component_set
+          };
+          let component_set = if let Some(damageable) = damageable {
+            component_set.insert(damageable)
+          } else {
+            component_set
+          };
+
+          let entity = Entity {
+            handle: rigid_body_handle,
+            components: component_set,
+            label,
+          };
+          (None, Some(entity))
+        }
+      }
     })
     .collect::<Vec<_>>();
 
-  collider_set.insert(ColliderBuilder::compound(map_shapes).build());
+  let static_walls = map_tiles
+    .iter()
+    .cloned()
+    .filter_map(|(static_wall, _)| static_wall)
+    .collect::<Vec<_>>();
+  collider_set.insert(ColliderBuilder::compound(static_walls).build());
+
+  let interactive_walls = map_tiles
+    .iter()
+    .cloned()
+    .filter_map(|(_, interactive_wall)| interactive_wall)
+    .collect::<Vec<_>>();
 
   /* MARK: Create other structures necessary for the simulation. */
   let integration_parameters = IntegrationParameters::default();
@@ -180,7 +237,12 @@ fn load_new_map(
   let impulse_joint_set = ImpulseJointSet::new();
   let multibody_joint_set = MultibodyJointSet::new();
   let ccd_solver: CCDSolver = CCDSolver::new();
-  let entities: Vec<_> = [player].iter().cloned().chain(enemies).collect();
+  let entities: Vec<_> = [player]
+    .iter()
+    .cloned()
+    .chain(enemies)
+    .chain(interactive_walls)
+    .collect();
   let sensors = item_pickups
     .iter()
     .cloned()
@@ -265,7 +327,7 @@ impl System for PhysicsSystem {
     let mut impulse_joint_set = self.impulse_joint_set.clone();
     let mut multibody_joint_set = self.multibody_joint_set.clone();
     let mut ccd_solver = self.ccd_solver.clone();
-    let mut rigid_body_set = &mut self.rigid_body_set.clone();
+    let rigid_body_set = &mut self.rigid_body_set.clone();
     let mut collider_set = self.collider_set.clone();
 
     let entities = self.entities.clone();
@@ -350,14 +412,15 @@ impl System for PhysicsSystem {
 
         rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
 
-        return Entity {
+        Entity {
           handle,
           components: ComponentSet::new()
             .insert(DestroyOnCollision)
             .insert(Damager {
               damage: projectile.damage,
             }),
-        };
+          label: "projectile".to_string(),
+        }
       })
       .collect();
 
@@ -384,8 +447,8 @@ impl System for PhysicsSystem {
           .apply_impulse(relevant_decision.movement_force.into_vec(), true);
 
         [Entity {
-          handle: entity.handle,
           components: entity.components.with(relevant_decision.enemy.clone()),
+          ..entity.clone()
         }]
         .iter()
         .cloned()
@@ -408,6 +471,7 @@ impl System for PhysicsSystem {
               .insert(Damager {
                 damage: projectile.damage,
               }),
+            label: "enemy projectile".to_string(),
           }
         }))
         .collect::<Vec<_>>()
@@ -428,6 +492,7 @@ impl System for PhysicsSystem {
               Entity {
                 handle,
                 components: enemy_to_spawn.enemy_spawn.into_entity_components(),
+                label: "child enemy".to_string(),
               }
             }),
         )
@@ -448,11 +513,11 @@ impl System for PhysicsSystem {
 
         if damageable.current_hitstun > 0.0 {
           return Entity {
-            handle: entity.handle,
             components: entity.components.with(Damageable {
               current_hitstun: damageable.current_hitstun - 1.0,
               ..*damageable
             }),
+            ..entity.clone()
           };
         }
 
@@ -493,7 +558,6 @@ impl System for PhysicsSystem {
 
         if incoming_damage == 0.0 {
           return Entity {
-            handle: entity.handle,
             components: entity.components.with(Damageable {
               current_hitstun: if damageable.current_hitstun > 0.0 {
                 damageable.current_hitstun - 1.0
@@ -502,18 +566,19 @@ impl System for PhysicsSystem {
               },
               ..*damageable
             }),
+            ..entity.clone()
           };
         }
 
         println!("{}", incoming_damage);
 
         return Entity {
-          handle: entity.handle,
           components: entity.components.with(Damageable {
             health: damageable.health - incoming_damage,
             current_hitstun: damageable.max_hitstun,
             ..*damageable
           }),
+          ..entity.clone()
         };
       })
       .collect();
@@ -748,13 +813,13 @@ impl System for PhysicsSystem {
           println!("+{}", incoming_healing);
         }
 
-        return Entity {
-          handle: entity.handle,
+        Entity {
           components: entity.components.with(Damageable {
             health: (damageable.health + incoming_healing).min(damageable.max_health),
             ..*damageable
           }),
-        };
+          ..entity.clone()
+        }
       })
       .collect();
 

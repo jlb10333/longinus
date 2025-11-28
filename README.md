@@ -5,8 +5,7 @@
 - Add story terminal
 - Add first boss
 - Add gameover menu
-- Add destructible walls
-- Add kinematic/nonkinematic damaging hazards
+- Add kinematic damaging hazards
 - Add one-directional passageways
 - Add gravity emitter
 
@@ -21,7 +20,7 @@
 ### Keys & Locks:
 
 + Weapon (P)
-  - Destructible blocks
+  + Destructible blocks
   + Areas with enemies
 + Boost
   - Gravity repulsors
@@ -29,7 +28,6 @@
   - Lock-on stun weapon emplacements
 - Chain
   - Cranks (grab on with chain, spin around to make something in the environment move)
-  - 
 
 ## STORY:
 

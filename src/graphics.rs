@@ -61,7 +61,22 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           .for_each(|(_, collider)| draw_collider(collider, camera_system.translation, None, None));
       }
 
-      /* Draw entities */
+      /* Draw entity labels */
+      physics_system.entities.iter().for_each(|entity| {
+        physics_system.rigid_body_set[entity.handle]
+          .colliders()
+          .iter()
+          .for_each(|collider_handle| {
+            draw_collider(
+              &physics_system.collider_set[*collider_handle],
+              camera_system.translation,
+              Some(entity.label.clone()),
+              Some(GREEN),
+            )
+          });
+      });
+
+      /* Draw sensors */
       physics_system.sensors.iter().for_each(|sensor| {
         let label = sensor
           .components

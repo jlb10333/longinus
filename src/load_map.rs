@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::{
   combat::WeaponModuleKind,
-  ecs::{ComponentSet, Damageable, Damager, DropHealthOnDestroy, Enemy, Entity},
+  ecs::{ComponentSet, Damageable, Damager, DropHealthOnDestroy, Enemy},
   f::{Monad, MonadTranslate},
   physics::PhysicsSystem,
   save::SaveData,
@@ -535,23 +535,21 @@ impl RawMap {
       })
     });
 
-    let item_pickups = entities_layer
-      .map(|layer| {
-        map_height.map(|map_height| {
-          layer
-            .into(map_height)
-            .iter()
-            .flat_map(|object| {
-              if let MapComponent::ItemPickup(item_pickup) = object {
-                vec![item_pickup.clone()]
-              } else {
-                vec![]
-              }
-            })
-            .collect::<Vec<_>>()
-        })
+    let item_pickups = entities_layer.and_then(|layer| {
+      map_height.map(|map_height| {
+        layer
+          .into(map_height)
+          .iter()
+          .flat_map(|object| {
+            if let MapComponent::ItemPickup(item_pickup) = object {
+              vec![item_pickup.clone()]
+            } else {
+              vec![]
+            }
+          })
+          .collect::<Vec<_>>()
       })
-      .flatten();
+    });
 
     let map_transitions = entities_layer.and_then(|layer| {
       map_height.map(|map_height| {
