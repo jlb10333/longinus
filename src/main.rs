@@ -71,9 +71,9 @@ async fn main() {
             .add_system(CameraSystem::start)
             .add_system(ControlsSystem::start)
             .add_system(MenuSystem::start)
-            .add_system(GraphicsSystem::start)
             .add_system(EnemySystem::start)
             .add_system(AbilitySystem::start)
+            .add_system(GraphicsSystem::start)
             .start(),
         )
         .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())

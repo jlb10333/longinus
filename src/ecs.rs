@@ -5,7 +5,7 @@ use rapier2d::prelude::{ColliderHandle, RigidBodyHandle};
 use crate::{
   combat::WeaponModuleKind,
   enemy::{EnemyDefender, EnemySeeker, EnemySeekerGenerator},
-  load_map::MapEnemyName,
+  load_map::{MapEnemyName, MapGateState},
 };
 
 #[derive(Clone)]
@@ -154,3 +154,14 @@ pub struct HealOnCollision {
   pub amount: f32,
 }
 impl Component for HealOnCollision {}
+
+pub struct Gate {
+  pub id: i32,
+}
+impl Component for Gate {}
+
+pub struct GateTrigger {
+  pub gate_id: i32,
+  pub action: MapGateState,
+}
+impl Component for GateTrigger {}

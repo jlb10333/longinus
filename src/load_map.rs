@@ -141,6 +141,74 @@ struct MapSavePoint {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+pub enum MapGateState {
+  Open,
+  Close,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapGateInitialStateClass {
+  InitialState,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGateInitialState {
+  #[serde(rename = "name")]
+  _name: MapGateInitialStateClass,
+  value: MapGateState,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapGateClass {
+  Gate,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGate {
+  id: i32,
+  x: f32,
+  y: f32,
+  width: f32,
+  height: f32,
+  properties: (MapGateInitialState,),
+  #[serde(rename = "type")]
+  _class: MapGateClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapGateTriggerGateActionClass {
+  GateAction,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGateTriggerGateAction {
+  #[serde(rename = "name")]
+  _name: MapGateTriggerGateActionClass,
+  value: MapGateState,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapGateTriggerTargetGateClass {
+  TargetGate,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGateTriggerTargetGate {
+  #[serde(rename = "name")]
+  _name: MapGateTriggerTargetGateClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGateTrigger {
+  x: f32,
+  y: f32,
+  width: f32,
+  height: f32,
+  properties: (MapGateTriggerGateAction, MapGateTriggerTargetGate),
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -148,6 +216,8 @@ enum Object {
   ItemPickup(MapItemPickup),
   MapTransition(MapMapTransition),
   SavePoint(MapSavePoint),
+  Gate(MapGate),
+  GateTrigger(MapGateTrigger),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -281,6 +351,19 @@ pub struct SavePoint {
 }
 
 #[derive(Clone)]
+pub struct Gate {
+  pub id: i32,
+  pub collider: Collider,
+}
+
+#[derive(Clone)]
+pub struct GateTrigger {
+  pub gate_id: i32,
+  pub collider: Collider,
+  pub action: MapGateState,
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -311,6 +394,8 @@ pub enum MapComponent {
   ItemPickup(ItemPickup),
   MapTransition(MapTransition),
   SavePoint(SavePoint),
+  Gate(Gate),
+  GateTrigger(GateTrigger),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -352,14 +437,13 @@ impl Object {
       Object::MapTransition(map_transition) => MapComponent::MapTransition(MapTransition {
         target_player_spawn_id: map_transition.properties.0.value,
         map_name: map_transition.name.clone(),
-        collider: ColliderBuilder::cuboid(
-          *map_scalar_to_physics(map_transition.width / 2.0),
-          *map_scalar_to_physics(map_transition.height / 2.0),
+        collider: cuboid_collider_from_map(
+          map_transition.x,
+          map_transition.y,
+          map_transition.width,
+          map_transition.height,
+          map_height,
         )
-        .translation(vector![
-          *map_scalar_to_physics(map_transition.x + map_transition.width / 2.0),
-          *map_scalar_to_physics(map_height - map_transition.y - map_transition.height / 2.0)
-        ])
         .sensor(true)
         .collision_groups(InteractionGroups {
           memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
@@ -382,17 +466,59 @@ impl Object {
           })
           .build(),
       }),
+
+      Object::Gate(gate) => MapComponent::Gate(Gate {
+        id: gate.id,
+        collider: cuboid_collider_from_map(gate.x, gate.y, gate.width, gate.height, map_height)
+          .enabled(matches!(gate.properties.0.value, MapGateState::Close))
+          .build(),
+      }),
+
+      Object::GateTrigger(gate_trigger) => MapComponent::GateTrigger(GateTrigger {
+        gate_id: gate_trigger.properties.1.value,
+        collider: cuboid_collider_from_map(
+          gate_trigger.x,
+          gate_trigger.y,
+          gate_trigger.width,
+          gate_trigger.height,
+          map_height,
+        )
+        .sensor(true)
+        .collision_groups(InteractionGroups {
+          memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+          filter: COLLISION_GROUP_PLAYER,
+        })
+        .build(),
+        action: gate_trigger.properties.0.value.clone(),
+      }),
     }
   }
 }
 
+fn cuboid_collider_from_map(
+  translation_map_x: f32,
+  translation_map_y: f32,
+  translation_map_width: f32,
+  translation_map_height: f32,
+  map_height: f32,
+) -> ColliderBuilder {
+  ColliderBuilder::cuboid(
+    *map_scalar_to_physics(translation_map_width / 2.0),
+    *map_scalar_to_physics(translation_map_height / 2.0),
+  )
+  .translation(vector![
+    *map_scalar_to_physics(translation_map_x + translation_map_width / 2.0),
+    *map_scalar_to_physics(map_height - translation_map_y - translation_map_height / 2.0)
+  ])
+}
+
 impl ObjectLayer {
   pub fn into(&self, map_height: f32) -> Vec<MapComponent> {
-    return self
+    self
       .objects
       .iter()
       .map(|object| object.into(map_height))
-      .collect();
+      .collect()
   }
 }
 
@@ -477,129 +603,130 @@ pub struct Map {
   pub item_pickups: Vec<ItemPickup>,
   pub map_transitions: Vec<MapTransition>,
   pub save_points: Vec<SavePoint>,
+  pub gates: Vec<Gate>,
+  pub gate_triggers: Vec<GateTrigger>,
 }
 
 impl RawMap {
-  pub fn into(&self) -> Option<Map> {
-    let tile_layer = self.layers.iter().find_map(|layer| {
-      if let Layer::TileLayer(tile_layer) = layer
-        && let TileLayerName::Colliders = tile_layer.name
-      {
-        Some(tile_layer)
-      } else {
-        None
-      }
-    });
-
-    let colliders: Option<Vec<MapTile>> = tile_layer.map(|tile_layer| tile_layer.into());
-
-    let entities_layer = self.layers.iter().find_map(|layer| match layer {
-      Layer::ObjectLayer(object_layer) => match object_layer.name {
-        ObjectLayerName::Entities => Some(object_layer),
-      },
-      Layer::TileLayer(_) => None,
-    });
-
-    let map_height = tile_layer.bind(|&tile_layer| tile_layer.height as f32 * 8.0);
-
-    let enemy_spawns: Option<Vec<EnemySpawn>> = entities_layer.and_then(|layer| {
-      map_height.map(|map_height| {
-        layer
-          .into(map_height)
-          .iter()
-          .flat_map(|object| {
-            if let MapComponent::Enemy(enemy_spawn) = object {
-              vec![enemy_spawn.clone()]
-            } else {
-              vec![]
-            }
-          })
-          .collect()
+  pub fn into(&self) -> Map {
+    let tile_layer = self
+      .layers
+      .iter()
+      .find_map(|layer| {
+        if let Layer::TileLayer(tile_layer) = layer
+          && let TileLayerName::Colliders = tile_layer.name
+        {
+          Some(tile_layer)
+        } else {
+          None
+        }
       })
-    });
+      .unwrap();
 
-    let player_spawns = entities_layer.and_then(|layer| {
-      map_height.map(|map_height| {
-        layer
-          .into(map_height)
-          .iter()
-          .flat_map(|object| {
-            if let MapComponent::Player(player_spawn) = object {
-              vec![player_spawn.clone()]
-            } else {
-              vec![]
-            }
-          })
-          .collect::<Vec<_>>()
-          .clone()
-      })
-    });
+    let colliders = tile_layer.into();
 
-    let item_pickups = entities_layer.and_then(|layer| {
-      map_height.map(|map_height| {
-        layer
-          .into(map_height)
-          .iter()
-          .flat_map(|object| {
-            if let MapComponent::ItemPickup(item_pickup) = object {
-              vec![item_pickup.clone()]
-            } else {
-              vec![]
-            }
-          })
-          .collect::<Vec<_>>()
+    let entities_layer = self
+      .layers
+      .iter()
+      .find_map(|layer| match layer {
+        Layer::ObjectLayer(object_layer) => match object_layer.name {
+          ObjectLayerName::Entities => Some(object_layer),
+        },
+        Layer::TileLayer(_) => None,
       })
-    });
+      .unwrap();
 
-    let map_transitions = entities_layer.and_then(|layer| {
-      map_height.map(|map_height| {
-        layer
-          .into(map_height)
-          .iter()
-          .flat_map(|object| {
-            if let MapComponent::MapTransition(map_transition) = object {
-              vec![map_transition.clone()]
-            } else {
-              vec![]
-            }
-          })
-          .collect::<Vec<_>>()
-      })
-    });
+    let map_height = tile_layer.height as f32 * 8.0;
 
-    let save_points = entities_layer.and_then(|layer| {
-      map_height.map(|map_height| {
-        layer
-          .into(map_height)
-          .iter()
-          .flat_map(|object| {
-            if let MapComponent::SavePoint(save_point) = object {
-              vec![save_point.clone()]
-            } else {
-              vec![]
-            }
-          })
-          .collect::<Vec<_>>()
-      })
-    });
+    let converted_entities = entities_layer.into(map_height);
 
-    if let Some(enemy_spawns) = enemy_spawns
-      && let Some(player_spawns) = player_spawns
-      && let Some(item_pickups) = item_pickups
-      && let Some(colliders) = colliders
-      && let Some(map_transitions) = map_transitions
-      && let Some(save_points) = save_points
-    {
-      Some(Map {
-        colliders,
-        enemy_spawns,
-        player_spawns,
-        item_pickups,
-        map_transitions,
-        save_points,
+    let enemy_spawns: Vec<EnemySpawn> = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Enemy(enemy_spawn) = object {
+          vec![enemy_spawn.clone()]
+        } else {
+          vec![]
+        }
       })
-    } else {
-      None
+      .collect();
+
+    let player_spawns = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Player(player_spawn) = object {
+          vec![player_spawn.clone()]
+        } else {
+          vec![]
+        }
+      })
+      .collect::<Vec<_>>()
+      .clone();
+
+    let item_pickups = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::ItemPickup(item_pickup) = object {
+          vec![item_pickup.clone()]
+        } else {
+          vec![]
+        }
+      })
+      .collect::<Vec<_>>();
+
+    let map_transitions = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::MapTransition(map_transition) = object {
+          vec![map_transition.clone()]
+        } else {
+          vec![]
+        }
+      })
+      .collect::<Vec<_>>();
+
+    let save_points = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::SavePoint(save_point) = object {
+          vec![save_point.clone()]
+        } else {
+          vec![]
+        }
+      })
+      .collect::<Vec<_>>();
+
+    let gates = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Gate(gate) = object {
+          vec![gate.clone()]
+        } else {
+          vec![]
+        }
+      })
+      .collect::<Vec<_>>();
+
+    let gate_triggers = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::GateTrigger(gate_trigger) = object {
+          vec![gate_trigger.clone()]
+        } else {
+          vec![]
+        }
+      })
+      .collect::<Vec<_>>();
+
+    Map {
+      colliders,
+      enemy_spawns,
+      player_spawns,
+      item_pickups,
+      map_transitions,
+      save_points,
+      gates,
+      gate_triggers,
     }
   }
 }
@@ -608,7 +735,7 @@ pub fn load(file_path: &str) -> Option<Map> {
   fs::read_to_string(file_path)
     .translate()
     .as_ref()
-    .and_then(|raw_file| (&deser_map(raw_file)).into())
+    .map(|raw_file| (&deser_map(raw_file)).into())
 }
 
 pub struct MapSystem {

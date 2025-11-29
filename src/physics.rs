@@ -7,14 +7,16 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::ControlsSystem,
   ecs::{
-    ComponentSet, Damageable, Damager, DestroyOnCollision, DropHealthOnDestroy, Entity,
-    GivesItemOnCollision, HealOnCollision, MapTransitionOnCollision, SaveMenuOnCollision, Sensor,
+    ComponentSet, Damageable, Damager, DestroyOnCollision, DropHealthOnDestroy, Entity, Gate,
+    GateTrigger, GivesItemOnCollision, HealOnCollision, MapTransitionOnCollision,
+    SaveMenuOnCollision, Sensor,
   },
   enemy::EnemySystem,
   f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
-    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapSystem, MapTile,
+    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapGateState, MapSystem,
+    MapTile,
   },
   menu::MenuSystem,
   save::SaveData,
@@ -156,6 +158,38 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
+  /* MARK: Spawn gates */
+  let gates = map
+    .gates
+    .iter()
+    .map(|gate| {
+      let rigid_body_handle = rigid_body_set.insert(RigidBodyBuilder::fixed());
+      collider_set.insert_with_parent(
+        gate.collider.clone(),
+        rigid_body_handle,
+        &mut rigid_body_set,
+      );
+      Entity {
+        handle: rigid_body_handle,
+        components: ComponentSet::new().insert(Gate { id: gate.id }),
+        label: format!("g{}", gate.id),
+      }
+    })
+    .collect::<Vec<_>>();
+
+  /* MARK: Spawn gate triggers */
+  let gate_triggers = map
+    .gate_triggers
+    .iter()
+    .map(|gate_trigger| Sensor {
+      handle: collider_set.insert(gate_trigger.collider.clone()),
+      components: ComponentSet::new().insert(GateTrigger {
+        gate_id: gate_trigger.gate_id,
+        action: gate_trigger.action.clone(),
+      }),
+    })
+    .collect::<Vec<_>>();
+
   /* MARK: Create the map colliders. */
   let map_tiles = map
     .colliders
@@ -242,15 +276,17 @@ fn load_new_map(
     .cloned()
     .chain(enemies)
     .chain(interactive_walls)
+    .chain(gates)
     .collect();
   let sensors = item_pickups
     .iter()
     .cloned()
     .chain(map_transitions)
     .chain(save_points)
+    .chain(gate_triggers)
     .collect();
 
-  return Rc::new(PhysicsSystem {
+  Rc::new(PhysicsSystem {
     rigid_body_set,
     collider_set,
     integration_parameters,
@@ -269,7 +305,7 @@ fn load_new_map(
     load_new_map: None,
     save_point_contact: None,
     save_point_contact_last_frame: None,
-  });
+  })
 }
 
 impl System for PhysicsSystem {
@@ -767,6 +803,39 @@ impl System for PhysicsSystem {
         .components
         .get::<SaveMenuOnCollision>()
         .map(|save_menu_on_collision| save_menu_on_collision.id)
+    });
+
+    /* MARK: Open/close gates from triggers */
+    sensors.iter().for_each(|sensor| {
+      if narrow_phase
+        .intersection_pairs_with(sensor.handle)
+        .filter(|(_, _, colliding)| *colliding)
+        .count()
+        != 0
+        && let Some(gate_trigger) = sensor.components.get::<GateTrigger>()
+      {
+        let gate_handle = entities.iter().find_map(|entity| {
+          entity.components.get::<Gate>().and_then(|gate| {
+            if gate.id == gate_trigger.gate_id {
+              Some(entity.handle)
+            } else {
+              None
+            }
+          })
+        });
+
+        if let Some(gate_handle) = gate_handle {
+          rigid_body_set[gate_handle]
+            .colliders()
+            .iter()
+            .for_each(|collider_handle| {
+              collider_set[*collider_handle].set_enabled(match gate_trigger.action {
+                MapGateState::Close => true,
+                MapGateState::Open => false,
+              });
+            });
+        }
+      }
     });
 
     /* MARK: Heal from sensor collision mark as such */

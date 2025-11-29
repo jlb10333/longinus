@@ -1,4 +1,9 @@
-use std::{marker::PhantomData, rc::Rc, thread::sleep, time::Duration};
+use std::{
+  marker::PhantomData,
+  rc::Rc,
+  thread::sleep,
+  time::{Duration, Instant},
+};
 
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
@@ -173,6 +178,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
     if frame_time < MIN_FRAME_TIME {
       let time_to_sleep = (MIN_FRAME_TIME - frame_time) * 1000.0; // Calculate sleep time in ms
+
       sleep(Duration::from_millis(time_to_sleep as u64)); // Sleep
     }
 
