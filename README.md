@@ -7,6 +7,7 @@
 - Add gameover menu
 - Add kinematic damaging hazards
 - Add ability pickup
+- Restrict camera movement to map boundaries
 
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 

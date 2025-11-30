@@ -22,13 +22,13 @@ impl System for AbilitySystem {
   type Input = SaveData;
 
   fn start(
-    _: &crate::system::ProcessContext<Self::Input>,
+    ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
     Rc::new(AbilitySystem {
-      acquired_boost: true, // TODO: load this from save data
+      acquired_boost: ctx.input.acquired_boost, // TODO: load this from save data
       boost_force: None,
       current_boost_cooldown: 60.0,
       max_boost_cooldown: 60.0,

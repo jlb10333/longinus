@@ -209,24 +209,6 @@ struct MapGateTrigger {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub enum GravitySourceDirection {
-  Out,
-  In,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-enum MapGravitySourceDirectionClass {
-  Direction,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct MapGravitySourceDirection {
-  #[serde(rename = "name")]
-  _name: MapGravitySourceDirectionClass,
-  value: GravitySourceDirection,
-}
-
-#[derive(Clone, Debug, Deserialize)]
 enum MapGravitySourceRadiusClass {
   Radius,
 }
@@ -259,11 +241,7 @@ enum MapGravitySourceClass {
 struct MapGravitySource {
   x: f32,
   y: f32,
-  properties: (
-    MapGravitySourceDirection,
-    MapGravitySourceRadius,
-    MapGravitySourceStrength,
-  ),
+  properties: (MapGravitySourceRadius, MapGravitySourceStrength),
   #[serde(rename = "type")]
   _class: MapGravitySourceClass,
 }
@@ -427,7 +405,6 @@ pub struct GateTrigger {
 #[derive(Clone)]
 pub struct GravitySource {
   pub collider: Collider,
-  pub direction: GravitySourceDirection,
   pub strength: f32,
 }
 
@@ -562,8 +539,7 @@ impl Object {
       }),
 
       Object::GravitySource(gravity_source) => MapComponent::GravitySource(GravitySource {
-        direction: gravity_source.properties.0.value.clone(),
-        collider: ColliderBuilder::ball(gravity_source.properties.1.value)
+        collider: ColliderBuilder::ball(gravity_source.properties.0.value)
           .translation(physics_translation_from_map(
             gravity_source.x,
             gravity_source.y,
@@ -573,7 +549,7 @@ impl Object {
           ))
           .sensor(true)
           .build(),
-        strength: gravity_source.properties.2.value,
+        strength: gravity_source.properties.1.value,
       }),
     }
   }

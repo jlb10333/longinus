@@ -15,8 +15,8 @@ use crate::{
   f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
-    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, GravitySourceDirection, Map,
-    MapGateState, MapSystem, MapTile,
+    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapGateState, MapSystem,
+    MapTile,
   },
   menu::MenuSystem,
   save::SaveData,
@@ -197,7 +197,6 @@ fn load_new_map(
     .map(|gravity_source| Sensor {
       handle: collider_set.insert(gravity_source.collider.clone()),
       components: ComponentSet::new().insert(GravitySource {
-        direction: gravity_source.direction.clone(),
         strength: gravity_source.strength,
       }),
     })
@@ -466,17 +465,7 @@ impl System for PhysicsSystem {
               - collider_set[other_handle].translation());
 
             let distance_squared = distance_vec.magnitude_squared();
-            println!("distance squared {}", distance_squared);
-
-            let direction_mod = if let GravitySourceDirection::Out = gravity_source.direction {
-              -1.0
-            } else {
-              1.0
-            };
-
-            let gravity_intensity = direction_mod * gravity_source.strength / distance_squared;
-
-            println!("gravity intensity {}", gravity_intensity);
+            let gravity_intensity = gravity_source.strength / distance_squared;
 
             if let Some(rigid_body_handle) = collider_set[other_handle].parent() {
               rigid_body_set[rigid_body_handle]

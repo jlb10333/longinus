@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+  ability::AbilitySystem,
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, UnequippedModules, WeaponModuleKind,
   },
@@ -24,6 +25,7 @@ pub struct SaveData {
   pub acquired_items: Vec<(String, i32)>,
   pub player_health: f32,
   pub player_max_health: f32,
+  pub acquired_boost: bool,
 }
 
 fn initital_save_file_path() -> String {
@@ -83,14 +85,13 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
     let mut available_save_data = fs::read_dir(save_dir_path())
       .unwrap()
       .flatten()
-      .map(|dir_entry| dir_entry.file_name().into_string())
-      .flatten()
+      .flat_map(|dir_entry| dir_entry.file_name().into_string())
       .collect::<Vec<_>>();
     available_save_data.sort();
-    return Rc::new(Self {
+    Rc::new(Self {
       available_save_data,
       phantom: PhantomData,
-    });
+    })
   }
 
   fn run(
@@ -104,6 +105,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
         let map_system = ctx.get::<MapSystem>().unwrap();
         let combat_system = ctx.get::<CombatSystem>().unwrap();
         let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+        let ability_system = ctx.get::<AbilitySystem>().unwrap();
 
         /* MARK: Save current progress */
         menu_system.save_point_confirmed_id.map(|player_spawn_id| {
@@ -123,6 +125,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
             acquired_items: combat_system.acquired_items.clone(),
             player_health: player_damageable.health,
             player_max_health: player_damageable.max_health,
+            acquired_boost: ability_system.acquired_boost,
           };
 
           let sys_time: DateTime<Utc> = time::SystemTime::now().into();

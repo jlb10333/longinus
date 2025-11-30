@@ -5,7 +5,7 @@ use rapier2d::prelude::{ColliderHandle, RigidBodyHandle};
 use crate::{
   combat::WeaponModuleKind,
   enemy::{EnemyDefender, EnemySeeker, EnemySeekerGenerator},
-  load_map::{GravitySourceDirection, MapEnemyName, MapGateState},
+  load_map::{MapEnemyName, MapGateState},
 };
 
 #[derive(Clone)]
@@ -167,7 +167,6 @@ pub struct GateTrigger {
 impl Component for GateTrigger {}
 
 pub struct GravitySource {
-  pub direction: GravitySourceDirection,
   pub strength: f32,
 }
 impl Component for GravitySource {}

@@ -4,7 +4,7 @@
   "unequipped_modules": [],
   "equipped_modules": [
     [
-      null,
+      "Plasma",
       null,
       null,
       null
@@ -30,5 +30,6 @@
   ],
   "acquired_items": [],
   "player_health": 100.0,
-  "player_max_health": 100.0
+  "player_max_health": 100.0,
+  "acquired_boost": false
 }

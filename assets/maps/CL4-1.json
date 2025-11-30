@@ -118,14 +118,9 @@
                 }, 
                 {
                  "height":0,
-                 "id":3,
+                 "id":5,
                  "name":"Gravity Source",
                  "properties":[
-                        {
-                         "name":"Direction",
-                         "type":"string",
-                         "value":"Out"
-                        }, 
                         {
                          "name":"Radius",
                          "type":"float",
@@ -134,14 +129,146 @@
                         {
                          "name":"Strength",
                          "type":"float",
-                         "value":5
+                         "value":-0.03
                         }],
                  "rotation":0,
                  "type":"GravitySource",
                  "visible":true,
                  "width":0,
-                 "x":96,
+                 "x":104,
+                 "y":256
+                }, 
+                {
+                 "height":0,
+                 "id":6,
+                 "name":"Gravity Source",
+                 "properties":[
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":2
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":-0.03
+                        }],
+                 "rotation":0,
+                 "type":"GravitySource",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
+                 "y":248
+                }, 
+                {
+                 "height":0,
+                 "id":7,
+                 "name":"Gravity Source",
+                 "properties":[
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":2
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":-0.03
+                        }],
+                 "rotation":0,
+                 "type":"GravitySource",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
                  "y":264
+                }, 
+                {
+                 "height":0,
+                 "id":8,
+                 "name":"Gravity Source",
+                 "properties":[
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":2
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":-0.03
+                        }],
+                 "rotation":0,
+                 "type":"GravitySource",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
+                 "y":272
+                }, 
+                {
+                 "height":0,
+                 "id":9,
+                 "name":"Gravity Source",
+                 "properties":[
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":2
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":-0.03
+                        }],
+                 "rotation":0,
+                 "type":"GravitySource",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
+                 "y":280
+                }, 
+                {
+                 "height":0,
+                 "id":10,
+                 "name":"Gravity Source",
+                 "properties":[
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":2
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":-0.03
+                        }],
+                 "rotation":0,
+                 "type":"GravitySource",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
+                 "y":240
+                }, 
+                {
+                 "height":0,
+                 "id":11,
+                 "name":"Gravity Source",
+                 "properties":[
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":2
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":-0.03
+                        }],
+                 "rotation":0,
+                 "type":"GravitySource",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
+                 "y":288
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -150,7 +277,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":5,
+ "nextobjectid":13,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",
