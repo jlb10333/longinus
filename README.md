@@ -6,7 +6,7 @@
 - Add first boss
 - Add gameover menu
 - Add kinematic damaging hazards
-- Add gravity emitter
+- Add ability pickup
 
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
@@ -22,7 +22,7 @@
   + Destructible blocks
   + Areas with enemies
 + Boost
-  - Gravity repulsors
+  + Gravity repulsors
 - Shield
   - Lock-on stun weapon emplacements
   - Fixed lasers (shield blocks the lasers' path and allows the player to proceed undamaged)

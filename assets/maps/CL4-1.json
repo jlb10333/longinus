@@ -120,6 +120,22 @@
                  "height":0,
                  "id":3,
                  "name":"Gravity Source",
+                 "properties":[
+                        {
+                         "name":"Direction",
+                         "type":"string",
+                         "value":"Out"
+                        }, 
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":2
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":5
+                        }],
                  "rotation":0,
                  "type":"GravitySource",
                  "visible":true,
@@ -134,7 +150,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":4,
+ "nextobjectid":5,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

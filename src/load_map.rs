@@ -6,7 +6,7 @@ use serde::Deserialize;
 use crate::{
   combat::WeaponModuleKind,
   ecs::{ComponentSet, Damageable, Damager, DropHealthOnDestroy, Enemy},
-  f::{Monad, MonadTranslate},
+  f::MonadTranslate,
   physics::PhysicsSystem,
   save::SaveData,
   system::System,
@@ -209,6 +209,66 @@ struct MapGateTrigger {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+pub enum GravitySourceDirection {
+  Out,
+  In,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapGravitySourceDirectionClass {
+  Direction,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGravitySourceDirection {
+  #[serde(rename = "name")]
+  _name: MapGravitySourceDirectionClass,
+  value: GravitySourceDirection,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapGravitySourceRadiusClass {
+  Radius,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGravitySourceRadius {
+  #[serde(rename = "name")]
+  _name: MapGravitySourceRadiusClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapGravitySourceStrengthClass {
+  Strength,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGravitySourceStrength {
+  #[serde(rename = "name")]
+  _name: MapGravitySourceStrengthClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapGravitySourceClass {
+  GravitySource,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGravitySource {
+  x: f32,
+  y: f32,
+  properties: (
+    MapGravitySourceDirection,
+    MapGravitySourceRadius,
+    MapGravitySourceStrength,
+  ),
+  #[serde(rename = "type")]
+  _class: MapGravitySourceClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -218,6 +278,7 @@ enum Object {
   SavePoint(MapSavePoint),
   Gate(MapGate),
   GateTrigger(MapGateTrigger),
+  GravitySource(MapGravitySource),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -364,6 +425,13 @@ pub struct GateTrigger {
 }
 
 #[derive(Clone)]
+pub struct GravitySource {
+  pub collider: Collider,
+  pub direction: GravitySourceDirection,
+  pub strength: f32,
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -396,6 +464,7 @@ pub enum MapComponent {
   SavePoint(SavePoint),
   Gate(Gate),
   GateTrigger(GateTrigger),
+  GravitySource(GravitySource),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -491,8 +560,36 @@ impl Object {
         .build(),
         action: gate_trigger.properties.0.value.clone(),
       }),
+
+      Object::GravitySource(gravity_source) => MapComponent::GravitySource(GravitySource {
+        direction: gravity_source.properties.0.value.clone(),
+        collider: ColliderBuilder::ball(gravity_source.properties.1.value)
+          .translation(physics_translation_from_map(
+            gravity_source.x,
+            gravity_source.y,
+            0.0,
+            0.0,
+            map_height,
+          ))
+          .sensor(true)
+          .build(),
+        strength: gravity_source.properties.2.value,
+      }),
     }
   }
+}
+
+fn physics_translation_from_map(
+  translation_map_x: f32,
+  translation_map_y: f32,
+  translation_map_width: f32,
+  translation_map_height: f32,
+  map_height: f32,
+) -> Vector2<f32> {
+  vector![
+    *map_scalar_to_physics(translation_map_x + translation_map_width / 2.0),
+    *map_scalar_to_physics(map_height - translation_map_y - translation_map_height / 2.0)
+  ]
 }
 
 fn cuboid_collider_from_map(
@@ -506,10 +603,13 @@ fn cuboid_collider_from_map(
     *map_scalar_to_physics(translation_map_width / 2.0),
     *map_scalar_to_physics(translation_map_height / 2.0),
   )
-  .translation(vector![
-    *map_scalar_to_physics(translation_map_x + translation_map_width / 2.0),
-    *map_scalar_to_physics(map_height - translation_map_y - translation_map_height / 2.0)
-  ])
+  .translation(physics_translation_from_map(
+    translation_map_x,
+    translation_map_y,
+    translation_map_width,
+    translation_map_height,
+    map_height,
+  ))
 }
 
 impl ObjectLayer {
@@ -605,6 +705,7 @@ pub struct Map {
   pub save_points: Vec<SavePoint>,
   pub gates: Vec<Gate>,
   pub gate_triggers: Vec<GateTrigger>,
+  pub gravity_sources: Vec<GravitySource>,
 }
 
 impl RawMap {
@@ -718,6 +819,17 @@ impl RawMap {
       })
       .collect::<Vec<_>>();
 
+    let gravity_sources = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::GravitySource(gravity_source) = object {
+          vec![gravity_source.clone()]
+        } else {
+          vec![]
+        }
+      })
+      .collect::<Vec<_>>();
+
     Map {
       colliders,
       enemy_spawns,
@@ -727,6 +839,7 @@ impl RawMap {
       save_points,
       gates,
       gate_triggers,
+      gravity_sources,
     }
   }
 }

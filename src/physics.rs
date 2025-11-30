@@ -8,15 +8,15 @@ use crate::{
   controls::ControlsSystem,
   ecs::{
     ComponentSet, Damageable, Damager, DestroyOnCollision, DropHealthOnDestroy, Entity, Gate,
-    GateTrigger, GivesItemOnCollision, HealOnCollision, MapTransitionOnCollision,
+    GateTrigger, GivesItemOnCollision, GravitySource, HealOnCollision, MapTransitionOnCollision,
     SaveMenuOnCollision, Sensor,
   },
   enemy::EnemySystem,
   f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
-    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapGateState, MapSystem,
-    MapTile,
+    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, GravitySourceDirection, Map,
+    MapGateState, MapSystem, MapTile,
   },
   menu::MenuSystem,
   save::SaveData,
@@ -190,6 +190,19 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
+  /* MARK: Spawn gravity sources */
+  let gravity_sources = map
+    .gravity_sources
+    .iter()
+    .map(|gravity_source| Sensor {
+      handle: collider_set.insert(gravity_source.collider.clone()),
+      components: ComponentSet::new().insert(GravitySource {
+        direction: gravity_source.direction.clone(),
+        strength: gravity_source.strength,
+      }),
+    })
+    .collect::<Vec<_>>();
+
   /* MARK: Create the map colliders. */
   let map_tiles = map
     .colliders
@@ -284,6 +297,7 @@ fn load_new_map(
     .chain(map_transitions)
     .chain(save_points)
     .chain(gate_triggers)
+    .chain(gravity_sources)
     .collect();
 
   Rc::new(PhysicsSystem {
@@ -431,6 +445,46 @@ impl System for PhysicsSystem {
     if let Some(boost_force) = ability_system.boost_force {
       rigid_body_set[self.player_handle].apply_impulse(boost_force * player_mass, true);
     }
+
+    /* MARK: Gravity source behavior */
+    sensors.iter().for_each(|sensor| {
+      if let Some(gravity_source) = sensor.components.get::<GravitySource>() {
+        narrow_phase
+          .intersection_pairs_with(sensor.handle)
+          .filter_map(|(collider1, collider2, colliding)| {
+            if colliding {
+              [collider1, collider2]
+                .iter()
+                .find(|collider_handle| **collider_handle != sensor.handle)
+                .cloned()
+            } else {
+              None
+            }
+          })
+          .for_each(|other_handle| {
+            let distance_vec = (collider_set[sensor.handle].translation()
+              - collider_set[other_handle].translation());
+
+            let distance_squared = distance_vec.magnitude_squared();
+            println!("distance squared {}", distance_squared);
+
+            let direction_mod = if let GravitySourceDirection::Out = gravity_source.direction {
+              -1.0
+            } else {
+              1.0
+            };
+
+            let gravity_intensity = direction_mod * gravity_source.strength / distance_squared;
+
+            println!("gravity intensity {}", gravity_intensity);
+
+            if let Some(rigid_body_handle) = collider_set[other_handle].parent() {
+              rigid_body_set[rigid_body_handle]
+                .apply_impulse(distance_vec * gravity_intensity, true);
+            }
+          });
+      }
+    });
 
     /* MARK: Fire all weapons */
     let new_projectiles: Vec<Entity> = combat_system
@@ -931,7 +985,7 @@ impl System for PhysicsSystem {
       &(),
     );
 
-    return Rc::new(Self {
+    Rc::new(Self {
       rigid_body_set: rigid_body_set.clone(),
       collider_set,
       integration_parameters: self.integration_parameters,
@@ -950,6 +1004,6 @@ impl System for PhysicsSystem {
       load_new_map,
       save_point_contact,
       save_point_contact_last_frame: self.save_point_contact,
-    });
+    })
   }
 }
