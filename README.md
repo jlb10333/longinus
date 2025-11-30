@@ -12,6 +12,8 @@
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
 - CLEANUP: Replace `HealOnCollision` with `Damager` with negative damage
+- CLEANUP: Separate the logic to destroy entities from the logic to do stuff on destroy - maybe a `Destroy` component so that you can add it from different sources, and check for its presence to trigger other effects
+- Collapse Entity/Sensor distinction with enum on handle prop
 
 - IDEA: Add human-readable label to entities/sensors, use to draw labels in debug mode
 
