@@ -1,4 +1,4 @@
-use std::rc::Rc;
+ use std::rc::Rc;
 
 use rapier2d::na::Vector2;
 

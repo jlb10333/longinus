@@ -1,6 +1,9 @@
 use std::{any::Any, rc::Rc};
 
-use rapier2d::prelude::{ColliderHandle, RigidBodyHandle};
+use rapier2d::{
+  na::Vector2,
+  prelude::{ColliderHandle, ColliderSet, RigidBodyHandle, RigidBodySet},
+};
 
 use crate::{
   combat::WeaponModuleKind,
@@ -9,16 +12,41 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct Entity {
-  pub handle: RigidBodyHandle,
-  pub components: ComponentSet,
-  pub label: String,
+pub enum EntityHandle {
+  RigidBody(RigidBodyHandle),
+  Collider(ColliderHandle),
+}
+
+impl EntityHandle {
+  pub fn colliders<'a>(&'a self, rigid_body_set: &'a RigidBodySet) -> Vec<&'a ColliderHandle> {
+    match self {
+      EntityHandle::Collider(collider_handle) => vec![collider_handle],
+      EntityHandle::RigidBody(rigid_body_handle) => rigid_body_set[*rigid_body_handle]
+        .colliders()
+        .iter()
+        .collect(),
+    }
+  }
+
+  pub fn translation<'a>(
+    &'a self,
+    rigid_body_set: &'a RigidBodySet,
+    collider_set: &'a ColliderSet,
+  ) -> &'a Vector2<f32> {
+    match self {
+      EntityHandle::Collider(collider_handle) => collider_set[*collider_handle].translation(),
+      EntityHandle::RigidBody(rigid_body_handle) => {
+        rigid_body_set[*rigid_body_handle].translation()
+      }
+    }
+  }
 }
 
 #[derive(Clone)]
-pub struct Sensor {
-  pub handle: ColliderHandle,
+pub struct Entity {
+  pub handle: EntityHandle,
   pub components: ComponentSet,
+  pub label: String,
 }
 
 #[derive(Clone)]

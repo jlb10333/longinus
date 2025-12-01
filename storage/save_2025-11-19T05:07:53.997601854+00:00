@@ -1,0 +1,34 @@
+{
+  "player_spawn_id": 1,
+  "map_name": "map4",
+  "unequipped_modules": [],
+  "equipped_modules": [
+    [
+      "Plasma",
+      "Plasma",
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      "Front2Slot"
+    ],
+    [
+      null,
+      "DoubleDamage",
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null
+    ]
+  ],
+  "acquired_items": [],
+  "player_health": 90.0,
+  "player_max_health": 100.0
+}

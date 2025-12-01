@@ -7,9 +7,9 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::ControlsSystem,
   ecs::{
-    ComponentSet, Damageable, Damager, DestroyOnCollision, DropHealthOnDestroy, Entity, Gate,
-    GateTrigger, GivesItemOnCollision, GravitySource, HealOnCollision, MapTransitionOnCollision,
-    SaveMenuOnCollision, Sensor,
+    ComponentSet, Damageable, Damager, DestroyOnCollision, DropHealthOnDestroy, Entity,
+    EntityHandle, Gate, GateTrigger, GivesItemOnCollision, GravitySource, HealOnCollision,
+    MapTransitionOnCollision, SaveMenuOnCollision,
   },
   enemy::EnemySystem,
   f::Monad,
@@ -40,7 +40,6 @@ pub struct PhysicsSystem {
   pub ccd_solver: CCDSolver,
   pub player_handle: RigidBodyHandle,
   pub entities: Vec<Entity>,
-  pub sensors: Vec<Sensor>,
   pub new_weapon_modules: Vec<(i32, WeaponModuleKind)>,
   pub frame_count: i64,
   pub load_new_map: Option<(String, i32)>,
@@ -86,7 +85,7 @@ fn load_new_map(
   collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
 
   let player = Entity {
-    handle: player_handle,
+    handle: EntityHandle::RigidBody(player_handle),
     components: ComponentSet::new().insert(Damageable {
       health: player_health,
       max_health: player_max_health,
@@ -107,7 +106,7 @@ fn load_new_map(
       let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
       collider_set.insert_with_parent(enemy_spawn.collider.clone(), handle, &mut rigid_body_set);
       Entity {
-        handle,
+        handle: EntityHandle::RigidBody(handle),
         components: enemy_spawn.into_entity_components(),
         label: "enemy".to_string(),
       }
@@ -121,14 +120,15 @@ fn load_new_map(
     .filter(|item_pickup| !acquired_modules.contains(&(map_name.to_string(), item_pickup.id)))
     .map(|item_pickup| {
       let handle = collider_set.insert(item_pickup.collider.clone());
-      Sensor {
-        handle,
+      Entity {
+        handle: EntityHandle::Collider(handle),
         components: ComponentSet::new()
           .insert(GivesItemOnCollision {
             id: item_pickup.id,
             weapon_module_kind: item_pickup.weapon_module_kind.clone(),
           })
           .insert(DestroyOnCollision),
+        label: "item".to_string(),
       }
     })
     .collect::<Vec<_>>();
@@ -137,12 +137,13 @@ fn load_new_map(
   let map_transitions = map
     .map_transitions
     .iter()
-    .map(|map_transition| Sensor {
-      handle: collider_set.insert(map_transition.collider.clone()),
+    .map(|map_transition| Entity {
+      handle: EntityHandle::Collider(collider_set.insert(map_transition.collider.clone())),
       components: ComponentSet::new().insert(MapTransitionOnCollision {
         map_name: map_transition.map_name.clone(),
         target_player_spawn_id: map_transition.target_player_spawn_id,
       }),
+      label: map_transition.map_name.clone(),
     })
     .collect::<Vec<_>>();
 
@@ -150,11 +151,12 @@ fn load_new_map(
   let save_points = map
     .save_points
     .iter()
-    .map(|save_point| Sensor {
-      handle: collider_set.insert(save_point.collider.clone()),
+    .map(|save_point| Entity {
+      handle: EntityHandle::Collider(collider_set.insert(save_point.collider.clone())),
       components: ComponentSet::new().insert(SaveMenuOnCollision {
         id: save_point.player_spawn_id,
       }),
+      label: "save".to_string(),
     })
     .collect::<Vec<_>>();
 
@@ -170,7 +172,7 @@ fn load_new_map(
         &mut rigid_body_set,
       );
       Entity {
-        handle: rigid_body_handle,
+        handle: EntityHandle::RigidBody(rigid_body_handle),
         components: ComponentSet::new().insert(Gate { id: gate.id }),
         label: format!("g{}", gate.id),
       }
@@ -181,12 +183,13 @@ fn load_new_map(
   let gate_triggers = map
     .gate_triggers
     .iter()
-    .map(|gate_trigger| Sensor {
-      handle: collider_set.insert(gate_trigger.collider.clone()),
+    .map(|gate_trigger| Entity {
+      handle: EntityHandle::Collider(collider_set.insert(gate_trigger.collider.clone())),
       components: ComponentSet::new().insert(GateTrigger {
         gate_id: gate_trigger.gate_id,
         action: gate_trigger.action.clone(),
       }),
+      label: format!("gt{}", gate_trigger.gate_id),
     })
     .collect::<Vec<_>>();
 
@@ -194,11 +197,12 @@ fn load_new_map(
   let gravity_sources = map
     .gravity_sources
     .iter()
-    .map(|gravity_source| Sensor {
-      handle: collider_set.insert(gravity_source.collider.clone()),
+    .map(|gravity_source| Entity {
+      handle: EntityHandle::Collider(collider_set.insert(gravity_source.collider.clone())),
       components: ComponentSet::new().insert(GravitySource {
         strength: gravity_source.strength,
       }),
+      label: "grav".to_string(),
     })
     .collect::<Vec<_>>();
 
@@ -251,7 +255,7 @@ fn load_new_map(
           };
 
           let entity = Entity {
-            handle: rigid_body_handle,
+            handle: EntityHandle::RigidBody(rigid_body_handle),
             components: component_set,
             label,
           };
@@ -289,10 +293,7 @@ fn load_new_map(
     .chain(enemies)
     .chain(interactive_walls)
     .chain(gates)
-    .collect();
-  let sensors = item_pickups
-    .iter()
-    .cloned()
+    .chain(item_pickups)
     .chain(map_transitions)
     .chain(save_points)
     .chain(gate_triggers)
@@ -312,7 +313,6 @@ fn load_new_map(
     ccd_solver,
     player_handle,
     entities,
-    sensors,
     frame_count: 0,
     new_weapon_modules: vec![],
     load_new_map: None,
@@ -354,7 +354,15 @@ impl System for PhysicsSystem {
       let player_entity = self
         .entities
         .iter()
-        .find(|Entity { handle, .. }| *handle == self.player_handle)
+        .find(|Entity { handle, .. }| {
+          if let EntityHandle::RigidBody(rigid_body_handle) = *handle
+            && rigid_body_handle == self.player_handle
+          {
+            true
+          } else {
+            false
+          }
+        })
         .unwrap();
       let player_damageable = player_entity.components.get::<Damageable>().unwrap();
 
@@ -380,7 +388,6 @@ impl System for PhysicsSystem {
     let mut collider_set = self.collider_set.clone();
 
     let entities = self.entities.clone();
-    let sensors = self.sensors.clone();
 
     /* MARK: Don't do physics if currently in menu */
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
@@ -399,7 +406,6 @@ impl System for PhysicsSystem {
         ccd_solver,
         player_handle: self.player_handle,
         entities: self.entities.clone(),
-        sensors: self.sensors.clone(),
         frame_count: self.frame_count + 1,
         new_weapon_modules: vec![],
         load_new_map: None,
@@ -446,22 +452,24 @@ impl System for PhysicsSystem {
     }
 
     /* MARK: Gravity source behavior */
-    sensors.iter().for_each(|sensor| {
-      if let Some(gravity_source) = sensor.components.get::<GravitySource>() {
+    entities.iter().for_each(|entity| {
+      if let Some(gravity_source) = entity.components.get::<GravitySource>()
+        && let EntityHandle::Collider(collider_handle) = entity.handle
+      {
         narrow_phase
-          .intersection_pairs_with(sensor.handle)
+          .intersection_pairs_with(collider_handle)
           .filter_map(|(collider1, collider2, colliding)| {
             if colliding {
               [collider1, collider2]
                 .iter()
-                .find(|collider_handle| **collider_handle != sensor.handle)
+                .find(|other_handle| **other_handle != collider_handle)
                 .cloned()
             } else {
               None
             }
           })
           .for_each(|other_handle| {
-            let distance_vec = (collider_set[sensor.handle].translation()
+            let distance_vec = (collider_set[collider_handle].translation()
               - collider_set[other_handle].translation());
 
             let distance_squared = distance_vec.magnitude_squared();
@@ -492,7 +500,7 @@ impl System for PhysicsSystem {
         rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
 
         Entity {
-          handle,
+          handle: EntityHandle::RigidBody(handle),
           components: ComponentSet::new()
             .insert(DestroyOnCollision)
             .insert(Damager {
@@ -511,18 +519,25 @@ impl System for PhysicsSystem {
     let entities = entities
       .iter()
       .cloned()
-      .flat_map(|entity: Entity| {
+      .filter_map(|entity| {
+        if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
+          Some((entity, rigid_body_handle))
+        } else {
+          None
+        }
+      })
+      .flat_map(|(entity, rigid_body_handle)| {
         let entity = &entity;
         let relevant_decision = enemy_system
           .decisions
           .iter()
-          .find(|&decision| decision.handle == entity.handle);
+          .find(|&decision| decision.handle == rigid_body_handle);
         if relevant_decision.is_none() {
           return Vec::from([entity.clone()]);
         }
         let relevant_decision = relevant_decision.unwrap();
 
-        rigid_body_set[entity.handle]
+        rigid_body_set[rigid_body_handle]
           .apply_impulse(relevant_decision.movement_force.into_vec(), true);
 
         [Entity {
@@ -533,18 +548,18 @@ impl System for PhysicsSystem {
         .cloned()
         .chain(relevant_decision.projectiles.iter().map(|projectile| {
           let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
-            *rigid_body_set[entity.handle].translation() + projectile.offset.into_vec(),
+            *rigid_body_set[rigid_body_handle].translation() + projectile.offset.into_vec(),
           ));
           collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
 
           let rbs_clone = rigid_body_set.clone();
-          let enemy_velocity = rbs_clone[entity.handle].linvel();
+          let enemy_velocity = rbs_clone[rigid_body_handle].linvel();
           rigid_body_set[handle].set_linvel(*enemy_velocity, true);
 
           rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
 
           Entity {
-            handle,
+            handle: EntityHandle::RigidBody(handle),
             components: ComponentSet::new()
               .insert(DestroyOnCollision)
               .insert(Damager {
@@ -569,7 +584,7 @@ impl System for PhysicsSystem {
               );
               rigid_body_set[handle].apply_impulse(enemy_to_spawn.initial_force, true);
               Entity {
-                handle,
+                handle: EntityHandle::RigidBody(handle),
                 components: enemy_to_spawn.enemy_spawn.into_entity_components(),
                 label: "child enemy".to_string(),
               }
@@ -600,13 +615,14 @@ impl System for PhysicsSystem {
           };
         }
 
-        let damagers = rigid_body_set[entity.handle]
-          .colliders()
+        let damagers = entity
+          .handle
+          .colliders(rigid_body_set)
           .iter()
           .cloned()
           .flat_map(|collider_handle| {
             narrow_phase
-              .contact_pairs_with(collider_handle)
+              .contact_pairs_with(*collider_handle)
               .flat_map(|contact_pairs| {
                 if !contact_pairs.has_any_active_contact {
                   Vec::new()
@@ -614,7 +630,7 @@ impl System for PhysicsSystem {
                   [contact_pairs.collider1, contact_pairs.collider2]
                     .iter()
                     .cloned()
-                    .filter(|&handle| collider_handle != handle)
+                    .filter(|&handle| *collider_handle != handle)
                     .collect::<Vec<_>>()
                 }
               })
@@ -623,14 +639,18 @@ impl System for PhysicsSystem {
           .flat_map(|collider_handle| {
             collider_set[collider_handle]
               .parent()
-              .bind(|rigid_body_handle| {
-                entities
-                  .iter()
-                  .find(|entity| entity.handle == *rigid_body_handle)
+              .and_then(|rigid_body_handle| {
+                entities.iter().find(|entity| {
+                  if let EntityHandle::RigidBody(other_handle) = entity.handle
+                    && other_handle == rigid_body_handle
+                  {
+                    true
+                  } else {
+                    false
+                  }
+                })
               })
-              .flatten()
-              .bind(|entity| entity.components.get::<Damager>())
-              .flatten()
+              .and_then(|entity| entity.components.get::<Damager>())
           });
 
         let incoming_damage = damagers.fold(0.0, |sum, damager| sum + damager.damage);
@@ -677,7 +697,7 @@ impl System for PhysicsSystem {
       .collect::<Vec<_>>();
 
     /* MARK: Drop health pickups from entities with 0 health marked as such */
-    let sensors = sensors
+    let entities = entities
       .iter()
       .cloned()
       .chain(
@@ -704,16 +724,17 @@ impl System for PhysicsSystem {
                       filter: COLLISION_GROUP_PLAYER,
                     })
                     .sensor(true)
-                    .translation(*rigid_body_set[entity.handle].translation())
+                    .translation(*entity.handle.translation(&rigid_body_set, &collider_set))
                     .build(),
                 );
-                Some(Sensor {
-                  handle,
+                Some(Entity {
+                  handle: EntityHandle::Collider(handle),
                   components: ComponentSet::new().insert(DestroyOnCollision).insert(
                     HealOnCollision {
                       amount: drop_health.amount,
                     },
                   ),
+                  label: "health".to_string(),
                 })
               })
           })
@@ -736,9 +757,11 @@ impl System for PhysicsSystem {
 
         let entity_destroyed = damageable.health <= 0.0 && damageable.destroy_on_zero_health;
 
-        let entity = if entity_destroyed {
+        let entity = if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle
+          && entity_destroyed
+        {
           rigid_body_set.remove(
-            entity.handle,
+            rigid_body_handle,
             &mut island_manager,
             &mut collider_set,
             &mut impulse_joint_set,
@@ -763,18 +786,20 @@ impl System for PhysicsSystem {
           .components
           .get::<DestroyOnCollision>()
           .is_none()
-          || rigid_body_set[entity.handle]
-            .colliders()
+          || entity
+            .handle
+            .colliders(&rigid_body_set)
             .iter()
+            .map(|handle| collider_set[*handle])
             .cloned()
             .flat_map(|collider| narrow_phase.contact_pairs_with(collider))
             .filter(|&contact_pair| contact_pair.has_any_active_contact)
             .count()
             == 0);
 
-        if entity_destroyed {
+        if entity_destroyed && let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
           rigid_body_set.remove(
-            entity.handle,
+            rigid_body_handle,
             &mut island_manager,
             &mut collider_set,
             &mut impulse_joint_set,
@@ -868,8 +893,8 @@ impl System for PhysicsSystem {
         });
 
         if let Some(gate_handle) = gate_handle {
-          rigid_body_set[gate_handle]
-            .colliders()
+          gate_handle
+            .colliders(&rigid_body_set)
             .iter()
             .for_each(|collider_handle| {
               collider_set[*collider_handle].set_enabled(match gate_trigger.action {
@@ -987,7 +1012,6 @@ impl System for PhysicsSystem {
       ccd_solver,
       player_handle: self.player_handle,
       entities,
-      sensors,
       new_weapon_modules,
       frame_count: self.frame_count + 1,
       load_new_map,
