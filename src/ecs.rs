@@ -198,3 +198,6 @@ pub struct GravitySource {
   pub strength: f32,
 }
 impl Component for GravitySource {}
+
+pub struct Destroyed;
+impl Component for Destroyed {}

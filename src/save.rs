@@ -8,7 +8,7 @@ use crate::{
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, UnequippedModules, WeaponModuleKind,
   },
-  ecs::{Damageable, Entity},
+  ecs::{Damageable, Entity, EntityHandle},
   load_map::MapSystem,
   menu::{MenuSystem, SaveToLoad},
   physics::PhysicsSystem,
@@ -112,7 +112,15 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
           let player_entity = physics_system
             .entities
             .iter()
-            .find(|Entity { handle, .. }| *handle == physics_system.player_handle)
+            .find(|Entity { handle, .. }| {
+              if let EntityHandle::RigidBody(rigid_body_handle) = handle
+                && *rigid_body_handle == physics_system.player_handle
+              {
+                true
+              } else {
+                false
+              }
+            })
             .unwrap();
 
           let player_damageable = player_entity.components.get::<Damageable>().unwrap();

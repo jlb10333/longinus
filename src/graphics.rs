@@ -14,7 +14,7 @@ use crate::{
     CombatSystem, EQUIP_SLOTS_WIDTH, WeaponModuleKind, distance_projection_screen, get_reticle_pos,
     get_slot_positions,
   },
-  ecs::{Damageable, Entity, MapTransitionOnCollision},
+  ecs::{Damageable, Entity, EntityHandle, MapTransitionOnCollision},
   graphics_utils::draw_collider,
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
@@ -68,10 +68,11 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       /* Draw entity labels */
       physics_system.entities.iter().for_each(|entity| {
-        physics_system.rigid_body_set[entity.handle]
-          .colliders()
+        entity
+          .handle
+          .colliders(&physics_system.rigid_body_set)
           .iter()
-          .for_each(|collider_handle| {
+          .for_each(|&collider_handle| {
             draw_collider(
               &physics_system.collider_set[*collider_handle],
               camera_system.translation,
@@ -81,30 +82,12 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           });
       });
 
-      /* Draw sensors */
-      physics_system.sensors.iter().for_each(|sensor| {
-        let label = sensor
-          .components
-          .get::<MapTransitionOnCollision>()
-          .map(|map_transition| map_transition.map_name.clone());
-
-        draw_collider(
-          &physics_system.collider_set[sensor.handle],
-          camera_system.translation,
-          label,
-          Some(GREEN),
-        )
-      });
-
-      /* Draw player */
+      /* Draw reticle */
       let player_screen_pos = PhysicsVector::from_vec(
         *physics_system.rigid_body_set[physics_system.player_handle].translation(),
       )
       .into_pos(camera_system.translation);
 
-      draw_circle(player_screen_pos.x(), player_screen_pos.y(), 12.5, GREEN);
-
-      /* Draw reticle */
       let reticle_pos = get_reticle_pos(combat_system.reticle_angle);
 
       draw_circle(
@@ -141,7 +124,15 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       let player = physics_system
         .entities
         .iter()
-        .find(|Entity { handle, .. }| *handle == physics_system.player_handle)
+        .find(|Entity { handle, .. }| {
+          if let EntityHandle::RigidBody(rigid_body_handle) = handle
+            && *rigid_body_handle == physics_system.player_handle
+          {
+            true
+          } else {
+            false
+          }
+        })
         .unwrap();
 
       let player_damageable = player.components.get::<Damageable>().unwrap();

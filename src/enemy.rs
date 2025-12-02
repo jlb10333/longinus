@@ -7,7 +7,7 @@ use rapier2d::{
 
 use crate::{
   combat::{Projectile, distance_projection_physics},
-  ecs::{Enemy, Entity},
+  ecs::{Enemy, Entity, EntityHandle},
   load_map::{
     COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL, EnemySpawn,
     MapEnemyName,
@@ -24,7 +24,7 @@ pub struct EnemyDecisionEnemySpawn {
 }
 
 pub struct EnemyDecision {
-  pub handle: RigidBodyHandle,
+  pub handle: EntityHandle,
   pub projectiles: Vec<Projectile>,
   pub movement_force: PhysicsVector,
   pub enemy: Enemy,
@@ -97,7 +97,7 @@ pub struct EnemyDefender {
 }
 
 impl EnemyDefender {
-  pub fn behavior(&self, handle: RigidBodyHandle) -> EnemyDecision {
+  pub fn behavior(&self, handle: EntityHandle) -> EnemyDecision {
     let should_fire_projectiles = self.cooldown % 50 == 0;
     EnemyDecision {
       handle,
@@ -140,7 +140,7 @@ const SEEKER_SPEED: f32 = 0.3;
 impl EnemySeeker {
   pub fn behavior(
     &self,
-    handle: RigidBodyHandle,
+    handle: EntityHandle,
     player_translation: &Vector2<f32>,
     physics_rigid_bodies: &RigidBodySet,
   ) -> EnemyDecision {

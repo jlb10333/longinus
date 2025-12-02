@@ -7,12 +7,11 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::ControlsSystem,
   ecs::{
-    ComponentSet, Damageable, Damager, DestroyOnCollision, DropHealthOnDestroy, Entity,
+    ComponentSet, Damageable, Damager, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity,
     EntityHandle, Gate, GateTrigger, GivesItemOnCollision, GravitySource, HealOnCollision,
     MapTransitionOnCollision, SaveMenuOnCollision,
   },
   enemy::EnemySystem,
-  f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
     COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapGateState, MapSystem,
@@ -618,11 +617,11 @@ impl System for PhysicsSystem {
         let damagers = entity
           .handle
           .colliders(rigid_body_set)
-          .iter()
+          .into_iter()
           .cloned()
           .flat_map(|collider_handle| {
             narrow_phase
-              .contact_pairs_with(*collider_handle)
+              .contact_pairs_with(collider_handle)
               .flat_map(|contact_pairs| {
                 if !contact_pairs.has_any_active_contact {
                   Vec::new()
@@ -630,7 +629,7 @@ impl System for PhysicsSystem {
                   [contact_pairs.collider1, contact_pairs.collider2]
                     .iter()
                     .cloned()
-                    .filter(|&handle| *collider_handle != handle)
+                    .filter(|&handle| collider_handle != handle)
                     .collect::<Vec<_>>()
                 }
               })
@@ -682,105 +681,28 @@ impl System for PhysicsSystem {
       })
       .collect();
 
-    let rng = rand::RandGenerator::new();
-    rng.srand(self.frame_count as u64);
-
-    let zero_health_entities = entities
-      .iter()
-      .filter(|entity| {
-        entity
-          .components
-          .get::<Damageable>()
-          .map(|damageable| damageable.health <= 0.0)
-          .unwrap_or(false)
-      })
-      .collect::<Vec<_>>();
-
-    /* MARK: Drop health pickups from entities with 0 health marked as such */
+    /* MARK: Destroy all entities with 0 health marked as such */
     let entities = entities
       .iter()
       .cloned()
-      .chain(
-        zero_health_entities
-          .iter()
-          .flat_map(|entity| {
-            (*entity)
-              .clone()
-              .components
-              .get::<DropHealthOnDestroy>()
-              .map(|drop_health| {
-                let random = rng.gen_range(0.0, 1.0);
-                let should_drop_health = random < drop_health.chance;
-                println!("{} {} {}", drop_health.chance, random, should_drop_health);
-
-                if !should_drop_health {
-                  return None;
-                }
-
-                let handle = collider_set.insert(
-                  ColliderBuilder::ball(0.31)
-                    .collision_groups(InteractionGroups {
-                      memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
-                      filter: COLLISION_GROUP_PLAYER,
-                    })
-                    .sensor(true)
-                    .translation(*entity.handle.translation(&rigid_body_set, &collider_set))
-                    .build(),
-                );
-                Some(Entity {
-                  handle: EntityHandle::Collider(handle),
-                  components: ComponentSet::new().insert(DestroyOnCollision).insert(
-                    HealOnCollision {
-                      amount: drop_health.amount,
-                    },
-                  ),
-                  label: "health".to_string(),
-                })
-              })
-          })
-          .flatten(),
-      )
-      .collect::<Vec<_>>();
-
-    /* MARK: Destroy entities with 0 health marked as destroy on 0 health */
-    let entities = entities
-      .iter()
-      .flat_map(|entity| {
-        let damageable = entity.clone().components.get::<Damageable>();
-        if damageable.is_none() {
-          return vec![entity.clone()];
-        }
-        let damageable = damageable.unwrap();
-        if damageable.health > 0.0 {
-          return vec![entity.clone()];
-        }
-
-        let entity_destroyed = damageable.health <= 0.0 && damageable.destroy_on_zero_health;
-
-        let entity = if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle
-          && entity_destroyed
+      .map(|entity| {
+        if let Some(damageable) = entity.components.get::<Damageable>()
+          && damageable.health <= 0.0
         {
-          rigid_body_set.remove(
-            rigid_body_handle,
-            &mut island_manager,
-            &mut collider_set,
-            &mut impulse_joint_set,
-            &mut multibody_joint_set,
-            true,
-          );
-          None
+          Entity {
+            components: entity.components.with(Destroyed),
+            ..entity.clone()
+          }
         } else {
-          Some(entity)
-        };
-
-        entity.iter().cloned().cloned().collect::<Vec<_>>()
+          entity
+        }
       })
       .collect::<Vec<_>>();
 
     /* MARK: Remove colliding entities marked as destroy on collision */
     let entities = entities
       .iter()
-      .filter(|entity| {
+      .map(|entity| {
         let entity_destroyed = !((*entity)
           .clone()
           .components
@@ -790,38 +712,86 @@ impl System for PhysicsSystem {
             .handle
             .colliders(&rigid_body_set)
             .iter()
-            .map(|handle| collider_set[*handle])
             .cloned()
-            .flat_map(|collider| narrow_phase.contact_pairs_with(collider))
+            .flat_map(|collider| narrow_phase.contact_pairs_with(*collider))
             .filter(|&contact_pair| contact_pair.has_any_active_contact)
             .count()
             == 0);
 
-        if entity_destroyed && let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
-          rigid_body_set.remove(
-            rigid_body_handle,
-            &mut island_manager,
-            &mut collider_set,
-            &mut impulse_joint_set,
-            &mut multibody_joint_set,
-            true,
-          );
+        if entity_destroyed {
+          Entity {
+            components: entity.components.with(Destroyed),
+            ..entity.clone()
+          }
+        } else {
+          entity.clone()
         }
-        !entity_destroyed
       })
+      .collect::<Vec<_>>();
+
+    let rng = rand::RandGenerator::new();
+    rng.srand(self.frame_count as u64);
+
+    /* MARK: Drop health pickups from entities with 0 health marked as such */
+    let entities = entities
+      .iter()
       .cloned()
+      .flat_map(|entity| {
+        if entity.components.get::<Destroyed>().is_none()
+          || entity.components.get::<DropHealthOnDestroy>().is_none()
+        {
+          return vec![entity];
+        };
+        let drop_health = entity.components.get::<DropHealthOnDestroy>().unwrap();
+
+        let random = rng.gen_range(0.0, 1.0);
+        let should_drop_health = random < drop_health.chance;
+
+        if !should_drop_health {
+          return vec![entity];
+        }
+
+        let handle = collider_set.insert(
+          ColliderBuilder::ball(0.31)
+            .collision_groups(InteractionGroups {
+              memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+              filter: COLLISION_GROUP_PLAYER,
+            })
+            .sensor(true)
+            .translation(*entity.handle.translation(&rigid_body_set, &collider_set))
+            .build(),
+        );
+        vec![
+          entity,
+          Entity {
+            handle: EntityHandle::Collider(handle),
+            components: ComponentSet::new()
+              .insert(DestroyOnCollision)
+              .insert(HealOnCollision {
+                amount: drop_health.amount,
+              }),
+            label: "health".to_string(),
+          },
+        ]
+      })
       .collect::<Vec<_>>();
 
     /* MARK: Give items on collision */
-    let new_weapon_modules = sensors.iter().cloned().fold(vec![], |acc, sensor| {
-      if let Some(gives_item) = sensor.components.get::<GivesItemOnCollision>()
-        && rigid_body_set[self.player_handle]
-          .colliders()
+    let new_weapon_modules = entities.iter().cloned().fold(vec![], |acc, entity| {
+      if let Some(gives_item) = entity.components.get::<GivesItemOnCollision>()
+        && entity
+          .handle
+          .colliders(rigid_body_set)
           .iter()
-          .any(|player_collider| {
-            narrow_phase
-              .intersection_pair(sensor.handle, *player_collider)
-              .unwrap_or(false)
+          .any(|&entity_collider_handle| {
+            rigid_body_set[self.player_handle]
+              .colliders()
+              .iter()
+              .any(|player_collider| {
+                narrow_phase
+                  .intersection_pair(*entity_collider_handle, *player_collider)
+                  .unwrap_or(false)
+              })
           })
       {
         [(gives_item.id, gives_item.weapon_module_kind.clone())]
@@ -835,17 +805,23 @@ impl System for PhysicsSystem {
     });
 
     /* MARK: Load new map */
-    let load_new_map = sensors.iter().find_map(|sensor| {
-      if narrow_phase
-        .intersection_pairs_with(sensor.handle)
-        .filter(|(_, _, colliding)| *colliding)
-        .count()
-        == 0
+    let load_new_map = entities.iter().find_map(|entity| {
+      if entity
+        .handle
+        .colliders(rigid_body_set)
+        .iter()
+        .all(|&collider_handle| {
+          narrow_phase
+            .intersection_pairs_with(*collider_handle)
+            .filter(|(_, _, colliding)| *colliding)
+            .count()
+            == 0
+        })
       {
         return None;
       }
 
-      sensor
+      entity
         .components
         .get::<MapTransitionOnCollision>()
         .map(|map_transition_on_collision| {
@@ -857,35 +833,47 @@ impl System for PhysicsSystem {
     });
 
     /* MARK: Save point interaction */
-    let save_point_contact = sensors.iter().find_map(|sensor| {
-      if narrow_phase
-        .intersection_pairs_with(sensor.handle)
-        .filter(|(_, _, colliding)| *colliding)
-        .count()
-        == 0
+    let save_point_contact = entities.iter().find_map(|entity| {
+      if entity
+        .handle
+        .colliders(&rigid_body_set)
+        .iter()
+        .all(|&collider_handle| {
+          narrow_phase
+            .intersection_pairs_with(*collider_handle)
+            .filter(|(_, _, colliding)| *colliding)
+            .count()
+            == 0
+        })
       {
         return None;
       }
 
-      sensor
+      entity
         .components
         .get::<SaveMenuOnCollision>()
         .map(|save_menu_on_collision| save_menu_on_collision.id)
     });
 
     /* MARK: Open/close gates from triggers */
-    sensors.iter().for_each(|sensor| {
-      if narrow_phase
-        .intersection_pairs_with(sensor.handle)
-        .filter(|(_, _, colliding)| *colliding)
-        .count()
-        != 0
-        && let Some(gate_trigger) = sensor.components.get::<GateTrigger>()
+    entities.iter().for_each(|entity| {
+      if entity
+        .handle
+        .colliders(&rigid_body_set)
+        .iter()
+        .any(|&collider_handle| {
+          narrow_phase
+            .intersection_pairs_with(*collider_handle)
+            .filter(|(_, _, colliding)| *colliding)
+            .count()
+            != 0
+        })
+        && let Some(gate_trigger) = entity.components.get::<GateTrigger>()
       {
         let gate_handle = entities.iter().find_map(|entity| {
           entity.components.get::<Gate>().and_then(|gate| {
             if gate.id == gate_trigger.gate_id {
-              Some(entity.handle)
+              Some(entity.handle.clone())
             } else {
               None
             }
@@ -896,7 +884,7 @@ impl System for PhysicsSystem {
           gate_handle
             .colliders(&rigid_body_set)
             .iter()
-            .for_each(|collider_handle| {
+            .for_each(|&collider_handle| {
               collider_set[*collider_handle].set_enabled(match gate_trigger.action {
                 MapGateState::Close => true,
                 MapGateState::Open => false,
@@ -917,11 +905,11 @@ impl System for PhysicsSystem {
         }
         let damageable = damageable.unwrap();
 
-        let healing_sensors = rigid_body_set[entity.handle]
-          .colliders()
-          .iter()
-          .cloned()
-          .flat_map(|collider_handle| {
+        let healing_sensors = entity
+          .handle
+          .colliders(&rigid_body_set)
+          .into_iter()
+          .flat_map(|&collider_handle| {
             narrow_phase
               .intersection_pairs_with(collider_handle)
               .flat_map(|(collider1, collider2, has_active_contact)| {
@@ -938,9 +926,15 @@ impl System for PhysicsSystem {
               .collect::<Vec<_>>()
           })
           .flat_map(|collider_handle| {
-            sensors
+            entities
               .iter()
-              .find(|sensor| sensor.handle == collider_handle)
+              .find(|entity| {
+                entity
+                  .handle
+                  .colliders(&rigid_body_set)
+                  .iter()
+                  .any(|&handle| *handle == collider_handle)
+              })
               .and_then(|sensor| sensor.components.get::<HealOnCollision>())
           });
 
@@ -961,26 +955,56 @@ impl System for PhysicsSystem {
       .collect();
 
     /* MARK: Remove colliding sensors marked as destroy on collision */
-    let sensors = sensors
+    let entities = entities
       .iter()
       .cloned()
-      .filter(|sensor| {
-        let entity_destroyed = sensor
+      .filter(|entity| {
+        let entity_destroyed = entity
           .clone()
           .components
           .get::<DestroyOnCollision>()
           .is_some()
-          && narrow_phase
-            .intersection_pairs_with(sensor.handle)
-            .filter(|(_, _, colliding)| *colliding)
-            .count()
-            > 0;
-
-        if entity_destroyed {
-          collider_set.remove(sensor.handle, &mut island_manager, rigid_body_set, true);
-        }
+          && entity
+            .handle
+            .colliders(&rigid_body_set)
+            .iter()
+            .any(|&entity_handle| {
+              narrow_phase
+                .intersection_pairs_with(*entity_handle)
+                .filter(|(_, _, colliding)| *colliding)
+                .count()
+                > 0
+            });
         return !entity_destroyed;
       })
+      .collect::<Vec<_>>();
+
+    /* MARK: Remove destroyed entities */
+    let entities = entities
+      .iter()
+      .filter(|entity| {
+        if entity.components.get::<Destroyed>().is_none() {
+          return true;
+        }
+
+        match entity.handle {
+          EntityHandle::RigidBody(rigid_body_handle) => {
+            rigid_body_set.remove(
+              rigid_body_handle,
+              &mut island_manager,
+              &mut collider_set,
+              &mut impulse_joint_set,
+              &mut multibody_joint_set,
+              true,
+            );
+          }
+          EntityHandle::Collider(collider_handle) => {
+            collider_set.remove(collider_handle, &mut island_manager, rigid_body_set, true);
+          }
+        }
+        false
+      })
+      .cloned()
       .collect::<Vec<_>>();
 
     /* MARK: Step physics */
