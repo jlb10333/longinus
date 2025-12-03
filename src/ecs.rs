@@ -11,7 +11,7 @@ use crate::{
   load_map::{MapEnemyName, MapGateState},
 };
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum EntityHandle {
   RigidBody(RigidBodyHandle),
   Collider(ColliderHandle),

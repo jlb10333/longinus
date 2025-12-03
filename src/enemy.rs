@@ -63,7 +63,6 @@ impl System for EnemySystem {
     let decisions = physics_system
       .entities
       .iter()
-      .cloned()
       .filter_map(enemy_behavior)
       .collect::<Vec<_>>();
 
@@ -74,13 +73,13 @@ impl System for EnemySystem {
 fn enemy_behavior_generator(
   player_translation: &Vector2<f32>,
   physics_rigid_bodies: &RigidBodySet,
-) -> impl Fn(Entity) -> Option<EnemyDecision> {
-  |entity| {
+) -> impl Fn((&EntityHandle, &Entity)) -> Option<EnemyDecision> {
+  |(handle, entity)| {
     entity
       .components
       .get::<Enemy>()
       .map(|enemy| match enemy.as_ref() {
-        Enemy::Defender(defender) => defender.behavior(entity.handle),
+        Enemy::Defender(defender) => defender.behavior(handle.clone()),
         Enemy::Seeker(seeker) => {
           seeker.behavior(&entity.handle, player_translation, physics_rigid_bodies)
         }

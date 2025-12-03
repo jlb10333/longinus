@@ -1,6 +1,6 @@
 use macroquad::prelude::rand;
 use rapier2d::{na::Isometry2, prelude::*};
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Instant};
 
 use crate::{
   ability::AbilitySystem,
@@ -38,7 +38,7 @@ pub struct PhysicsSystem {
   pub multibody_joint_set: MultibodyJointSet,
   pub ccd_solver: CCDSolver,
   pub player_handle: RigidBodyHandle,
-  pub entities: Vec<Entity>,
+  pub entities: HashMap<EntityHandle, Entity>,
   pub new_weapon_modules: Vec<(i32, WeaponModuleKind)>,
   pub frame_count: i64,
   pub load_new_map: Option<(String, i32)>,
@@ -286,7 +286,7 @@ fn load_new_map(
   let impulse_joint_set = ImpulseJointSet::new();
   let multibody_joint_set = MultibodyJointSet::new();
   let ccd_solver: CCDSolver = CCDSolver::new();
-  let entities: Vec<_> = [player]
+  let entities: HashMap<_, _> = [player]
     .iter()
     .cloned()
     .chain(enemies)
@@ -297,6 +297,7 @@ fn load_new_map(
     .chain(save_points)
     .chain(gate_triggers)
     .chain(gravity_sources)
+    .map(|entity| (entity.handle.clone(), entity))
     .collect();
 
   Rc::new(PhysicsSystem {
@@ -345,6 +346,7 @@ impl System for PhysicsSystem {
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
+    let now = Instant::now();
     let map_system = ctx.get::<MapSystem>().unwrap();
 
     let combat_system = ctx.get::<CombatSystem>().unwrap();
@@ -352,16 +354,7 @@ impl System for PhysicsSystem {
     if let Some(map) = map_system.map.as_ref() {
       let player_entity = self
         .entities
-        .iter()
-        .find(|Entity { handle, .. }| {
-          if let EntityHandle::RigidBody(rigid_body_handle) = *handle
-            && rigid_body_handle == self.player_handle
-          {
-            true
-          } else {
-            false
-          }
-        })
+        .get(&EntityHandle::RigidBody(self.player_handle))
         .unwrap();
       let player_damageable = player_entity.components.get::<Damageable>().unwrap();
 
@@ -413,6 +406,11 @@ impl System for PhysicsSystem {
       });
     }
 
+    println!(
+      "after physics setup {}",
+      now.elapsed().as_nanos() as f64 / 1_000_000.0
+    );
+
     /* MARK: Move the player */
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
@@ -443,6 +441,11 @@ impl System for PhysicsSystem {
     rigid_body_set[self.player_handle]
       .apply_impulse(vector![safe_acceleration_x, safe_acceleration_y], true);
 
+    println!(
+      "after player move {}",
+      now.elapsed().as_nanos() as f64 / 1_000_000.0
+    );
+
     /* MARK: Perform boost */
     let ability_system = ctx.get::<AbilitySystem>().unwrap();
 
@@ -450,26 +453,31 @@ impl System for PhysicsSystem {
       rigid_body_set[self.player_handle].apply_impulse(boost_force * player_mass, true);
     }
 
+    println!(
+      "after boost {}",
+      now.elapsed().as_nanos() as f64 / 1_000_000.0
+    );
+
     /* MARK: Gravity source behavior */
-    entities.iter().for_each(|entity| {
+    entities.iter().for_each(|(handle, entity)| {
       if let Some(gravity_source) = entity.components.get::<GravitySource>()
-        && let EntityHandle::Collider(collider_handle) = entity.handle
+        && let EntityHandle::Collider(collider_handle) = handle
       {
         narrow_phase
-          .intersection_pairs_with(collider_handle)
+          .intersection_pairs_with(*collider_handle)
           .filter_map(|(collider1, collider2, colliding)| {
             if colliding {
               [collider1, collider2]
                 .iter()
-                .find(|other_handle| **other_handle != collider_handle)
+                .find(|other_handle| **other_handle != *collider_handle)
                 .cloned()
             } else {
               None
             }
           })
           .for_each(|other_handle| {
-            let distance_vec = (collider_set[collider_handle].translation()
-              - collider_set[other_handle].translation());
+            let distance_vec = collider_set[*collider_handle].translation()
+              - collider_set[other_handle].translation();
 
             let distance_squared = distance_vec.magnitude_squared();
             let gravity_intensity = gravity_source.strength / distance_squared;
@@ -482,8 +490,13 @@ impl System for PhysicsSystem {
       }
     });
 
+    println!(
+      "after gravity source {}",
+      now.elapsed().as_nanos() as f64 / 1_000_000.0
+    );
+
     /* MARK: Fire all weapons */
-    let new_projectiles: Vec<Entity> = combat_system
+    let new_projectiles = combat_system
       .new_projectiles
       .iter()
       .map(|projectile| {
@@ -498,32 +511,45 @@ impl System for PhysicsSystem {
 
         rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
 
-        Entity {
-          handle: EntityHandle::RigidBody(handle),
-          components: ComponentSet::new()
-            .insert(DestroyOnCollision)
-            .insert(Damager {
-              damage: projectile.damage,
-            }),
-          label: "projectile".to_string(),
-        }
-      })
-      .collect();
+        let handle = EntityHandle::RigidBody(handle);
 
-    let entities: Vec<Entity> = entities.iter().cloned().chain(new_projectiles).collect();
+        (
+          handle.clone(),
+          Entity {
+            handle,
+            components: ComponentSet::new()
+              .insert(DestroyOnCollision)
+              .insert(Damager {
+                damage: projectile.damage,
+              }),
+            label: "projectile".to_string(),
+          },
+        )
+      })
+      .collect::<HashMap<_, _>>();
+
+    let entities = entities
+      .iter()
+      .chain(new_projectiles.iter())
+      .collect::<HashMap<_, _>>();
+
+    println!(
+      "after firing weapons {}",
+      now.elapsed().as_nanos() as f64 / 1_000_000.0
+    );
 
     /* MARK: Carry out enemy behavior */
     let enemy_system = ctx.get::<EnemySystem>().unwrap();
 
     let entities = entities
       .iter()
-      .flat_map(|entity| {
+      .flat_map(|(_, &entity)| {
         let relevant_decision = enemy_system
           .decisions
           .iter()
           .find(|&decision| decision.handle == entity.handle);
         if relevant_decision.is_none() {
-          return Vec::from([entity.clone()]);
+          return vec![(entity.handle.clone(), entity.clone())];
         }
         let relevant_decision = relevant_decision.unwrap();
 
@@ -548,31 +574,34 @@ impl System for PhysicsSystem {
 
               rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
 
-              Entity {
-                handle: EntityHandle::RigidBody(handle),
-                components: ComponentSet::new()
-                  .insert(DestroyOnCollision)
-                  .insert(Damager {
-                    damage: projectile.damage,
-                  }),
-                label: "enemy projectile".to_string(),
-              }
+              (
+                EntityHandle::RigidBody(handle),
+                Entity {
+                  handle: EntityHandle::RigidBody(handle),
+                  components: ComponentSet::new()
+                    .insert(DestroyOnCollision)
+                    .insert(Damager {
+                      damage: projectile.damage,
+                    }),
+                  label: "enemy projectile".to_string(),
+                },
+              )
             })
-            .collect::<Vec<_>>()
+            .collect::<HashMap<_, _>>()
         } else {
-          vec![]
+          HashMap::new()
         };
 
-        [Entity {
-          components: entity.components.with(relevant_decision.enemy.clone()),
-          ..entity.clone()
-        }]
+        [(
+          entity.handle.clone(),
+          Entity {
+            components: entity.components.with(relevant_decision.enemy.clone()),
+            ..entity.clone()
+          },
+        )]
         .iter()
         .cloned()
         .chain(new_projectiles)
-        .collect::<Vec<_>>()
-        .iter()
-        .cloned()
         .chain(
           relevant_decision
             .enemies_to_spawn
@@ -585,21 +614,29 @@ impl System for PhysicsSystem {
                 rigid_body_set,
               );
               rigid_body_set[handle].apply_impulse(enemy_to_spawn.initial_force, true);
-              Entity {
-                handle: EntityHandle::RigidBody(handle),
-                components: enemy_to_spawn.enemy_spawn.into_entity_components(),
-                label: "child enemy".to_string(),
-              }
+              (
+                EntityHandle::RigidBody(handle),
+                Entity {
+                  handle: EntityHandle::RigidBody(handle),
+                  components: enemy_to_spawn.enemy_spawn.into_entity_components(),
+                  label: "child enemy".to_string(),
+                },
+              )
             }),
         )
         .collect()
       })
-      .collect::<Vec<_>>();
+      .collect::<HashMap<_, _>>();
+
+    println!(
+      "after enemy behavior {}",
+      now.elapsed().as_nanos() as f64 / 1_000_000.0
+    );
 
     /* MARK: Damage all entities colliding with damagers */
     let entities: Vec<_> = entities
       .iter()
-      .map(|entity| {
+      .map(|(_, entity)| {
         let damageable = entity.components.get::<Damageable>();
 
         if damageable.is_none() {
@@ -642,15 +679,7 @@ impl System for PhysicsSystem {
             collider_set[collider_handle]
               .parent()
               .and_then(|rigid_body_handle| {
-                entities.iter().find(|entity| {
-                  if let EntityHandle::RigidBody(other_handle) = entity.handle
-                    && other_handle == rigid_body_handle
-                  {
-                    true
-                  } else {
-                    false
-                  }
-                })
+                entities.get(&EntityHandle::RigidBody(rigid_body_handle))
               })
               .and_then(|entity| entity.components.get::<Damager>())
           });
@@ -683,6 +712,11 @@ impl System for PhysicsSystem {
         };
       })
       .collect();
+
+    println!(
+      "after damaging all {}",
+      now.elapsed().as_nanos() as f64 / 1_000_000.0
+    );
 
     /* MARK: Destroy all entities with 0 health marked as such */
     let entities = entities
@@ -1025,6 +1059,17 @@ impl System for PhysicsSystem {
       &(),
       &(),
     );
+
+    println!(
+      "physics total {}",
+      now.elapsed().as_nanos() as f64 / 1_000_000.0
+    );
+
+    /* delete this */
+    let entities = entities
+      .iter()
+      .map(|entity| (entity.handle.clone(), entity.clone()))
+      .collect::<HashMap<_, _>>();
 
     Rc::new(Self {
       rigid_body_set: rigid_body_set.clone(),

@@ -67,9 +67,8 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       }
 
       /* Draw entity labels */
-      physics_system.entities.iter().for_each(|entity| {
-        entity
-          .handle
+      physics_system.entities.iter().for_each(|(handle, entity)| {
+        handle
           .colliders(&physics_system.rigid_body_set)
           .iter()
           .for_each(|&collider_handle| {
@@ -123,16 +122,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       /* Draw overlays */
       let player = physics_system
         .entities
-        .iter()
-        .find(|Entity { handle, .. }| {
-          if let EntityHandle::RigidBody(rigid_body_handle) = handle
-            && *rigid_body_handle == physics_system.player_handle
-          {
-            true
-          } else {
-            false
-          }
-        })
+        .get(&EntityHandle::RigidBody(physics_system.player_handle))
         .unwrap();
 
       let player_damageable = player.components.get::<Damageable>().unwrap();

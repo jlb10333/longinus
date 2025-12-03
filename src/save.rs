@@ -111,16 +111,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
         menu_system.save_point_confirmed_id.map(|player_spawn_id| {
           let player_entity = physics_system
             .entities
-            .iter()
-            .find(|Entity { handle, .. }| {
-              if let EntityHandle::RigidBody(rigid_body_handle) = handle
-                && *rigid_body_handle == physics_system.player_handle
-              {
-                true
-              } else {
-                false
-              }
-            })
+            .get(&EntityHandle::RigidBody(physics_system.player_handle))
             .unwrap();
 
           let player_damageable = player_entity.components.get::<Damageable>().unwrap();
