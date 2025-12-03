@@ -517,27 +517,51 @@ impl System for PhysicsSystem {
 
     let entities = entities
       .iter()
-      .cloned()
-      .filter_map(|entity| {
-        if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
-          Some((entity, rigid_body_handle))
-        } else {
-          None
-        }
-      })
-      .flat_map(|(entity, rigid_body_handle)| {
-        let entity = &entity;
+      .flat_map(|entity| {
         let relevant_decision = enemy_system
           .decisions
           .iter()
-          .find(|&decision| decision.handle == rigid_body_handle);
+          .find(|&decision| decision.handle == entity.handle);
         if relevant_decision.is_none() {
           return Vec::from([entity.clone()]);
         }
         let relevant_decision = relevant_decision.unwrap();
 
-        rigid_body_set[rigid_body_handle]
-          .apply_impulse(relevant_decision.movement_force.into_vec(), true);
+        if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
+          rigid_body_set[rigid_body_handle]
+            .apply_impulse(relevant_decision.movement_force.into_vec(), true);
+        }
+
+        let new_projectiles = if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
+          relevant_decision
+            .projectiles
+            .iter()
+            .map(|projectile| {
+              let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
+                *rigid_body_set[rigid_body_handle].translation() + projectile.offset.into_vec(),
+              ));
+              collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
+
+              let rbs_clone = rigid_body_set.clone();
+              let enemy_velocity = rbs_clone[rigid_body_handle].linvel();
+              rigid_body_set[handle].set_linvel(*enemy_velocity, true);
+
+              rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
+
+              Entity {
+                handle: EntityHandle::RigidBody(handle),
+                components: ComponentSet::new()
+                  .insert(DestroyOnCollision)
+                  .insert(Damager {
+                    damage: projectile.damage,
+                  }),
+                label: "enemy projectile".to_string(),
+              }
+            })
+            .collect::<Vec<_>>()
+        } else {
+          vec![]
+        };
 
         [Entity {
           components: entity.components.with(relevant_decision.enemy.clone()),
@@ -545,28 +569,7 @@ impl System for PhysicsSystem {
         }]
         .iter()
         .cloned()
-        .chain(relevant_decision.projectiles.iter().map(|projectile| {
-          let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
-            *rigid_body_set[rigid_body_handle].translation() + projectile.offset.into_vec(),
-          ));
-          collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
-
-          let rbs_clone = rigid_body_set.clone();
-          let enemy_velocity = rbs_clone[rigid_body_handle].linvel();
-          rigid_body_set[handle].set_linvel(*enemy_velocity, true);
-
-          rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
-
-          Entity {
-            handle: EntityHandle::RigidBody(handle),
-            components: ComponentSet::new()
-              .insert(DestroyOnCollision)
-              .insert(Damager {
-                damage: projectile.damage,
-              }),
-            label: "enemy projectile".to_string(),
-          }
-        }))
+        .chain(new_projectiles)
         .collect::<Vec<_>>()
         .iter()
         .cloned()

@@ -2,7 +2,7 @@ use std::{f32::consts::PI, rc::Rc};
 
 use rapier2d::{
   na::Vector2,
-  prelude::{ColliderBuilder, InteractionGroups, RigidBodyHandle, RigidBodySet},
+  prelude::{ColliderBuilder, InteractionGroups, RigidBodySet},
 };
 
 use crate::{
@@ -82,10 +82,10 @@ fn enemy_behavior_generator(
       .map(|enemy| match enemy.as_ref() {
         Enemy::Defender(defender) => defender.behavior(entity.handle),
         Enemy::Seeker(seeker) => {
-          seeker.behavior(entity.handle, player_translation, physics_rigid_bodies)
+          seeker.behavior(&entity.handle, player_translation, physics_rigid_bodies)
         }
         Enemy::SeekerGenerator(seeker_generator) => {
-          seeker_generator.behavior(entity.handle, player_translation, physics_rigid_bodies)
+          seeker_generator.behavior(&entity.handle, player_translation, physics_rigid_bodies)
         }
       })
   }
@@ -140,27 +140,31 @@ const SEEKER_SPEED: f32 = 0.3;
 impl EnemySeeker {
   pub fn behavior(
     &self,
-    handle: EntityHandle,
+    handle: &EntityHandle,
     player_translation: &Vector2<f32>,
     physics_rigid_bodies: &RigidBodySet,
   ) -> EnemyDecision {
-    let self_rigid_body = &physics_rigid_bodies[handle];
-    let direction_to_player = player_translation - self_rigid_body.translation();
-    let velocity_towards_player = (self_rigid_body.linvel().dot(&direction_to_player)
-      / direction_to_player.magnitude())
-      * direction_to_player.normalize();
+    let movement_force = if let EntityHandle::RigidBody(rigid_body_handle) = handle {
+      let self_rigid_body = &physics_rigid_bodies[*rigid_body_handle];
+      let direction_to_player = player_translation - self_rigid_body.translation();
+      let velocity_towards_player = (self_rigid_body.linvel().dot(&direction_to_player)
+        / direction_to_player.magnitude())
+        * direction_to_player.normalize();
 
-    let velocity_away_from_player = self_rigid_body.linvel() - velocity_towards_player;
-    let movement_force = PhysicsVector::from_vec(
-      if velocity_towards_player.magnitude() >= SEEKER_SPEED_CAP {
-        vec_zero()
-      } else {
-        direction_to_player.normalize() * SEEKER_SPEED
-      } - velocity_away_from_player.normalize() * SEEKER_SPEED * 0.3,
-    );
+      let velocity_away_from_player = self_rigid_body.linvel() - velocity_towards_player;
+      PhysicsVector::from_vec(
+        if velocity_towards_player.magnitude() >= SEEKER_SPEED_CAP {
+          vec_zero()
+        } else {
+          direction_to_player.normalize() * SEEKER_SPEED
+        } - velocity_away_from_player.normalize() * SEEKER_SPEED * 0.3,
+      )
+    } else {
+      PhysicsVector::zero()
+    };
     EnemyDecision {
       movement_force,
-      handle,
+      handle: handle.clone(),
       projectiles: vec![],
       enemies_to_spawn: vec![],
       enemy: Enemy::Seeker(Self),
@@ -179,20 +183,22 @@ const SEEKER_SPAWN_COOLDOWN: i32 = 120;
 impl EnemySeekerGenerator {
   pub fn behavior(
     &self,
-    handle: RigidBodyHandle,
+    handle: &EntityHandle,
     player_translation: &Vector2<f32>,
     physics_rigid_bodies: &RigidBodySet,
   ) -> EnemyDecision {
     let should_spawn_enemy = self.cooldown % SEEKER_SPAWN_COOLDOWN == 0;
     EnemyDecision {
       movement_force: PhysicsVector::zero(),
-      handle,
+      handle: handle.clone(),
       projectiles: vec![],
       enemy: Enemy::SeekerGenerator(Self {
         cooldown: self.cooldown - 1,
       }),
-      enemies_to_spawn: if should_spawn_enemy {
-        let self_rigid_body = &physics_rigid_bodies[handle];
+      enemies_to_spawn: if should_spawn_enemy
+        && let EntityHandle::RigidBody(rigid_body_handle) = handle
+      {
+        let self_rigid_body = &physics_rigid_bodies[*rigid_body_handle];
         let direction_to_player = player_translation - self_rigid_body.translation();
         let initial_force = direction_to_player.normalize() * SEEKER_GENERATOR_INITIAL_FORCE;
         vec![EnemyDecisionEnemySpawn {
