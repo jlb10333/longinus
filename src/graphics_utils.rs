@@ -23,15 +23,27 @@ pub fn draw_collider(
     let top_left = ScreenVector::from_vec(translation.into_vec() - half_extents.into_vec());
     let dimensions = ScreenVector::from_vec(half_extents.into_vec().scale(2.0));
 
-    draw_rectangle(
-      top_left.x(),
-      top_left.y(),
-      dimensions.x(),
-      dimensions.y(),
-      color.unwrap_or(ORANGE).with_alpha(alpha),
-    );
+    let bottom_right = ScreenVector::from_vec(top_left.into_vec() + dimensions.into_vec());
 
-    label.map(|label| draw_text(label.as_ref(), top_left.x(), top_left.y(), 40.0, BLACK));
+    if (top_left.x() > 0.0
+      && top_left.x() < screen_width()
+      && top_left.y() > 0.0
+      && top_left.y() < screen_height())
+      || (bottom_right.x() > 0.0
+        && bottom_right.x() < screen_width()
+        && bottom_right.y() > 0.0
+        && bottom_right.y() < screen_height())
+    {
+      draw_rectangle(
+        top_left.x(),
+        top_left.y(),
+        dimensions.x(),
+        dimensions.y(),
+        color.unwrap_or(ORANGE).with_alpha(alpha),
+      );
+
+      label.map(|label| draw_text(label.as_ref(), top_left.x(), top_left.y(), 40.0, BLACK));
+    }
   }
 
   if let Some(ball) = collider.shape().as_ball() {
@@ -56,13 +68,25 @@ pub fn draw_collider(
 
         let dimensions = half_extents.into_vec().scale(2.0);
 
-        draw_rectangle(
-          top_left.x,
-          top_left.y,
-          dimensions.x,
-          dimensions.y,
-          color.unwrap_or(ORANGE).with_alpha(alpha),
-        );
+        let bottom_right = top_left + dimensions;
+
+        if (top_left.x > 0.0
+          && top_left.x < screen_width()
+          && top_left.y > 0.0
+          && top_left.y < screen_height())
+          || (bottom_right.x > 0.0
+            && bottom_right.x < screen_width()
+            && bottom_right.y > 0.0
+            && bottom_right.y < screen_height())
+        {
+          draw_rectangle(
+            top_left.x,
+            top_left.y,
+            dimensions.x,
+            dimensions.y,
+            color.unwrap_or(ORANGE).with_alpha(alpha),
+          );
+        }
       }
     });
   }

@@ -1,4 +1,4 @@
-use std::{any::Any, rc::Rc};
+use std::{any::Any, rc::Rc, time::Instant};
 
 use rapier2d::{
   na::Vector2,
@@ -11,7 +11,7 @@ use crate::{
   load_map::{MapEnemyName, MapGateState},
 };
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EntityHandle {
   RigidBody(RigidBodyHandle),
   Collider(ColliderHandle),
@@ -104,18 +104,19 @@ impl ComponentSet {
   where
     Item: Component,
   {
-    return match self.components.iter().find(|component| {
-      (Rc::clone(component) as Rc<dyn Any>)
-        .downcast::<Item>()
-        .is_ok()
-    }) {
-      Some(component) => Some(
+    self
+      .components
+      .iter()
+      .find(|component| {
         (Rc::clone(component) as Rc<dyn Any>)
           .downcast::<Item>()
-          .unwrap(),
-      ),
-      None => None,
-    };
+          .is_ok()
+      })
+      .and_then(|component| {
+        (Rc::clone(component) as Rc<dyn Any>)
+          .downcast::<Item>()
+          .ok()
+      })
   }
 }
 

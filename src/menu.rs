@@ -201,7 +201,7 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
       });
     }
 
-    panic!("Expected to be in either a SaveData or ProcessStart GameState");
+    todo!("Expected to be in either a SaveData or ProcessStart GameState");
   }
 }
 
@@ -427,7 +427,7 @@ fn menu_main(
     );
   }
 
-  panic!("Unhandled cursor positon {}", cursor_position);
+  todo!("Unhandled cursor positon {}", cursor_position);
 }
 
 #[derive(Clone)]
@@ -518,7 +518,7 @@ fn pause_main(
     return (vec![], Some(QuitDecision::ToMainMenu));
   }
 
-  panic!("Unhandled cursor positon {}", cursor_position);
+  todo!("Unhandled cursor positon {}", cursor_position);
 }
 
 fn pause_load_game(
@@ -799,7 +799,7 @@ fn save_confirm(
     return (vec![], Some(id));
   }
 
-  panic!("Unaccounted cursor position {}", cursor_position);
+  todo!("Unaccounted cursor position {}", cursor_position);
 }
 
 fn menu_input_to_direction(input: &MenuInput) -> HashSet<Direction> {

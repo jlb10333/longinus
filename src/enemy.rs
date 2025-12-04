@@ -73,13 +73,13 @@ impl System for EnemySystem {
 fn enemy_behavior_generator(
   player_translation: &Vector2<f32>,
   physics_rigid_bodies: &RigidBodySet,
-) -> impl Fn((&EntityHandle, &Entity)) -> Option<EnemyDecision> {
-  |(handle, entity)| {
+) -> impl Fn((&EntityHandle, &Rc<Entity>)) -> Option<EnemyDecision> {
+  |(&handle, entity)| {
     entity
       .components
       .get::<Enemy>()
       .map(|enemy| match enemy.as_ref() {
-        Enemy::Defender(defender) => defender.behavior(handle.clone()),
+        Enemy::Defender(defender) => defender.behavior(handle),
         Enemy::Seeker(seeker) => {
           seeker.behavior(&entity.handle, player_translation, physics_rigid_bodies)
         }
