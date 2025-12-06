@@ -1,7 +1,7 @@
 use macroquad::prelude::rand;
 use rapier2d::{na::Isometry2, prelude::*};
 use rpds::{HashTrieMap, List, list};
-use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Instant};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
   ability::AbilitySystem,
@@ -53,10 +53,11 @@ const PLAYER_MAX_HITSTUN: f32 = 100.0;
 fn load_new_map(
   map: &Map,
   map_name: &str,
-  acquired_modules: &Vec<(String, i32)>,
+  acquired_modules: &[(String, i32)],
   target_player_spawn_id: i32,
   player_health: f32,
   player_max_health: f32,
+  boost_acquired: bool,
 ) -> Rc<PhysicsSystem> {
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
@@ -126,7 +127,7 @@ fn load_new_map(
         components: ComponentSet::new()
           .insert(GivesItemOnCollision {
             id: item_pickup.id,
-            weapon_module_kind: item_pickup.weapon_module_kind.clone(),
+            weapon_module_kind: item_pickup.weapon_module_kind,
           })
           .insert(DestroyOnCollision),
         label: "item".to_string(),
@@ -211,14 +212,24 @@ fn load_new_map(
   let ability_pickups = map
     .ability_pickups
     .iter()
-    .map(|ability_pickup| Entity {
-      handle: EntityHandle::Collider(collider_set.insert(ability_pickup.collider.clone())),
-      components: ComponentSet::new()
-        .insert(GiveAbilityOnCollision {
-          ability_type: ability_pickup.ability_type,
+    .filter_map(|ability_pickup| {
+      let should_spawn_entity = match ability_pickup.ability_type {
+        MapAbilityType::Boost => !boost_acquired,
+      };
+
+      if should_spawn_entity {
+        Some(Entity {
+          handle: EntityHandle::Collider(collider_set.insert(ability_pickup.collider.clone())),
+          components: ComponentSet::new()
+            .insert(GiveAbilityOnCollision {
+              ability_type: ability_pickup.ability_type,
+            })
+            .insert(DestroyOnCollision),
+          label: "ability".to_string(),
         })
-        .insert(DestroyOnCollision),
-      label: "ability".to_string(),
+      } else {
+        None
+      }
     })
     .collect::<Vec<_>>();
 
@@ -358,6 +369,7 @@ impl System for PhysicsSystem {
       map_system.target_player_spawn_id,
       ctx.input.player_health,
       ctx.input.player_max_health,
+      ctx.input.acquired_boost,
     )
   }
 
@@ -365,10 +377,10 @@ impl System for PhysicsSystem {
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    let now = Instant::now();
     let map_system = ctx.get::<MapSystem>().unwrap();
 
     let combat_system = ctx.get::<CombatSystem>().unwrap();
+    let ability_system = ctx.get::<AbilitySystem>().unwrap();
 
     if let Some(map) = map_system.map.as_ref() {
       let player_entity = self
@@ -385,6 +397,7 @@ impl System for PhysicsSystem {
         map_system.target_player_spawn_id,
         player_damageable.health,
         player_damageable.max_health,
+        ability_system.acquired_boost,
       );
     }
 
@@ -435,8 +448,6 @@ impl System for PhysicsSystem {
     rigid_body_set[self.player_handle].apply_impulse(next_player_impulse, true);
 
     /* MARK: Perform boost */
-    let ability_system = ctx.get::<AbilitySystem>().unwrap();
-
     let player_mass = rigid_body_set[self.player_handle].mass();
 
     if let Some(boost_force) = ability_system.boost_force {
@@ -714,7 +725,7 @@ impl System for PhysicsSystem {
               filter: COLLISION_GROUP_PLAYER,
             })
             .sensor(true)
-            .translation(*entity.handle.translation(&rigid_body_set, &collider_set))
+            .translation(*entity.handle.translation(rigid_body_set, &collider_set))
             .build(),
         );
         vec![
@@ -784,8 +795,7 @@ impl System for PhysicsSystem {
 
     /* MARK: Load new map */
     let load_new_map = entities.iter().find_map(|(handle, entity)| {
-      if entity
-        .handle
+      if handle
         .colliders(rigid_body_set)
         .iter()
         .all(|&collider_handle| {
@@ -812,9 +822,8 @@ impl System for PhysicsSystem {
 
     /* MARK: Save point interaction */
     let save_point_contact = entities.iter().find_map(|(handle, entity)| {
-      if entity
-        .handle
-        .colliders(&rigid_body_set)
+      if handle
+        .colliders(rigid_body_set)
         .iter()
         .all(|&collider_handle| {
           narrow_phase
@@ -836,7 +845,7 @@ impl System for PhysicsSystem {
     /* MARK: Open/close gates from triggers */
     entities.iter().for_each(|(handle, entity)| {
       if handle
-        .colliders(&rigid_body_set)
+        .colliders(rigid_body_set)
         .iter()
         .any(|&collider_handle| {
           narrow_phase
@@ -859,7 +868,7 @@ impl System for PhysicsSystem {
 
         if let Some(gate_handle) = gate_handle {
           gate_handle
-            .colliders(&rigid_body_set)
+            .colliders(rigid_body_set)
             .iter()
             .for_each(|&collider_handle| {
               collider_set[*collider_handle].set_enabled(match gate_trigger.action {
@@ -884,7 +893,7 @@ impl System for PhysicsSystem {
 
         let healing_sensors = entity
           .handle
-          .colliders(&rigid_body_set)
+          .colliders(rigid_body_set)
           .into_iter()
           .flat_map(|&collider_handle| {
             narrow_phase
@@ -907,7 +916,7 @@ impl System for PhysicsSystem {
               .iter()
               .find(|(handle, _)| {
                 handle
-                  .colliders(&rigid_body_set)
+                  .colliders(rigid_body_set)
                   .iter()
                   .any(|&handle| *handle == collider_handle)
               })
