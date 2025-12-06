@@ -261,6 +261,7 @@ dependencies = [
 name = "game"
 version = "0.1.0"
 dependencies = [
+ "archery",
  "chrono",
  "derive_more",
  "device_query",

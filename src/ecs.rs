@@ -8,7 +8,7 @@ use rapier2d::{
 use crate::{
   combat::WeaponModuleKind,
   enemy::{EnemyDefender, EnemySeeker, EnemySeekerGenerator},
-  load_map::{MapEnemyName, MapGateState},
+  load_map::{MapAbilityType, MapEnemyName, MapGateState},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -202,3 +202,8 @@ impl Component for GravitySource {}
 
 pub struct Destroyed;
 impl Component for Destroyed {}
+
+pub struct GiveAbilityOnCollision {
+  pub ability_type: MapAbilityType,
+}
+impl Component for GiveAbilityOnCollision {}

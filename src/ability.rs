@@ -1,9 +1,11 @@
- use std::rc::Rc;
+use std::rc::Rc;
 
 use rapier2d::na::Vector2;
 
 use crate::{
   controls::ControlsSystem,
+  load_map::MapAbilityType,
+  physics::PhysicsSystem,
   save::SaveData,
   system::System,
   units::{PhysicsVector, UnitConvert, UnitConvert2},
@@ -54,8 +56,16 @@ impl System for AbilitySystem {
       (None, (self.current_boost_cooldown - 1.0).max(0.0))
     };
 
+    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+
+    let acquired_boost = self.acquired_boost
+      || physics_system
+        .new_abilities
+        .iter()
+        .any(|new_ability| matches!(new_ability, MapAbilityType::Boost));
+
     Rc::new(AbilitySystem {
-      acquired_boost: self.acquired_boost,
+      acquired_boost,
       boost_force,
       current_boost_cooldown,
       max_boost_cooldown: self.max_boost_cooldown,

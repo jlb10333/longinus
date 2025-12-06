@@ -1,6 +1,6 @@
 use macroquad::prelude::rand;
 use rapier2d::{na::Isometry2, prelude::*};
-use rpds::HashTrieMap;
+use rpds::{HashTrieMap, List, list};
 use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Instant};
 
 use crate::{
@@ -9,14 +9,14 @@ use crate::{
   controls::ControlsSystem,
   ecs::{
     ComponentSet, Damageable, Damager, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity,
-    EntityHandle, Gate, GateTrigger, GivesItemOnCollision, GravitySource, HealOnCollision,
-    MapTransitionOnCollision, SaveMenuOnCollision,
+    EntityHandle, Gate, GateTrigger, GiveAbilityOnCollision, GivesItemOnCollision, GravitySource,
+    HealOnCollision, MapTransitionOnCollision, SaveMenuOnCollision,
   },
   enemy::EnemySystem,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
-    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapGateState, MapSystem,
-    MapTile,
+    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapAbilityType, MapGateState,
+    MapSystem, MapTile,
   },
   menu::MenuSystem,
   save::SaveData,
@@ -40,7 +40,8 @@ pub struct PhysicsSystem {
   pub ccd_solver: CCDSolver,
   pub player_handle: RigidBodyHandle,
   pub entities: HashTrieMap<EntityHandle, Rc<Entity>>,
-  pub new_weapon_modules: Vec<(i32, WeaponModuleKind)>,
+  pub new_weapon_modules: List<(i32, WeaponModuleKind)>,
+  pub new_abilities: List<MapAbilityType>,
   pub frame_count: i64,
   pub load_new_map: Option<(String, i32)>,
   pub save_point_contact: Option<i32>,
@@ -206,6 +207,21 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
+  /* MARK: Spawn ability pickups */
+  let ability_pickups = map
+    .ability_pickups
+    .iter()
+    .map(|ability_pickup| Entity {
+      handle: EntityHandle::Collider(collider_set.insert(ability_pickup.collider.clone())),
+      components: ComponentSet::new()
+        .insert(GiveAbilityOnCollision {
+          ability_type: ability_pickup.ability_type,
+        })
+        .insert(DestroyOnCollision),
+      label: "ability".to_string(),
+    })
+    .collect::<Vec<_>>();
+
   /* MARK: Create the map colliders. */
   let map_tiles = map
     .colliders
@@ -294,11 +310,12 @@ fn load_new_map(
     .chain(interactive_walls)
     .chain(gates)
     .chain(item_pickups)
+    .chain(ability_pickups)
     .chain(map_transitions)
     .chain(save_points)
     .chain(gate_triggers)
     .chain(gravity_sources)
-    .map(|entity| (entity.handle.clone(), Rc::new(entity)))
+    .map(|entity| (entity.handle, Rc::new(entity)))
     .collect::<HashTrieMap<_, _>>();
 
   Rc::new(PhysicsSystem {
@@ -315,7 +332,8 @@ fn load_new_map(
     player_handle,
     entities,
     frame_count: 0,
-    new_weapon_modules: vec![],
+    new_weapon_modules: list![],
+    new_abilities: list![],
     load_new_map: None,
     save_point_contact: None,
     save_point_contact_last_frame: None,
@@ -400,7 +418,8 @@ impl System for PhysicsSystem {
         player_handle: self.player_handle,
         entities: self.entities.clone(),
         frame_count: self.frame_count + 1,
-        new_weapon_modules: vec![],
+        new_weapon_modules: list![],
+        new_abilities: list![],
         load_new_map: None,
         save_point_contact: self.save_point_contact,
         save_point_contact_last_frame: self.save_point_contact_last_frame,
@@ -610,18 +629,46 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
-    /* MARK: Remove colliding entities marked as destroy on collision */
+    /* MARK: Destroy colliding entities marked as destroy on collision */
     let entities = entities
       .into_iter()
       .map(|(handle, entity)| {
-        let entity_destroyed = !((*entity).components.get::<DestroyOnCollision>().is_none()
+        let entity_destroyed = !(entity.components.get::<DestroyOnCollision>().is_none()
           || entity
             .handle
-            .colliders(&rigid_body_set)
+            .colliders(rigid_body_set)
             .iter()
-            .cloned()
-            .flat_map(|collider| narrow_phase.contact_pairs_with(*collider))
-            .filter(|&contact_pair| contact_pair.has_any_active_contact)
+            .flat_map(|&&collider_handle| {
+              let collider = &collider_set[collider_handle];
+
+              if collider.is_sensor() {
+                narrow_phase
+                  .intersection_pairs_with(collider_handle)
+                  .flat_map(|(collider1, collider2, is_intersecting)| {
+                    if is_intersecting {
+                      vec![collider1, collider2]
+                    } else {
+                      vec![]
+                    }
+                  })
+                  .collect::<Vec<_>>()
+              } else {
+                narrow_phase
+                  .contact_pairs_with(collider_handle)
+                  .flat_map(|contact_pair| {
+                    if contact_pair.has_any_active_contact {
+                      vec![contact_pair.collider1, contact_pair.collider2]
+                    } else {
+                      vec![]
+                    }
+                  })
+                  .collect::<Vec<_>>()
+              }
+            })
+            .filter(|collider_handle| {
+              EntityHandle::Collider(*collider_handle) != entity.handle
+                && !collider_set[*collider_handle].is_sensor()
+            })
             .count()
             == 0);
 
@@ -690,10 +737,9 @@ impl System for PhysicsSystem {
       .collect::<HashTrieMap<_, _>>();
 
     /* MARK: Give items on collision */
-    let new_weapon_modules = entities.iter().fold(vec![], |acc, (handle, entity)| {
+    let new_weapon_modules = entities.iter().fold(list![], |acc, (handle, entity)| {
       if let Some(gives_item) = entity.components.get::<GivesItemOnCollision>()
-        && entity
-          .handle
+        && handle
           .colliders(rigid_body_set)
           .iter()
           .any(|&entity_collider_handle| {
@@ -707,11 +753,30 @@ impl System for PhysicsSystem {
               })
           })
       {
-        [(gives_item.id, gives_item.weapon_module_kind.clone())]
+        acc.push_front((gives_item.id, gives_item.weapon_module_kind))
+      } else {
+        acc
+      }
+    });
+
+    /* MARK: Give abilities on collision */
+    let new_abilities = entities.iter().fold(list![], |acc, (handle, entity)| {
+      if let Some(gives_ability) = entity.components.get::<GiveAbilityOnCollision>()
+        && handle
+          .colliders(rigid_body_set)
           .iter()
-          .chain(acc.iter())
-          .cloned()
-          .collect::<Vec<_>>()
+          .any(|&entity_collider_handle| {
+            rigid_body_set[self.player_handle]
+              .colliders()
+              .iter()
+              .any(|player_collider| {
+                narrow_phase
+                  .intersection_pair(*entity_collider_handle, *player_collider)
+                  .unwrap_or(false)
+              })
+          })
+      {
+        acc.push_front(gives_ability.ability_type)
       } else {
         acc
       }
@@ -865,41 +930,10 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
-    /* MARK: Destroy colliding entities marked as destroy on collision */
-    let entities = entities
-      .into_iter()
-      .map(|(&&handle, entity)| {
-        let entity_destroyed = entity.components.get::<DestroyOnCollision>().is_some()
-          && entity
-            .handle
-            .colliders(&rigid_body_set)
-            .iter()
-            .any(|&entity_handle| {
-              narrow_phase
-                .intersection_pairs_with(*entity_handle)
-                .filter(|(_, _, colliding)| *colliding)
-                .count()
-                > 0
-            });
-        return if entity_destroyed {
-          (
-            handle,
-            Rc::new(Entity {
-              handle,
-              components: entity.components.with(Destroyed),
-              label: entity.label.clone(),
-            }),
-          )
-        } else {
-          (handle, Rc::clone(entity))
-        };
-      })
-      .collect::<HashTrieMap<_, _>>();
-
     /* MARK: Remove destroyed entities */
     let entities = entities
       .into_iter()
-      .filter_map(|(&handle, entity)| {
+      .filter_map(|(&&handle, entity)| {
         if entity.components.get::<Destroyed>().is_none() {
           return Some((handle, Rc::clone(entity)));
         }
@@ -953,6 +987,7 @@ impl System for PhysicsSystem {
       player_handle: self.player_handle,
       entities,
       new_weapon_modules,
+      new_abilities,
       frame_count: self.frame_count + 1,
       load_new_map,
       save_point_contact,

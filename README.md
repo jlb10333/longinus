@@ -6,16 +6,12 @@
 - Add first boss
 - Add gameover menu
 - Add kinematic damaging hazards
-- Add ability pickup
 - Restrict camera movement to map boundaries
+- Make ability pickup not load in if already collected
 
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
 - CLEANUP: Replace `HealOnCollision` with `Damager` with negative damage
-- CLEANUP: Separate the logic to destroy entities from the logic to do stuff on destroy - maybe a `Destroy` component so that you can add it from different sources, and check for its presence to trigger other effects
-- Collapse Entity/Sensor distinction with enum on handle prop
-
-- IDEA: Add human-readable label to entities/sensors, use to draw labels in debug mode
 
 ## GAME DESIGN:
 
@@ -31,6 +27,8 @@
   - Fixed lasers (shield blocks the lasers' path and allows the player to proceed undamaged)
 - Chain
   - Cranks (grab on with chain, spin around to make something in the environment move)
+  - Switches (grab on with chain, pull in direction to flip switch)
+    - (can be used to create one-way gates, or areas where the player has to go around a separate path to hit a switch from a different angle in order to progress through the main path)
 
 ## STORY:
 

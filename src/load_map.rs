@@ -247,6 +247,25 @@ struct MapGravitySource {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapAbilityPickupClass {
+  AbilityPickup,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
+pub enum MapAbilityType {
+  Boost,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapAbilityPickup {
+  x: f32,
+  y: f32,
+  name: MapAbilityType,
+  #[serde(rename = "type")]
+  _class: MapAbilityPickupClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -257,6 +276,7 @@ enum Object {
   Gate(MapGate),
   GateTrigger(MapGateTrigger),
   GravitySource(MapGravitySource),
+  AbilityPickup(MapAbilityPickup),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -409,6 +429,12 @@ pub struct GravitySource {
 }
 
 #[derive(Clone)]
+pub struct AbilityPickup {
+  pub collider: Collider,
+  pub ability_type: MapAbilityType,
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -442,6 +468,7 @@ pub enum MapComponent {
   Gate(Gate),
   GateTrigger(GateTrigger),
   GravitySource(GravitySource),
+  AbilityPickup(AbilityPickup),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -550,6 +577,24 @@ impl Object {
           .sensor(true)
           .build(),
         strength: gravity_source.properties.1.value,
+      }),
+
+      Object::AbilityPickup(ability_pickup) => MapComponent::AbilityPickup(AbilityPickup {
+        ability_type: ability_pickup.name,
+        collider: ColliderBuilder::ball(1.0)
+          .translation(physics_translation_from_map(
+            ability_pickup.x,
+            ability_pickup.y,
+            0.0,
+            0.0,
+            map_height,
+          ))
+          .sensor(true)
+          .collision_groups(InteractionGroups {
+            memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+            filter: COLLISION_GROUP_PLAYER,
+          })
+          .build(),
       }),
     }
   }
@@ -682,6 +727,7 @@ pub struct Map {
   pub gates: Vec<Gate>,
   pub gate_triggers: Vec<GateTrigger>,
   pub gravity_sources: Vec<GravitySource>,
+  pub ability_pickups: Vec<AbilityPickup>,
 }
 
 impl RawMap {
@@ -806,6 +852,17 @@ impl RawMap {
       })
       .collect::<Vec<_>>();
 
+    let ability_pickups = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::AbilityPickup(gravity_source) = object {
+          vec![gravity_source.clone()]
+        } else {
+          vec![]
+        }
+      })
+      .collect::<Vec<_>>();
+
     Map {
       colliders,
       enemy_spawns,
@@ -816,6 +873,7 @@ impl RawMap {
       gates,
       gate_triggers,
       gravity_sources,
+      ability_pickups,
     }
   }
 }

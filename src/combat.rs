@@ -295,7 +295,7 @@ pub type EquippedModules = Matrix<
   >,
 >;
 
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 pub enum WeaponModuleKind {
   Plasma,
   Front2Slot,
