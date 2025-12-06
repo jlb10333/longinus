@@ -407,11 +407,6 @@ impl System for PhysicsSystem {
       });
     }
 
-    // println!(
-    //   "after physics setup {}",
-    //   now.elapsed().as_nanos() as f64 / 1_000_000.0
-    // );
-
     /* MARK: Move the player */
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
@@ -419,11 +414,6 @@ impl System for PhysicsSystem {
       player_movement_impulse(controls_system, &rigid_body_set[self.player_handle]);
 
     rigid_body_set[self.player_handle].apply_impulse(next_player_impulse, true);
-
-    // println!(
-    //   "after player move {}",
-    //   now.elapsed().as_nanos() as f64 / 1_000_000.0
-    // );
 
     /* MARK: Perform boost */
     let ability_system = ctx.get::<AbilitySystem>().unwrap();
@@ -433,11 +423,6 @@ impl System for PhysicsSystem {
     if let Some(boost_force) = ability_system.boost_force {
       rigid_body_set[self.player_handle].apply_impulse(boost_force * player_mass, true);
     }
-
-    // println!(
-    //   "after boost {}",
-    //   now.elapsed().as_nanos() as f64 / 1_000_000.0
-    // );
 
     /* MARK: Gravity source behavior */
     entities.iter().for_each(|(handle, entity)| {
@@ -470,11 +455,6 @@ impl System for PhysicsSystem {
           });
       }
     });
-
-    // println!(
-    //   "after gravity source {}",
-    //   now.elapsed().as_nanos() as f64 / 1_000_000.0
-    // );
 
     /* MARK: Fire all weapons */
     let new_projectiles = combat_system
@@ -510,11 +490,6 @@ impl System for PhysicsSystem {
       .collect::<HashTrieMap<_, _>>();
 
     let entities = entities.into_iter().chain(new_projectiles.iter());
-
-    // println!(
-    //   "after firing weapons {}",
-    //   now.elapsed().as_nanos() as f64 / 1_000_000.0
-    // );
 
     /* MARK: Carry out enemy behavior */
     let enemy_system = ctx.get::<EnemySystem>().unwrap();
@@ -604,11 +579,6 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
-    // println!(
-    //   "after enemy behavior {}",
-    //   now.elapsed().as_nanos() as f64 / 1_000_000.0
-    // );
-
     /* MARK: Damage all entities colliding with damagers */
     let entities = entities
       .iter()
@@ -619,11 +589,6 @@ impl System for PhysicsSystem {
         &entities,
       ))
       .collect::<HashTrieMap<_, _>>();
-
-    // println!(
-    //   "after damaging all {}",
-    //   now.elapsed().as_nanos() as f64 / 1_000_000.0
-    // );
 
     /* MARK: Destroy all entities with 0 health marked as such */
     let entities = entities
@@ -886,10 +851,6 @@ impl System for PhysicsSystem {
 
         let incoming_healing = healing_sensors.fold(0.0, |sum, healing| sum + healing.amount);
 
-        if incoming_healing > 0.0 {
-          // println!("+{}", incoming_healing);
-        }
-
         (
           handle,
           Entity {
@@ -904,10 +865,10 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
-    /* MARK: Remove colliding sensors marked as destroy on collision */
+    /* MARK: Destroy colliding entities marked as destroy on collision */
     let entities = entities
       .into_iter()
-      .filter_map(|(&&handle, entity)| {
+      .map(|(&&handle, entity)| {
         let entity_destroyed = entity.components.get::<DestroyOnCollision>().is_some()
           && entity
             .handle
@@ -921,9 +882,16 @@ impl System for PhysicsSystem {
                 > 0
             });
         return if entity_destroyed {
-          None
+          (
+            handle,
+            Rc::new(Entity {
+              handle,
+              components: entity.components.with(Destroyed),
+              label: entity.label.clone(),
+            }),
+          )
         } else {
-          Some((handle, Rc::clone(entity)))
+          (handle, Rc::clone(entity))
         };
       })
       .collect::<HashTrieMap<_, _>>();
@@ -970,11 +938,6 @@ impl System for PhysicsSystem {
       &(),
       &(),
     );
-
-    // println!(
-    //   "physics total {}",
-    //   now.elapsed().as_nanos() as f64 / 1_000_000.0
-    // );
 
     Rc::new(Self {
       rigid_body_set: rigid_body_set.clone(),
