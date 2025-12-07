@@ -5,11 +5,14 @@
 - Add story terminal
 - Add first boss
 - Add gameover menu
-- Add kinematic damaging hazards
+- Add kinematic damaging hazards (use enemy?)
 - Restrict camera movement to map boundaries
 - Unbreak gate trigger (use new activation system)
 - Add stationary chain mount point map loading
 - Allow switches to be loaded in any rotation
+- Allow switches to be loaded with an initial activation
+- Add chain ability pickup
+- Prevent infinite boost
 
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
@@ -23,15 +26,18 @@
   + Destructible blocks
   + Areas with enemies
 + Boost
-  + Gravity repulsors
+  + Gravity sources
+    + Gravity walls you have to boost through
+    + High gravity sections with gaps that you have to boost jump to get over
 - Shield
   - Lock-on stun weapon emplacements
   - Fixed lasers (shield blocks the lasers' path and allows the player to proceed undamaged)
 + Chain
   - Cranks (grab on with chain, spin around to make something in the environment move)
+    - High gravity sections where you have to boost against gravity to get around the crank
   + Switches (grab on with chain, pull in direction to flip switch)
     + (can be used to create one-way gates, or areas where the player has to go around a separate path to hit a switch from a different angle in order to progress through the main path)
-  - High gravity sections where you have to swing on the chain to get across a gap
+  + High gravity sections where you have to swing on the chain to get across a gap
 
 ## STORY:
 

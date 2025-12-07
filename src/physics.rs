@@ -20,7 +20,7 @@ use crate::{
   load_map::{
     COLLISION_GROUP_CHAIN, COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE,
     COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map,
-    MapAbilityType, MapGateState, MapSystem, MapTile,
+    MapAbilityType, MapSystem, MapTile,
   },
   menu::MenuSystem,
   save::SaveData,
@@ -31,9 +31,9 @@ use crate::{
 const PLAYER_SPEED_LIMIT: f32 = 5.0;
 const PLAYER_ACCELERATION_MOD: f32 = 0.5;
 
-const CHAIN_SEGMENT_LENGTH: f32 = 1.0;
+const CHAIN_SEGMENT_LENGTH: f32 = 0.5;
 const CHAIN_SEGMENT_HEIGHT: f32 = 0.05;
-const CHAIN_SEGMENT_LIMITS: [f32; 2] = [-90.0, 90.0];
+// const CHAIN_SEGMENT_LIMITS: [f32; 2] = [-90.0, 90.0];
 pub const CHAIN_ANGULAR_DAMPING: f32 = 1.0;
 
 pub struct PhysicsSystem {
@@ -1084,8 +1084,8 @@ impl System for PhysicsSystem {
                 ]
                 .into(),
               )
-              .local_anchor2(right_segment_anchor)
-              .limits(CHAIN_SEGMENT_LIMITS),
+              .local_anchor2(right_segment_anchor),
+            //              .limits(CHAIN_SEGMENT_LIMITS),
             true,
           )
         });
@@ -1098,8 +1098,8 @@ impl System for PhysicsSystem {
             *segment_b_handle,
             RevoluteJointBuilder::new()
               .local_anchor1(left_segment_anchor)
-              .local_anchor2(right_segment_anchor)
-              .limits(CHAIN_SEGMENT_LIMITS),
+              .local_anchor2(right_segment_anchor),
+            //              .limits(CHAIN_SEGMENT_LIMITS),
             true,
           );
           segment_b_handle

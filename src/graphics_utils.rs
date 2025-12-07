@@ -3,7 +3,10 @@ use std::f32::consts::PI;
 use macroquad::prelude::*;
 use rapier2d::{na::Vector2, prelude::*};
 
-use crate::units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2};
+use crate::{
+  graphics::{COLOR_2, COLOR_3, COLOR_4},
+  units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
+};
 
 pub fn draw_collider(
   collider: &Collider,
@@ -45,11 +48,11 @@ pub fn draw_collider(
         DrawRectangleParams {
           offset: Vec2 { x: 0.5, y: 0.5 },
           rotation: -rotation,
-          color: color.unwrap_or(ORANGE).with_alpha(alpha),
+          color: color.unwrap_or(COLOR_3).with_alpha(alpha),
         },
       );
 
-      label.map(|label| draw_text(label.as_ref(), top_left.x(), top_left.y(), 40.0, BLACK));
+      label.map(|label| draw_text(label.as_ref(), top_left.x(), top_left.y(), 40.0, COLOR_4));
     }
   }
 
@@ -58,7 +61,7 @@ pub fn draw_collider(
       translation.x(),
       translation.y(),
       *PhysicsScalar(ball.radius).convert(),
-      BLUE.with_alpha(alpha),
+      COLOR_2.with_alpha(alpha),
     );
   }
 
@@ -91,7 +94,7 @@ pub fn draw_collider(
             top_left.y,
             dimensions.x,
             dimensions.y,
-            color.unwrap_or(ORANGE).with_alpha(alpha),
+            color.unwrap_or(COLOR_3).with_alpha(alpha),
           );
         }
       }

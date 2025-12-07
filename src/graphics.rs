@@ -1,9 +1,4 @@
-use std::{
-  marker::PhantomData,
-  rc::Rc,
-  thread::sleep,
-  time::{Duration, Instant},
-};
+use std::{marker::PhantomData, rc::Rc, thread::sleep, time::Duration};
 
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
@@ -14,7 +9,7 @@ use crate::{
     CombatSystem, EQUIP_SLOTS_WIDTH, WeaponModuleKind, distance_projection_screen, get_reticle_pos,
     get_slot_positions,
   },
-  ecs::{Damageable, Entity, EntityHandle, MapTransitionOnCollision},
+  ecs::{Damageable, EntityHandle},
   graphics_utils::draw_collider,
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
@@ -31,6 +26,32 @@ const RETICLE_SIZE: f32 = 3.0;
 /* DEBUG OPTIONS */
 const SHOW_COLLIDERS: bool = true;
 const SHOW_SLOTS: bool = true;
+
+/* Colors */
+pub const COLOR_1: Color = Color {
+  r: 214.0 / 255.0,
+  g: 246.0 / 255.0,
+  b: 214.0 / 255.0,
+  a: 1.0,
+};
+pub const COLOR_2: Color = Color {
+  r: 107.0 / 255.0,
+  g: 165.0 / 255.0,
+  b: 107.0 / 255.0,
+  a: 1.0,
+};
+pub const COLOR_3: Color = Color {
+  r: 29.0 / 255.0,
+  g: 88.0 / 255.0,
+  b: 73.0 / 255.0,
+  a: 1.0,
+};
+pub const COLOR_4: Color = Color {
+  r: 0.0 / 255.0,
+  g: 18.0 / 255.0,
+  b: 25.0 / 255.0,
+  a: 1.0,
+};
 
 pub struct GraphicsSystem<Input>(PhantomData<Input>);
 
@@ -49,7 +70,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     /* Background */
-    clear_background(RED);
+    clear_background(COLOR_1);
 
     draw_fps();
 
@@ -76,7 +97,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
               &physics_system.collider_set[*collider_handle],
               camera_system.translation,
               Some(entity.label.clone()),
-              Some(GREEN),
+              Some(COLOR_2),
             )
           });
       });
@@ -93,7 +114,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         player_screen_pos.x() + reticle_pos.x(),
         player_screen_pos.y() + reticle_pos.y(),
         RETICLE_SIZE,
-        BLACK,
+        COLOR_4,
       );
 
       /* DEBUG - Draw slots */
@@ -109,12 +130,12 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             slot_screen_pos.into_vec() + distance_projection_screen(slot.angle, 7.0).into_vec(),
           );
 
-          draw_circle(slot_screen_pos.x(), slot_screen_pos.y(), 2.0, BLUE);
+          draw_circle(slot_screen_pos.x(), slot_screen_pos.y(), 2.0, COLOR_3);
           draw_circle(
             slot_next_screen_pos.x(),
             slot_next_screen_pos.y(),
             2.0,
-            WHITE,
+            COLOR_4,
           );
         });
       }
@@ -135,7 +156,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         screen_width() * 0.01,
         screen_height() * 0.9,
         40.0,
-        BLACK,
+        COLOR_4,
       );
     }
 
