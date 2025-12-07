@@ -1,6 +1,9 @@
-use std::{fs, rc::Rc};
+use std::{f32::consts::PI, fs, rc::Rc};
 
-use rapier2d::{na::Vector2, prelude::*};
+use rapier2d::{
+  na::{Unit, Vector2},
+  prelude::*,
+};
 use serde::Deserialize;
 
 use crate::{
@@ -10,7 +13,7 @@ use crate::{
   physics::PhysicsSystem,
   save::SaveData,
   system::System,
-  units::{PhysicsScalar, PhysicsVector, UnitConvert2},
+  units::{PhysicsScalar, PhysicsVector, UnitConvert2, vec_zero},
 };
 
 #[derive(Clone, Debug, Deserialize)]
@@ -287,6 +290,7 @@ struct MapChainSwitch {
   id: i32,
   x: f32,
   y: f32,
+  rotation: f32,
   properties: (MapChainSwitchInitialDirection,),
   #[serde(rename = "type")]
   _class: MapChainSwitchClass,
@@ -467,7 +471,9 @@ pub struct AbilityPickup {
 pub struct ChainSwitch {
   pub id: i32,
   pub collider: Collider,
+  pub switch_center: RigidBody,
   pub mount_body: RigidBody,
+  pub switch_joint: PrismaticJoint,
 }
 
 #[derive(Clone)]
@@ -527,7 +533,7 @@ impl Object {
 
       Object::ItemPickup(item_pickup) => MapComponent::ItemPickup(ItemPickup {
         id: item_pickup.id,
-        weapon_module_kind: item_pickup.name.clone(),
+        weapon_module_kind: item_pickup.name,
         collider: ColliderBuilder::ball(1.0)
           .translation(
             PhysicsVector::from_vec(vector![
@@ -650,7 +656,7 @@ impl Object {
             filter: COLLISION_GROUP_PLAYER,
           })
           .build(),
-        mount_body: RigidBodyBuilder::dynamic()
+        switch_center: RigidBodyBuilder::dynamic()
           .lock_translations()
           .translation(physics_translation_from_map(
             chain_switch.x,
@@ -659,7 +665,21 @@ impl Object {
             0.0,
             map_height,
           ))
-          .angular_damping(10.0)
+          .build(),
+        mount_body: RigidBodyBuilder::dynamic()
+          .translation(physics_translation_from_map(
+            chain_switch.x,
+            chain_switch.y,
+            0.0,
+            0.0,
+            map_height,
+          ))
+          .linear_damping(20.0)
+          .build(),
+        switch_joint: PrismaticJointBuilder::new(Unit::new_normalize(vector![1.0, 0.0]))
+          .limits([-1.0, 1.0])
+          .local_anchor1(vec_zero().into())
+          .local_anchor2(vec_zero().into())
           .build(),
       }),
     }

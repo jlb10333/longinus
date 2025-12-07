@@ -1,6 +1,6 @@
 use macroquad::prelude::rand;
 use rapier2d::{
-  na::{Isometry2, OPoint},
+  na::{Isometry2, OPoint, Unit},
   prelude::*,
 };
 use rpds::{HashTrieMap, List, list};
@@ -72,7 +72,7 @@ fn load_new_map(
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
   let multibody_joint_set = MultibodyJointSet::new();
-  let impulse_joint_set = ImpulseJointSet::new();
+  let mut impulse_joint_set = ImpulseJointSet::new();
 
   let player_spawn = map
     .player_spawns
@@ -249,6 +249,39 @@ fn load_new_map(
     .iter()
     .flat_map(|chain_switch| {
       let target_mount_body = rigid_body_set.insert(chain_switch.mount_body.clone());
+      collider_set.insert_with_parent(
+        ColliderBuilder::ball(0.1)
+          .collision_groups(InteractionGroups {
+            memberships: Group::all(),
+            filter: Group::empty(),
+          })
+          .mass(1.0),
+        target_mount_body,
+        &mut rigid_body_set,
+      );
+      impulse_joint_set.insert(
+        target_mount_body,
+        rigid_body_set.insert(chain_switch.switch_center.clone()),
+        PrismaticJointBuilder::new(Unit::new_normalize(vector![1.0, 0.0]))
+          .limits([-1.0, 1.0])
+          .local_anchor1(vec_zero().into())
+          .local_anchor2(vec_zero().into())
+          .motor_position(-1.0, 0.3, 0.0)
+          .build(),
+        true,
+      );
+      impulse_joint_set.insert(
+        target_mount_body,
+        rigid_body_set.insert(chain_switch.switch_center.clone()),
+        PrismaticJointBuilder::new(Unit::new_normalize(vector![1.0, 0.0]))
+          .limits([-1.0, 1.0])
+          .local_anchor1(vec_zero().into())
+          .local_anchor2(vec_zero().into())
+          .motor_position(1.0, 0.3, 0.0)
+          .build(),
+        true,
+      );
+
       [
         Entity {
           handle: EntityHandle::Collider(collider_set.insert(chain_switch.collider.clone())),
@@ -1001,11 +1034,22 @@ impl System for PhysicsSystem {
     /* MARK: Find all mount points in range */
     let mount_points_in_range = entities
       .iter()
-      .filter_map(|(_, entity)| {
+      .flat_map(|(handle, entity)| {
         entity
           .components
           .get::<ChainMountActivation>()
-          .map(|chain_mount_activation| chain_mount_activation.target_mount_body)
+          .into_iter()
+          .filter_map(|chain_mount_activation| {
+            if handle
+              .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+              .len()
+              != 0
+            {
+              Some(chain_mount_activation.target_mount_body)
+            } else {
+              None
+            }
+          })
       })
       .collect::<List<_>>();
 
@@ -1130,7 +1174,10 @@ impl System for PhysicsSystem {
           segment_b_handle
         });
 
-      chain_segment_handles.last().map(|&last_segment_handle| {
+      if let Some(&last_segment_handle) = chain_segment_handles
+        .push_front(initial_chain_segment_handle)
+        .last()
+      {
         impulse_joint_set.insert(
           last_segment_handle,
           mount_point,
@@ -1139,7 +1186,7 @@ impl System for PhysicsSystem {
             .local_anchor2(vector![0.0, 0.0].into()),
           true,
         );
-      });
+      };
 
       chain_segment_handles
         .push_front(initial_chain_segment_handle)

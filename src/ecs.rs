@@ -2,8 +2,9 @@ use std::{any::Any, rc::Rc, time::Instant};
 
 use rapier2d::{
   na::Vector2,
-  prelude::{ColliderHandle, ColliderSet, RigidBodyHandle, RigidBodySet},
+  prelude::{ColliderHandle, ColliderSet, NarrowPhase, RigidBodyHandle, RigidBodySet},
 };
+use rpds::{List, list};
 
 use crate::{
   combat::WeaponModuleKind,
@@ -39,6 +40,30 @@ impl EntityHandle {
         rigid_body_set[*rigid_body_handle].translation()
       }
     }
+  }
+
+  pub fn intersecting_with_colliders(
+    &self,
+    rigid_body_set: &RigidBodySet,
+    narrow_phase: &NarrowPhase,
+  ) -> List<ColliderHandle> {
+    self
+      .colliders(rigid_body_set)
+      .iter()
+      .flat_map(|&&collider_handle| {
+        narrow_phase
+          .intersection_pairs_with(collider_handle)
+          .flat_map(move |(collider1, collider2, colliding)| {
+            if !colliding {
+              return vec![];
+            }
+            return [collider1, collider2]
+              .into_iter()
+              .filter(|&other_handle| other_handle != collider_handle)
+              .collect::<Vec<_>>();
+          })
+      })
+      .collect::<List<_>>()
   }
 }
 
