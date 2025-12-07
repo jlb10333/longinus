@@ -1,10 +1,12 @@
-use std::{any::Any, rc::Rc, time::Instant};
+use std::{any::Any, rc::Rc};
 
 use rapier2d::{
   na::Vector2,
-  prelude::{ColliderHandle, ColliderSet, NarrowPhase, RigidBodyHandle, RigidBodySet},
+  prelude::{
+    ColliderHandle, ColliderSet, ImpulseJointHandle, NarrowPhase, RigidBodyHandle, RigidBodySet,
+  },
 };
-use rpds::{List, list};
+use rpds::List;
 
 use crate::{
   combat::WeaponModuleKind,
@@ -233,15 +235,22 @@ pub struct GiveAbilityOnCollision {
 }
 impl Component for GiveAbilityOnCollision {}
 
-pub struct ChainMountActivation {
+pub struct ChainMountArea {
   pub target_mount_body: RigidBodyHandle,
 }
-impl Component for ChainMountActivation {}
+impl Component for ChainMountArea {}
 
 pub struct Switch {
-  pub activation: f32,
+  pub joint: ImpulseJointHandle,
 }
 impl Component for Switch {}
 
 pub struct ChainSegment;
 impl Component for ChainSegment {}
+
+pub struct Activatable {
+  pub id: i32,
+  pub target_activatable_id: List<i32>,
+  pub activation: f32,
+}
+impl Component for Activatable {}

@@ -269,6 +269,18 @@ struct MapAbilityPickup {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapTargetActivatableIdClass {
+  TargetActivatableId,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapTargetActivatableId {
+  #[serde(rename = "name")]
+  _name: MapTargetActivatableIdClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 enum MapChainSwitchInitialDirectionClass {
   InitialDirection,
 }
@@ -291,7 +303,7 @@ struct MapChainSwitch {
   x: f32,
   y: f32,
   rotation: f32,
-  properties: (MapChainSwitchInitialDirection,),
+  properties: (MapChainSwitchInitialDirection, MapTargetActivatableId),
   #[serde(rename = "type")]
   _class: MapChainSwitchClass,
 }
@@ -470,6 +482,7 @@ pub struct AbilityPickup {
 #[derive(Clone)]
 pub struct ChainSwitch {
   pub id: i32,
+  pub activatable_id: i32,
   pub collider: Collider,
   pub switch_center: RigidBody,
   pub mount_body: RigidBody,
@@ -642,6 +655,7 @@ impl Object {
 
       Object::ChainSwitch(chain_switch) => MapComponent::ChainSwitch(ChainSwitch {
         id: chain_switch.id,
+        activatable_id: chain_switch.properties.1.value,
         collider: ColliderBuilder::ball(10.0)
           .translation(physics_translation_from_map(
             chain_switch.x,

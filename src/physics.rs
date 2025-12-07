@@ -11,8 +11,8 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
-    ChainMountActivation, ChainSegment, ComponentSet, Damageable, Damager, DestroyOnCollision,
-    Destroyed, DropHealthOnDestroy, Entity, EntityHandle, Gate, GateTrigger,
+    Activatable, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
+    DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity, EntityHandle, Gate, GateTrigger,
     GiveAbilityOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision,
     MapTransitionOnCollision, SaveMenuOnCollision, Switch,
   },
@@ -185,7 +185,17 @@ fn load_new_map(
       );
       Entity {
         handle: EntityHandle::RigidBody(rigid_body_handle),
-        components: ComponentSet::new().insert(Gate { id: gate.id }),
+        components: ComponentSet::new()
+          .insert(Activatable {
+            id: gate.id,
+            target_activatable_id: List::new(),
+            activation: if gate.collider.is_enabled() {
+              1.0
+            } else {
+              -1.0
+            },
+          })
+          .insert(Gate { id: gate.id }),
         label: format!("g{}", gate.id),
       }
     })
@@ -270,7 +280,7 @@ fn load_new_map(
           .build(),
         true,
       );
-      impulse_joint_set.insert(
+      let joint_handle = impulse_joint_set.insert(
         target_mount_body,
         rigid_body_set.insert(chain_switch.switch_center.clone()),
         PrismaticJointBuilder::new(Unit::new_normalize(vector![1.0, 0.0]))
@@ -285,12 +295,20 @@ fn load_new_map(
       [
         Entity {
           handle: EntityHandle::Collider(collider_set.insert(chain_switch.collider.clone())),
-          components: ComponentSet::new().insert(ChainMountActivation { target_mount_body }),
+          components: ComponentSet::new().insert(ChainMountArea { target_mount_body }),
           label: "mount".to_string(),
         },
         Entity {
           handle: EntityHandle::RigidBody(target_mount_body),
-          components: ComponentSet::new().insert(Switch { activation: 0.0 }),
+          components: ComponentSet::new()
+            .insert(Switch {
+              joint: joint_handle,
+            })
+            .insert(Activatable {
+              id: chain_switch.id,
+              activation: 0.0,
+              target_activatable_id: list![chain_switch.activatable_id],
+            }),
           label: "switch".to_string(),
         },
       ]
@@ -907,48 +925,10 @@ impl System for PhysicsSystem {
         .map(|save_menu_on_collision| save_menu_on_collision.id)
     });
 
-    /* MARK: Open/close gates from triggers */
-    entities.iter().for_each(|(handle, entity)| {
-      if handle
-        .colliders(rigid_body_set)
-        .iter()
-        .any(|&collider_handle| {
-          narrow_phase
-            .intersection_pairs_with(*collider_handle)
-            .filter(|(_, _, colliding)| *colliding)
-            .count()
-            != 0
-        })
-        && let Some(gate_trigger) = entity.components.get::<GateTrigger>()
-      {
-        let gate_handle = entities.iter().find_map(|(handle, entity)| {
-          entity.components.get::<Gate>().and_then(|gate| {
-            if gate.id == gate_trigger.gate_id {
-              Some(handle)
-            } else {
-              None
-            }
-          })
-        });
-
-        if let Some(gate_handle) = gate_handle {
-          gate_handle
-            .colliders(rigid_body_set)
-            .iter()
-            .for_each(|&collider_handle| {
-              collider_set[*collider_handle].set_enabled(match gate_trigger.action {
-                MapGateState::Close => true,
-                MapGateState::Open => false,
-              });
-            });
-        }
-      }
-    });
-
     /* MARK: Heal from sensor collision mark as such */
     let entities = entities
       .iter()
-      .map(|(handle, entity)| {
+      .map(|(&handle, entity)| {
         let damageable = entity.components.get::<Damageable>();
 
         if damageable.is_none() {
@@ -1003,55 +983,6 @@ impl System for PhysicsSystem {
         )
       })
       .collect::<HashTrieMap<_, _>>();
-
-    /* MARK: Remove destroyed entities */
-    let entities = entities
-      .into_iter()
-      .filter_map(|(&&handle, entity)| {
-        if entity.components.get::<Destroyed>().is_none() {
-          return Some((handle, Rc::clone(entity)));
-        }
-
-        match entity.handle {
-          EntityHandle::RigidBody(rigid_body_handle) => {
-            rigid_body_set.remove(
-              rigid_body_handle,
-              &mut island_manager,
-              &mut collider_set,
-              &mut impulse_joint_set,
-              &mut multibody_joint_set,
-              true,
-            );
-          }
-          EntityHandle::Collider(collider_handle) => {
-            collider_set.remove(collider_handle, &mut island_manager, rigid_body_set, true);
-          }
-        }
-        None
-      })
-      .collect::<HashTrieMap<_, _>>();
-
-    /* MARK: Find all mount points in range */
-    let mount_points_in_range = entities
-      .iter()
-      .flat_map(|(handle, entity)| {
-        entity
-          .components
-          .get::<ChainMountActivation>()
-          .into_iter()
-          .filter_map(|chain_mount_activation| {
-            if handle
-              .intersecting_with_colliders(rigid_body_set, &narrow_phase)
-              .len()
-              != 0
-            {
-              Some(chain_mount_activation.target_mount_body)
-            } else {
-              None
-            }
-          })
-      })
-      .collect::<List<_>>();
 
     /* MARK: Initiate chain on selected mount point */
     let chain_entities = ability_system.chain_to_mount_point.map(|mount_point| {
@@ -1219,34 +1150,166 @@ impl System for PhysicsSystem {
     let entities = if ability_system.kill_chain {
       entities
         .into_iter()
-        .filter(|(handle, entity)| {
-          if entity.components.get::<ChainSegment>().is_none() {
-            return true;
+        .map(|(&handle, entity)| {
+          if entity.components.get::<ChainSegment>().is_some() {
+            return (
+              handle,
+              Rc::new(Entity {
+                handle,
+                label: entity.label.clone(),
+                components: entity.components.with(Destroyed),
+              }),
+            );
           }
 
-          match *handle {
-            EntityHandle::Collider(collider_handle) => {
-              collider_set.remove(*collider_handle, &mut island_manager, rigid_body_set, true);
-            }
-            EntityHandle::RigidBody(rigid_body_handle) => {
-              rigid_body_set.remove(
-                *rigid_body_handle,
-                &mut island_manager,
-                &mut collider_set,
-                &mut impulse_joint_set,
-                &mut multibody_joint_set,
-                true,
-              );
-            }
-          }
-
-          false
+          (handle, Rc::clone(entity))
         })
-        .map(|(&handle, entity)| (handle, Rc::clone(entity)))
         .collect::<HashTrieMap<_, _>>()
     } else {
       entities
     };
+
+    /* MARK: Calculate activation for chain switches */
+    let entities = entities
+      .into_iter()
+      .map(|(&handle, entity)| {
+        if let Some(switch) = entity.components.get::<Switch>()
+          && let Some(activatable) = entity.components.get::<Activatable>()
+        {
+          let joint = impulse_joint_set.get(switch.joint).unwrap();
+          let prismatic = joint.data.as_prismatic().unwrap();
+
+          let activation = (rigid_body_set[joint.body1].translation()
+            - rigid_body_set[joint.body2].translation())
+          .dot(&prismatic.local_axis1());
+
+          (
+            handle,
+            Rc::new(Entity {
+              handle,
+              label: entity.label.clone(),
+              components: entity.components.with(Activatable {
+                activation,
+                id: activatable.id,
+                target_activatable_id: activatable.target_activatable_id.clone(),
+              }),
+            }),
+          )
+        } else {
+          (handle, Rc::clone(entity))
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
+
+    /* MARK: Apply activation to activatables */
+    let entities = entities
+      .iter()
+      .map(|(&handle, entity)| {
+        if let Some(activatable) = entity.components.get::<Activatable>() {
+          let targetting_activations = entities
+            .iter()
+            .filter_map(|(_, entity)| {
+              entity
+                .components
+                .get::<Activatable>()
+                .and_then(|other_activatable| {
+                  if other_activatable
+                    .target_activatable_id
+                    .iter()
+                    .any(|&target_id| target_id == activatable.id)
+                  {
+                    Some(other_activatable.activation)
+                  } else {
+                    None
+                  }
+                })
+            })
+            .collect::<Vec<_>>();
+
+          let activation = targetting_activations.iter().copied().sum::<f32>()
+            / targetting_activations.len() as f32;
+
+          (
+            handle,
+            Rc::new(Entity {
+              handle,
+              label: format!("{}", activation),
+              components: entity.components.with(Activatable {
+                activation,
+                id: activatable.id,
+                target_activatable_id: activatable.target_activatable_id.clone(),
+              }),
+            }),
+          )
+        } else {
+          (handle, Rc::clone(entity))
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
+
+    /* MARK: Open/close gates from activation */
+    entities.iter().for_each(|(handle, entity)| {
+      if entity.components.get::<Gate>().is_some()
+        && let Some(activatable) = entity.components.get::<Activatable>()
+      {
+        let enabled = activatable.activation > 0.0;
+
+        handle
+          .colliders(rigid_body_set)
+          .iter()
+          .for_each(|&&gate_collider| {
+            collider_set[gate_collider].set_enabled(enabled);
+          });
+      }
+    });
+
+    /* MARK: Remove destroyed entities */
+    let entities = entities
+      .into_iter()
+      .filter_map(|(&handle, entity)| {
+        if entity.components.get::<Destroyed>().is_none() {
+          return Some((handle, Rc::clone(entity)));
+        }
+
+        match entity.handle {
+          EntityHandle::RigidBody(rigid_body_handle) => {
+            rigid_body_set.remove(
+              rigid_body_handle,
+              &mut island_manager,
+              &mut collider_set,
+              &mut impulse_joint_set,
+              &mut multibody_joint_set,
+              true,
+            );
+          }
+          EntityHandle::Collider(collider_handle) => {
+            collider_set.remove(collider_handle, &mut island_manager, rigid_body_set, true);
+          }
+        }
+        None
+      })
+      .collect::<HashTrieMap<_, _>>();
+
+    /* MARK: Find all mount points in range */
+    let mount_points_in_range = entities
+      .iter()
+      .flat_map(|(handle, entity)| {
+        entity
+          .components
+          .get::<ChainMountArea>()
+          .into_iter()
+          .filter_map(|chain_mount_activation| {
+            if !handle
+              .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+              .is_empty()
+            {
+              Some(chain_mount_activation.target_mount_body)
+            } else {
+              None
+            }
+          })
+      })
+      .collect::<List<_>>();
 
     /* MARK: Step physics */
     physics_pipeline.step(

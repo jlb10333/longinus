@@ -7,13 +7,9 @@
 - Add gameover menu
 - Add kinematic damaging hazards
 - Restrict camera movement to map boundaries
-- Add chain
-  - Revolute joints for chain segments
-  - Spring between segments maybe?
-- Add chain switch
-  - Loading from map
-  - Prismatic joint
-  - Activating other objects
+- Unbreak gate trigger (use new activation system)
+- Add stationary chain mount point map loading
+- Allow switches to be loaded in any rotation
 
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
@@ -31,10 +27,11 @@
 - Shield
   - Lock-on stun weapon emplacements
   - Fixed lasers (shield blocks the lasers' path and allows the player to proceed undamaged)
-- Chain
++ Chain
   - Cranks (grab on with chain, spin around to make something in the environment move)
-  - Switches (grab on with chain, pull in direction to flip switch)
-    - (can be used to create one-way gates, or areas where the player has to go around a separate path to hit a switch from a different angle in order to progress through the main path)
+  + Switches (grab on with chain, pull in direction to flip switch)
+    + (can be used to create one-way gates, or areas where the player has to go around a separate path to hit a switch from a different angle in order to progress through the main path)
+  - High gravity sections where you have to swing on the chain to get across a gap
 
 ## STORY:
 
