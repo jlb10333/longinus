@@ -207,3 +207,13 @@ pub struct GiveAbilityOnCollision {
   pub ability_type: MapAbilityType,
 }
 impl Component for GiveAbilityOnCollision {}
+
+pub struct ChainMountActivation {
+  pub target_mount_body: RigidBodyHandle,
+}
+impl Component for ChainMountActivation {}
+
+pub struct Switch {
+  pub activation: f32,
+}
+impl Component for Switch {}

@@ -8,7 +8,7 @@ use crate::{
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, UnequippedModules, WeaponModuleKind,
   },
-  ecs::{Damageable, Entity, EntityHandle},
+  ecs::{Damageable, EntityHandle},
   load_map::MapSystem,
   menu::{MenuSystem, SaveToLoad},
   physics::PhysicsSystem,
@@ -26,6 +26,7 @@ pub struct SaveData {
   pub player_health: f32,
   pub player_max_health: f32,
   pub acquired_boost: bool,
+  pub acquired_chain: bool,
 }
 
 fn initital_save_file_path() -> String {
@@ -98,51 +99,49 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    let new_save_data = ctx
-      .downcast::<SaveData>()
-      .map(|ctx| {
-        let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
-        let map_system = ctx.get::<MapSystem>().unwrap();
-        let combat_system = ctx.get::<CombatSystem>().unwrap();
-        let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-        let ability_system = ctx.get::<AbilitySystem>().unwrap();
+    let new_save_data = ctx.downcast::<SaveData>().and_then(|ctx| {
+      let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+      let map_system = ctx.get::<MapSystem>().unwrap();
+      let combat_system = ctx.get::<CombatSystem>().unwrap();
+      let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+      let ability_system = ctx.get::<AbilitySystem>().unwrap();
 
-        /* MARK: Save current progress */
-        menu_system.save_point_confirmed_id.map(|player_spawn_id| {
-          let player_entity = physics_system
-            .entities
-            .get(&EntityHandle::RigidBody(physics_system.player_handle))
-            .unwrap();
-
-          let player_damageable = player_entity.components.get::<Damageable>().unwrap();
-
-          let save_data = SaveData {
-            player_spawn_id,
-            map_name: map_system.current_map_name.clone(),
-            unequipped_modules: combat_system.unequipped_modules.clone(),
-            equipped_modules: combat_system.equipped_modules.data.0.clone(),
-            acquired_items: combat_system.acquired_items.clone(),
-            player_health: player_damageable.health,
-            player_max_health: player_damageable.max_health,
-            acquired_boost: ability_system.acquired_boost,
-          };
-
-          let sys_time: DateTime<Utc> = time::SystemTime::now().into();
-
-          let new_save_path = format!("save_{}", sys_time.format("%+"));
-
-          fs::write(
-            save_data_path(&new_save_path),
-            serde_json::to_string_pretty(&save_data).unwrap(),
-          )
+      /* MARK: Save current progress */
+      menu_system.save_point_confirmed_id.map(|player_spawn_id| {
+        let player_entity = physics_system
+          .entities
+          .get(&EntityHandle::RigidBody(physics_system.player_handle))
           .unwrap();
 
-          new_save_path
-        })
-      })
-      .flatten();
+        let player_damageable = player_entity.components.get::<Damageable>().unwrap();
 
-    return Rc::new(SaveSystem {
+        let save_data = SaveData {
+          player_spawn_id,
+          map_name: map_system.current_map_name.clone(),
+          unequipped_modules: combat_system.unequipped_modules.clone(),
+          equipped_modules: combat_system.equipped_modules.data.0,
+          acquired_items: combat_system.acquired_items.clone(),
+          player_health: player_damageable.health,
+          player_max_health: player_damageable.max_health,
+          acquired_boost: ability_system.acquired_boost,
+          acquired_chain: ability_system.acquired_chain,
+        };
+
+        let sys_time: DateTime<Utc> = time::SystemTime::now().into();
+
+        let new_save_path = format!("save_{}", sys_time.format("%+"));
+
+        fs::write(
+          save_data_path(&new_save_path),
+          serde_json::to_string_pretty(&save_data).unwrap(),
+        )
+        .unwrap();
+
+        new_save_path
+      })
+    });
+
+    Rc::new(SaveSystem {
       available_save_data: self
         .available_save_data
         .iter()
@@ -150,6 +149,6 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
         .cloned()
         .collect(),
       phantom: PhantomData,
-    });
+    })
   }
 }

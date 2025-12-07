@@ -7,6 +7,13 @@
 - Add gameover menu
 - Add kinematic damaging hazards
 - Restrict camera movement to map boundaries
+- Add chain
+  - Revolute joints for chain segments
+  - Spring between segments maybe?
+- Add chain switch
+  - Loading from map
+  - Prismatic joint
+  - Activating other objects
 
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 

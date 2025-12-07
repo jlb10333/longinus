@@ -266,6 +266,33 @@ struct MapAbilityPickup {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapChainSwitchInitialDirectionClass {
+  InitialDirection,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapChainSwitchInitialDirection {
+  #[serde(rename = "name")]
+  _name: MapChainSwitchInitialDirectionClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapChainSwitchClass {
+  ChainSwitch,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapChainSwitch {
+  id: i32,
+  x: f32,
+  y: f32,
+  properties: (MapChainSwitchInitialDirection,),
+  #[serde(rename = "type")]
+  _class: MapChainSwitchClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -277,6 +304,7 @@ enum Object {
   GateTrigger(MapGateTrigger),
   GravitySource(MapGravitySource),
   AbilityPickup(MapAbilityPickup),
+  ChainSwitch(MapChainSwitch),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -435,6 +463,13 @@ pub struct AbilityPickup {
 }
 
 #[derive(Clone)]
+pub struct ChainSwitch {
+  pub id: i32,
+  pub collider: Collider,
+  pub mount_body: RigidBody,
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -469,6 +504,7 @@ pub enum MapComponent {
   GateTrigger(GateTrigger),
   GravitySource(GravitySource),
   AbilityPickup(AbilityPickup),
+  ChainSwitch(ChainSwitch),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -594,6 +630,34 @@ impl Object {
             memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
             filter: COLLISION_GROUP_PLAYER,
           })
+          .build(),
+      }),
+
+      Object::ChainSwitch(chain_switch) => MapComponent::ChainSwitch(ChainSwitch {
+        id: chain_switch.id,
+        collider: ColliderBuilder::ball(10.0)
+          .translation(physics_translation_from_map(
+            chain_switch.x,
+            chain_switch.y,
+            0.0,
+            0.0,
+            map_height,
+          ))
+          .sensor(true)
+          .collision_groups(InteractionGroups {
+            memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+            filter: COLLISION_GROUP_PLAYER,
+          })
+          .build(),
+        mount_body: RigidBodyBuilder::dynamic()
+          .lock_translations()
+          .translation(physics_translation_from_map(
+            chain_switch.x,
+            chain_switch.y,
+            0.0,
+            0.0,
+            map_height,
+          ))
           .build(),
       }),
     }
@@ -728,6 +792,7 @@ pub struct Map {
   pub gate_triggers: Vec<GateTrigger>,
   pub gravity_sources: Vec<GravitySource>,
   pub ability_pickups: Vec<AbilityPickup>,
+  pub chain_switches: Vec<ChainSwitch>,
 }
 
 impl RawMap {
@@ -863,6 +928,18 @@ impl RawMap {
       })
       .collect::<Vec<_>>();
 
+    let chain_switches = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::ChainSwitch(chain_switch) = object {
+          Some(chain_switch)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     Map {
       colliders,
       enemy_spawns,
@@ -874,6 +951,7 @@ impl RawMap {
       gate_triggers,
       gravity_sources,
       ability_pickups,
+      chain_switches,
     }
   }
 }

@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use macroquad::prelude::*;
 use rapier2d::{na::Vector2, prelude::*};
 
@@ -10,6 +12,7 @@ pub fn draw_collider(
   color: Option<Color>,
 ) {
   let translation = PhysicsVector::from_vec(*collider.translation()).into_pos(camera_position);
+  let rotation = collider.rotation().angle();
 
   let alpha = if collider.is_enabled() && !collider.is_sensor() {
     1.0
@@ -34,12 +37,16 @@ pub fn draw_collider(
         && bottom_right.y() > 0.0
         && bottom_right.y() < screen_height())
     {
-      draw_rectangle(
-        top_left.x(),
-        top_left.y(),
+      draw_rectangle_ex(
+        translation.x(),
+        translation.y(),
         dimensions.x(),
         dimensions.y(),
-        color.unwrap_or(ORANGE).with_alpha(alpha),
+        DrawRectangleParams {
+          offset: Vec2 { x: 0.5, y: 0.5 },
+          rotation: -rotation,
+          color: color.unwrap_or(ORANGE).with_alpha(alpha),
+        },
       );
 
       label.map(|label| draw_text(label.as_ref(), top_left.x(), top_left.y(), 40.0, BLACK));

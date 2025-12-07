@@ -15,6 +15,7 @@ const BOOST_MOD: f32 = 5.0;
 
 pub struct AbilitySystem {
   pub acquired_boost: bool,
+  pub acquired_chain: bool,
   pub boost_force: Option<Vector2<f32>>,
   pub current_boost_cooldown: f32,
   pub max_boost_cooldown: f32,
@@ -30,7 +31,8 @@ impl System for AbilitySystem {
     Self: Sized,
   {
     Rc::new(AbilitySystem {
-      acquired_boost: ctx.input.acquired_boost, // TODO: load this from save data
+      acquired_boost: ctx.input.acquired_boost,
+      acquired_chain: ctx.input.acquired_chain,
       boost_force: None,
       current_boost_cooldown: 60.0,
       max_boost_cooldown: 60.0,
@@ -66,6 +68,7 @@ impl System for AbilitySystem {
 
     Rc::new(AbilitySystem {
       acquired_boost,
+      acquired_chain: self.acquired_chain,
       boost_force,
       current_boost_cooldown,
       max_boost_cooldown: self.max_boost_cooldown,

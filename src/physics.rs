@@ -8,9 +8,10 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::ControlsSystem,
   ecs::{
-    ComponentSet, Damageable, Damager, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity,
-    EntityHandle, Gate, GateTrigger, GiveAbilityOnCollision, GivesItemOnCollision, GravitySource,
-    HealOnCollision, MapTransitionOnCollision, SaveMenuOnCollision,
+    ChainMountActivation, ComponentSet, Damageable, Damager, DestroyOnCollision, Destroyed,
+    DropHealthOnDestroy, Entity, EntityHandle, Gate, GateTrigger, GiveAbilityOnCollision,
+    GivesItemOnCollision, GravitySource, HealOnCollision, MapTransitionOnCollision,
+    SaveMenuOnCollision, Switch,
   },
   enemy::EnemySystem,
   load_map::{
@@ -61,6 +62,8 @@ fn load_new_map(
 ) -> Rc<PhysicsSystem> {
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
+  let multibody_joint_set = MultibodyJointSet::new();
+  let mut impulse_joint_set = ImpulseJointSet::new();
 
   let player_spawn = map
     .player_spawns
@@ -86,6 +89,48 @@ fn load_new_map(
   let player_handle = rigid_body_set.insert(player_rigid_body);
   collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
 
+  // let chain_joint_1_handle = rigid_body_set.insert(
+  //   RigidBodyBuilder::dynamic()
+  //     .translation(player_spawn.translation.into_vec())
+  //     .build(),
+  // );
+  // collider_set.insert_with_parent(
+  //   ColliderBuilder::cuboid(0.1, 0.4).mass(0.001).build(),
+  //   chain_joint_1_handle,
+  //   &mut rigid_body_set,
+  // );
+  // let chain_joint_1 = RevoluteJointBuilder::new()
+  //   .local_anchor1(vector![0.0, 0.0].into())
+  //   .local_anchor2(vector![0.0, 0.4].into())
+  //   .limits([0.0, 360.0])
+  //   .contacts_enabled(false)
+  //   .build();
+  // impulse_joint_set.insert(player_handle, chain_joint_1_handle, chain_joint_1, true);
+
+  // let chain_joint_2_handle = rigid_body_set.insert(
+  //   RigidBodyBuilder::dynamic()
+  //     .translation(player_spawn.translation.into_vec() - vector![0.0, 0.8])
+  //     .lock_translations()
+  //     .build(),
+  // );
+  // collider_set.insert_with_parent(
+  //   ColliderBuilder::cuboid(0.1, 0.4).mass(0.001).build(),
+  //   chain_joint_2_handle,
+  //   &mut rigid_body_set,
+  // );
+  // let chain_joint_2 = RevoluteJointBuilder::new()
+  //   .local_anchor1(vector![0.0, -0.4].into())
+  //   .local_anchor2(vector![0.0, 0.4].into())
+  //   .limits([0.0, 360.0])
+  //   .contacts_enabled(false)
+  //   .build();
+  // impulse_joint_set.insert(
+  //   chain_joint_1_handle,
+  //   chain_joint_2_handle,
+  //   chain_joint_2,
+  //   true,
+  // );
+
   let player = Entity {
     handle: EntityHandle::RigidBody(player_handle),
     components: ComponentSet::new().insert(Damageable {
@@ -97,8 +142,6 @@ fn load_new_map(
     }),
     label: "player".to_string(),
   };
-
-  // println!("spawning {} enemies", map.enemy_spawns.len());
 
   /* MARK: Spawn enemies. */
   let enemies = map
@@ -233,6 +276,27 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
+  /* MARK: Spawn chain switches */
+  let chain_switches = map
+    .chain_switches
+    .iter()
+    .flat_map(|chain_switch| {
+      let target_mount_body = rigid_body_set.insert(chain_switch.mount_body.clone());
+      [
+        Entity {
+          handle: EntityHandle::Collider(collider_set.insert(chain_switch.collider.clone())),
+          components: ComponentSet::new().insert(ChainMountActivation { target_mount_body }),
+          label: "mount".to_string(),
+        },
+        Entity {
+          handle: EntityHandle::RigidBody(target_mount_body),
+          components: ComponentSet::new().insert(Switch { activation: 0.0 }),
+          label: "switch".to_string(),
+        },
+      ]
+    })
+    .collect::<Vec<_>>();
+
   /* MARK: Create the map colliders. */
   let map_tiles = map
     .colliders
@@ -311,8 +375,6 @@ fn load_new_map(
   let island_manager = IslandManager::new();
   let broad_phase = DefaultBroadPhase::new();
   let narrow_phase = NarrowPhase::new();
-  let impulse_joint_set = ImpulseJointSet::new();
-  let multibody_joint_set = MultibodyJointSet::new();
   let ccd_solver: CCDSolver = CCDSolver::new();
   let entities = [player]
     .iter()
@@ -326,6 +388,7 @@ fn load_new_map(
     .chain(save_points)
     .chain(gate_triggers)
     .chain(gravity_sources)
+    .chain(chain_switches)
     .map(|entity| (entity.handle, Rc::new(entity)))
     .collect::<HashTrieMap<_, _>>();
 
