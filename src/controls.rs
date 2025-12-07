@@ -53,6 +53,7 @@ pub struct ControlsSystem<Input> {
   pub inventory: bool,
   pub pause: bool,
   pub boost: bool,
+  pub chain: bool,
   pub last_frame: Option<Rc<ControlsSystem<Input>>>,
   phantom: PhantomData<Input>,
 }
@@ -97,6 +98,7 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
       inventory: keys.contains(&Keycode::E),
       pause: keys.contains(&Keycode::Enter),
       boost: keys.contains(&Keycode::LControl),
+      chain: keys.contains(&Keycode::C),
       last_frame: None,
       phantom: PhantomData,
     })
@@ -128,8 +130,9 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
       firing: keys.contains(&Keycode::Space),
       inventory: keys.contains(&Keycode::E),
       pause: keys.contains(&Keycode::Enter),
-      last_frame: Some(Rc::new(self.clone())),
+      chain: keys.contains(&Keycode::C),
       boost: keys.contains(&Keycode::LControl),
+      last_frame: Some(Rc::new(self.clone())),
       phantom: PhantomData,
     });
   }

@@ -217,3 +217,6 @@ pub struct Switch {
   pub activation: f32,
 }
 impl Component for Switch {}
+
+pub struct ChainSegment;
+impl Component for ChainSegment {}

@@ -340,6 +340,7 @@ pub const COLLISION_GROUP_PLAYER_PROJECTILE: Group = Group::GROUP_3;
 pub const COLLISION_GROUP_ENEMY: Group = Group::GROUP_4;
 pub const COLLISION_GROUP_ENEMY_PROJECTILE: Group = Group::GROUP_5;
 pub const COLLISION_GROUP_PLAYER_INTERACTIBLE: Group = Group::GROUP_6;
+pub const COLLISION_GROUP_CHAIN: Group = Group::GROUP_7;
 
 #[derive(Clone)]
 pub struct EnemySpawn {
@@ -658,6 +659,7 @@ impl Object {
             0.0,
             map_height,
           ))
+          .angular_damping(10.0)
           .build(),
       }),
     }

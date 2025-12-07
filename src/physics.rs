@@ -1,32 +1,40 @@
 use macroquad::prelude::rand;
-use rapier2d::{na::Isometry2, prelude::*};
+use rapier2d::{
+  na::{Isometry2, OPoint},
+  prelude::*,
+};
 use rpds::{HashTrieMap, List, list};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
   ability::AbilitySystem,
   combat::{CombatSystem, WeaponModuleKind},
-  controls::ControlsSystem,
+  controls::{ControlsSystem, angle_from_vec},
   ecs::{
-    ChainMountActivation, ComponentSet, Damageable, Damager, DestroyOnCollision, Destroyed,
-    DropHealthOnDestroy, Entity, EntityHandle, Gate, GateTrigger, GiveAbilityOnCollision,
-    GivesItemOnCollision, GravitySource, HealOnCollision, MapTransitionOnCollision,
-    SaveMenuOnCollision, Switch,
+    ChainMountActivation, ChainSegment, ComponentSet, Damageable, Damager, DestroyOnCollision,
+    Destroyed, DropHealthOnDestroy, Entity, EntityHandle, Gate, GateTrigger,
+    GiveAbilityOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision,
+    MapTransitionOnCollision, SaveMenuOnCollision, Switch,
   },
   enemy::EnemySystem,
   load_map::{
-    COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER,
-    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map, MapAbilityType, MapGateState,
-    MapSystem, MapTile,
+    COLLISION_GROUP_CHAIN, COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE,
+    COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map,
+    MapAbilityType, MapGateState, MapSystem, MapTile,
   },
   menu::MenuSystem,
   save::SaveData,
   system::System,
-  units::UnitConvert2,
+  units::{PhysicsVector, UnitConvert2, vec_zero},
 };
 
 const PLAYER_SPEED_LIMIT: f32 = 5.0;
 const PLAYER_ACCELERATION_MOD: f32 = 0.5;
+
+const CHAIN_SEGMENT_LENGTH: f32 = 1.0;
+const CHAIN_SEGMENT_HEIGHT: f32 = 0.05;
+const CHAIN_SEGMENT_LIMITS: [f32; 2] = [-90.0, 90.0];
+pub const CHAIN_ANGULAR_DAMPING: f32 = 1.0;
 
 pub struct PhysicsSystem {
   pub rigid_body_set: RigidBodySet,
@@ -47,6 +55,7 @@ pub struct PhysicsSystem {
   pub load_new_map: Option<(String, i32)>,
   pub save_point_contact: Option<i32>,
   pub save_point_contact_last_frame: Option<i32>,
+  pub mount_points_in_range: List<RigidBodyHandle>,
 }
 
 const PLAYER_MAX_HITSTUN: f32 = 100.0;
@@ -63,7 +72,7 @@ fn load_new_map(
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
   let multibody_joint_set = MultibodyJointSet::new();
-  let mut impulse_joint_set = ImpulseJointSet::new();
+  let impulse_joint_set = ImpulseJointSet::new();
 
   let player_spawn = map
     .player_spawns
@@ -88,48 +97,6 @@ fn load_new_map(
     .build();
   let player_handle = rigid_body_set.insert(player_rigid_body);
   collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
-
-  // let chain_joint_1_handle = rigid_body_set.insert(
-  //   RigidBodyBuilder::dynamic()
-  //     .translation(player_spawn.translation.into_vec())
-  //     .build(),
-  // );
-  // collider_set.insert_with_parent(
-  //   ColliderBuilder::cuboid(0.1, 0.4).mass(0.001).build(),
-  //   chain_joint_1_handle,
-  //   &mut rigid_body_set,
-  // );
-  // let chain_joint_1 = RevoluteJointBuilder::new()
-  //   .local_anchor1(vector![0.0, 0.0].into())
-  //   .local_anchor2(vector![0.0, 0.4].into())
-  //   .limits([0.0, 360.0])
-  //   .contacts_enabled(false)
-  //   .build();
-  // impulse_joint_set.insert(player_handle, chain_joint_1_handle, chain_joint_1, true);
-
-  // let chain_joint_2_handle = rigid_body_set.insert(
-  //   RigidBodyBuilder::dynamic()
-  //     .translation(player_spawn.translation.into_vec() - vector![0.0, 0.8])
-  //     .lock_translations()
-  //     .build(),
-  // );
-  // collider_set.insert_with_parent(
-  //   ColliderBuilder::cuboid(0.1, 0.4).mass(0.001).build(),
-  //   chain_joint_2_handle,
-  //   &mut rigid_body_set,
-  // );
-  // let chain_joint_2 = RevoluteJointBuilder::new()
-  //   .local_anchor1(vector![0.0, -0.4].into())
-  //   .local_anchor2(vector![0.0, 0.4].into())
-  //   .limits([0.0, 360.0])
-  //   .contacts_enabled(false)
-  //   .build();
-  // impulse_joint_set.insert(
-  //   chain_joint_1_handle,
-  //   chain_joint_2_handle,
-  //   chain_joint_2,
-  //   true,
-  // );
 
   let player = Entity {
     handle: EntityHandle::RigidBody(player_handle),
@@ -411,6 +378,7 @@ fn load_new_map(
     load_new_map: None,
     save_point_contact: None,
     save_point_contact_last_frame: None,
+    mount_points_in_range: list![],
   })
 }
 
@@ -499,6 +467,7 @@ impl System for PhysicsSystem {
         load_new_map: None,
         save_point_contact: self.save_point_contact,
         save_point_contact_last_frame: self.save_point_contact_last_frame,
+        mount_points_in_range: list![],
       });
     }
 
@@ -1029,6 +998,209 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
+    /* MARK: Find all mount points in range */
+    let mount_points_in_range = entities
+      .iter()
+      .filter_map(|(_, entity)| {
+        entity
+          .components
+          .get::<ChainMountActivation>()
+          .map(|chain_mount_activation| chain_mount_activation.target_mount_body)
+      })
+      .collect::<List<_>>();
+
+    /* MARK: Initiate chain on selected mount point */
+    let chain_entities = ability_system.chain_to_mount_point.map(|mount_point| {
+      let player_translation = *rigid_body_set[self.player_handle].translation();
+
+      let vector_to_mount_point = rigid_body_set[mount_point].translation() - player_translation;
+      let distance_to_mount_point = vector_to_mount_point.magnitude();
+
+      let num_chain_segments = (distance_to_mount_point / CHAIN_SEGMENT_LENGTH).floor();
+      let initial_chain_segment_length = distance_to_mount_point % CHAIN_SEGMENT_LENGTH;
+
+      let unit_to_mount_point = vector_to_mount_point.normalize();
+
+      let rotation_angle = -angle_from_vec(PhysicsVector::from_vec(unit_to_mount_point));
+
+      let initial_chain_segment_handle = rigid_body_set.insert(
+        RigidBodyBuilder::dynamic()
+          .translation(
+            player_translation + (unit_to_mount_point * initial_chain_segment_length / 2.0),
+          )
+          .rotation(rotation_angle)
+          .angular_damping(CHAIN_ANGULAR_DAMPING)
+          .build(),
+      );
+      collider_set.insert_with_parent(
+        ColliderBuilder::cuboid(
+          initial_chain_segment_length / 2.0,
+          CHAIN_SEGMENT_HEIGHT / 2.0,
+        )
+        .collision_groups(InteractionGroups {
+          memberships: COLLISION_GROUP_CHAIN,
+          filter: Group::empty(),
+        }),
+        initial_chain_segment_handle,
+        rigid_body_set,
+      );
+
+      let chain_segment_handles = (0..num_chain_segments as i32)
+        .map(|chain_segment_index| {
+          let chain_segment_handle = rigid_body_set.insert(
+            RigidBodyBuilder::dynamic()
+              .translation(
+                player_translation
+                  + (unit_to_mount_point
+                    * (initial_chain_segment_length
+                      + (CHAIN_SEGMENT_LENGTH * (chain_segment_index as f32 + 0.5)))),
+              )
+              .rotation(rotation_angle)
+              .angular_damping(CHAIN_ANGULAR_DAMPING)
+              .build(),
+          );
+          collider_set.insert_with_parent(
+            ColliderBuilder::cuboid(CHAIN_SEGMENT_LENGTH / 2.0, CHAIN_SEGMENT_HEIGHT / 2.0)
+              .collision_groups(InteractionGroups {
+                memberships: COLLISION_GROUP_CHAIN,
+                filter: Group::empty(),
+              }),
+            chain_segment_handle,
+            rigid_body_set,
+          );
+          chain_segment_handle
+        })
+        .collect::<List<_>>();
+
+      impulse_joint_set.insert(
+        self.player_handle,
+        initial_chain_segment_handle,
+        RevoluteJointBuilder::new()
+          .local_anchor1(vector![0.0, 0.0].into())
+          .local_anchor2(
+            vector![
+              -initial_chain_segment_length / 2.0,
+              CHAIN_SEGMENT_HEIGHT / 2.0
+            ]
+            .into(),
+          )
+          .contacts_enabled(false)
+          .build(),
+        true,
+      );
+
+      let left_segment_anchor: OPoint<_, _> =
+        vector![CHAIN_SEGMENT_LENGTH / 2.0, CHAIN_SEGMENT_HEIGHT / 2.0].into();
+
+      let right_segment_anchor: OPoint<_, _> =
+        vector![-CHAIN_SEGMENT_LENGTH / 2.0, CHAIN_SEGMENT_HEIGHT / 2.0].into();
+
+      chain_segment_handles
+        .first()
+        .map(|&standard_segment_handle| {
+          impulse_joint_set.insert(
+            initial_chain_segment_handle,
+            standard_segment_handle,
+            RevoluteJointBuilder::new()
+              .local_anchor1(
+                vector![
+                  initial_chain_segment_length / 2.0,
+                  CHAIN_SEGMENT_HEIGHT / 2.0,
+                ]
+                .into(),
+              )
+              .local_anchor2(right_segment_anchor)
+              .limits(CHAIN_SEGMENT_LIMITS),
+            true,
+          )
+        });
+
+      chain_segment_handles
+        .iter()
+        .reduce(|&segment_a_handle, segment_b_handle| {
+          impulse_joint_set.insert(
+            segment_a_handle,
+            *segment_b_handle,
+            RevoluteJointBuilder::new()
+              .local_anchor1(left_segment_anchor)
+              .local_anchor2(right_segment_anchor)
+              .limits(CHAIN_SEGMENT_LIMITS),
+            true,
+          );
+          segment_b_handle
+        });
+
+      chain_segment_handles.last().map(|&last_segment_handle| {
+        impulse_joint_set.insert(
+          last_segment_handle,
+          mount_point,
+          RevoluteJointBuilder::new()
+            .local_anchor1(left_segment_anchor)
+            .local_anchor2(vector![0.0, 0.0].into()),
+          true,
+        );
+      });
+
+      chain_segment_handles
+        .push_front(initial_chain_segment_handle)
+        .iter()
+        .map(|&handle| {
+          let handle = EntityHandle::RigidBody(handle);
+          (
+            handle,
+            Rc::new(Entity {
+              handle,
+              components: ComponentSet::new().insert(ChainSegment),
+              label: "".to_string(),
+            }),
+          )
+        })
+        .collect::<HashTrieMap<_, _>>()
+    });
+
+    let entities = if let Some(chain_entities) = chain_entities {
+      entities
+        .into_iter()
+        .chain(&chain_entities)
+        .map(|(&handle, entity)| (handle, Rc::clone(entity)))
+        .collect::<HashTrieMap<_, _>>()
+    } else {
+      entities
+    };
+
+    /* MARK: Kill chain */
+    let entities = if ability_system.kill_chain {
+      entities
+        .into_iter()
+        .filter(|(handle, entity)| {
+          if entity.components.get::<ChainSegment>().is_none() {
+            return true;
+          }
+
+          match *handle {
+            EntityHandle::Collider(collider_handle) => {
+              collider_set.remove(*collider_handle, &mut island_manager, rigid_body_set, true);
+            }
+            EntityHandle::RigidBody(rigid_body_handle) => {
+              rigid_body_set.remove(
+                *rigid_body_handle,
+                &mut island_manager,
+                &mut collider_set,
+                &mut impulse_joint_set,
+                &mut multibody_joint_set,
+                true,
+              );
+            }
+          }
+
+          false
+        })
+        .map(|(&handle, entity)| (handle, Rc::clone(entity)))
+        .collect::<HashTrieMap<_, _>>()
+    } else {
+      entities
+    };
+
     /* MARK: Step physics */
     physics_pipeline.step(
       &vector![0.0, 0.0],
@@ -1064,6 +1236,7 @@ impl System for PhysicsSystem {
       load_new_map,
       save_point_contact,
       save_point_contact_last_frame: self.save_point_contact,
+      mount_points_in_range,
     })
   }
 }
