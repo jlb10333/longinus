@@ -6,12 +6,12 @@ use rapier2d::{
     ColliderHandle, ColliderSet, ImpulseJointHandle, NarrowPhase, RigidBodyHandle, RigidBodySet,
   },
 };
-use rpds::List;
+use rpds::{HashTrieSet, List};
 
 use crate::{
   combat::WeaponModuleKind,
   enemy::{EnemyDefender, EnemySeeker, EnemySeekerGenerator},
-  load_map::{MapAbilityType, MapEnemyName, MapGateState},
+  load_map::{MapAbilityType, MapEnemyName},
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -216,11 +216,10 @@ pub struct Gate {
 }
 impl Component for Gate {}
 
-pub struct GateTrigger {
-  pub gate_id: i32,
-  pub action: MapGateState,
+pub struct TouchSensor {
+  pub target_activation: f32,
 }
-impl Component for GateTrigger {}
+impl Component for TouchSensor {}
 
 pub struct GravitySource {
   pub strength: f32,
@@ -242,6 +241,7 @@ impl Component for ChainMountArea {}
 
 pub struct Switch {
   pub joint: ImpulseJointHandle,
+  pub id: i32,
 }
 impl Component for Switch {}
 
@@ -250,7 +250,12 @@ impl Component for ChainSegment {}
 
 pub struct Activatable {
   pub id: i32,
-  pub target_activatable_id: List<i32>,
   pub activation: f32,
 }
 impl Component for Activatable {}
+
+pub struct Activator {
+  pub activatable_ids: HashTrieSet<i32>,
+  pub activation: Option<f32>,
+}
+impl Component for Activator {}

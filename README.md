@@ -7,13 +7,13 @@
 - Add gameover menu
 - Add kinematic damaging hazards (use enemy?)
 - Restrict camera movement to map boundaries
-- Unbreak gate trigger (use new activation system)
 - Add stationary chain mount point map loading
 - Allow switches to be loaded in any rotation
 - Allow switches to be loaded with an initial activation
 - Add chain ability pickup
 - Prevent infinite boost
 
+- BUG: Culling is over-eager for cuboids in the direct corners of the screen
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
 - CLEANUP: Replace `HealOnCollision` with `Damager` with negative damage
@@ -32,6 +32,7 @@
 - Shield
   - Lock-on stun weapon emplacements
   - Fixed lasers (shield blocks the lasers' path and allows the player to proceed undamaged)
+    - Cranks with part of their path blocked by a laser, so you need to shield in order to turn the crank
 + Chain
   - Cranks (grab on with chain, spin around to make something in the environment move)
     - High gravity sections where you have to boost against gravity to get around the crank

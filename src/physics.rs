@@ -3,7 +3,7 @@ use rapier2d::{
   na::{Isometry2, OPoint, Unit},
   prelude::*,
 };
-use rpds::{HashTrieMap, List, list};
+use rpds::{HashTrieMap, List, ht_set, list};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
@@ -11,10 +11,10 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
-    Activatable, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
-    DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity, EntityHandle, Gate, GateTrigger,
+    Activatable, Activator, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
+    DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity, EntityHandle, Gate,
     GiveAbilityOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision,
-    MapTransitionOnCollision, SaveMenuOnCollision, Switch,
+    MapTransitionOnCollision, SaveMenuOnCollision, Switch, TouchSensor,
   },
   enemy::EnemySystem,
   load_map::{
@@ -188,7 +188,6 @@ fn load_new_map(
         components: ComponentSet::new()
           .insert(Activatable {
             id: gate.id,
-            target_activatable_id: List::new(),
             activation: if gate.collider.is_enabled() {
               1.0
             } else {
@@ -201,17 +200,24 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
-  /* MARK: Spawn gate triggers */
-  let gate_triggers = map
-    .gate_triggers
+  /* MARK: Spawn touch sensors */
+  let touch_sensors = map
+    .touch_sensors
     .iter()
-    .map(|gate_trigger| Entity {
-      handle: EntityHandle::Collider(collider_set.insert(gate_trigger.collider.clone())),
-      components: ComponentSet::new().insert(GateTrigger {
-        gate_id: gate_trigger.gate_id,
-        action: gate_trigger.action.clone(),
-      }),
-      label: format!("gt{}", gate_trigger.gate_id),
+    .map(|touch_sensor| Entity {
+      handle: EntityHandle::Collider(collider_set.insert(touch_sensor.collider.clone())),
+      components: ComponentSet::new()
+        .insert(TouchSensor {
+          target_activation: match touch_sensor.action {
+            crate::load_map::TouchSensorAction::Close => 1.0,
+            crate::load_map::TouchSensorAction::Open => -1.0,
+          },
+        })
+        .insert(Activator {
+          activatable_ids: ht_set![touch_sensor.target_activatable_id],
+          activation: None,
+        }),
+      label: format!("gt{}", touch_sensor.target_activatable_id),
     })
     .collect::<Vec<_>>();
 
@@ -302,12 +308,12 @@ fn load_new_map(
           handle: EntityHandle::RigidBody(target_mount_body),
           components: ComponentSet::new()
             .insert(Switch {
+              id: chain_switch.id,
               joint: joint_handle,
             })
-            .insert(Activatable {
-              id: chain_switch.id,
-              activation: 0.0,
-              target_activatable_id: list![chain_switch.activatable_id],
+            .insert(Activator {
+              activation: None,
+              activatable_ids: ht_set![chain_switch.activatable_id],
             }),
           label: "switch".to_string(),
         },
@@ -404,7 +410,7 @@ fn load_new_map(
     .chain(ability_pickups)
     .chain(map_transitions)
     .chain(save_points)
-    .chain(gate_triggers)
+    .chain(touch_sensors)
     .chain(gravity_sources)
     .chain(chain_switches)
     .map(|entity| (entity.handle, Rc::new(entity)))
@@ -1174,24 +1180,56 @@ impl System for PhysicsSystem {
       .into_iter()
       .map(|(&handle, entity)| {
         if let Some(switch) = entity.components.get::<Switch>()
-          && let Some(activatable) = entity.components.get::<Activatable>()
+          && let Some(activator) = entity.components.get::<Activator>()
         {
           let joint = impulse_joint_set.get(switch.joint).unwrap();
           let prismatic = joint.data.as_prismatic().unwrap();
 
-          let activation = (rigid_body_set[joint.body1].translation()
-            - rigid_body_set[joint.body2].translation())
-          .dot(&prismatic.local_axis1());
+          let activation = Some(
+            (rigid_body_set[joint.body1].translation() - rigid_body_set[joint.body2].translation())
+              .dot(&prismatic.local_axis1()),
+          );
 
           (
             handle,
             Rc::new(Entity {
               handle,
               label: entity.label.clone(),
-              components: entity.components.with(Activatable {
+              components: entity.components.with(Activator {
                 activation,
-                id: activatable.id,
-                target_activatable_id: activatable.target_activatable_id.clone(),
+                activatable_ids: activator.activatable_ids.clone(),
+              }),
+            }),
+          )
+        } else {
+          (handle, Rc::clone(entity))
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
+
+    /* MARK: Calculate activation for touch sensors */
+    let entities = entities
+      .into_iter()
+      .map(|(&handle, entity)| {
+        if let Some(touch_sensor) = entity.components.get::<TouchSensor>()
+          && let Some(activator) = entity.components.get::<Activator>()
+        {
+          let activation = if !handle
+            .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+            .is_empty()
+          {
+            Some(touch_sensor.target_activation)
+          } else {
+            None
+          };
+          (
+            handle,
+            Rc::new(Entity {
+              handle,
+              label: entity.label.clone(),
+              components: entity.components.with(Activator {
+                activatable_ids: activator.activatable_ids.clone(),
+                activation,
               }),
             }),
           )
@@ -1209,38 +1247,33 @@ impl System for PhysicsSystem {
           let targetting_activations = entities
             .iter()
             .filter_map(|(_, entity)| {
-              entity
-                .components
-                .get::<Activatable>()
-                .and_then(|other_activatable| {
-                  if other_activatable
-                    .target_activatable_id
-                    .iter()
-                    .any(|&target_id| target_id == activatable.id)
-                  {
-                    Some(other_activatable.activation)
-                  } else {
-                    None
-                  }
-                })
+              entity.components.get::<Activator>().and_then(|activator| {
+                if activator.activatable_ids.contains(&activatable.id) {
+                  activator.activation
+                } else {
+                  None
+                }
+              })
             })
             .collect::<Vec<_>>();
 
-          let activation = targetting_activations.iter().copied().sum::<f32>()
-            / targetting_activations.len() as f32;
-
-          (
-            handle,
-            Rc::new(Entity {
+          if targetting_activations.is_empty() {
+            (handle, Rc::clone(entity))
+          } else {
+            let activation = targetting_activations.iter().copied().sum::<f32>()
+              / targetting_activations.len() as f32;
+            (
               handle,
-              label: format!("{}", activation),
-              components: entity.components.with(Activatable {
-                activation,
-                id: activatable.id,
-                target_activatable_id: activatable.target_activatable_id.clone(),
+              Rc::new(Entity {
+                handle,
+                label: format!("{}", activation),
+                components: entity.components.with(Activatable {
+                  activation,
+                  id: activatable.id,
+                }),
               }),
-            }),
-          )
+            )
+          }
         } else {
           (handle, Rc::clone(entity))
         }

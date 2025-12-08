@@ -144,7 +144,7 @@ struct MapSavePoint {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub enum MapGateState {
+pub enum TouchSensorAction {
   Open,
   Close,
 }
@@ -158,7 +158,7 @@ enum MapGateInitialStateClass {
 struct MapGateInitialState {
   #[serde(rename = "name")]
   _name: MapGateInitialStateClass,
-  value: MapGateState,
+  value: TouchSensorAction,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -187,7 +187,7 @@ enum MapGateTriggerGateActionClass {
 struct MapGateTriggerGateAction {
   #[serde(rename = "name")]
   _name: MapGateTriggerGateActionClass,
-  value: MapGateState,
+  value: TouchSensorAction,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -461,10 +461,10 @@ pub struct Gate {
 }
 
 #[derive(Clone)]
-pub struct GateTrigger {
-  pub gate_id: i32,
+pub struct TouchSensor {
+  pub target_activatable_id: i32,
   pub collider: Collider,
-  pub action: MapGateState,
+  pub action: TouchSensorAction,
 }
 
 #[derive(Clone)]
@@ -521,7 +521,7 @@ pub enum MapComponent {
   MapTransition(MapTransition),
   SavePoint(SavePoint),
   Gate(Gate),
-  GateTrigger(GateTrigger),
+  GateTrigger(TouchSensor),
   GravitySource(GravitySource),
   AbilityPickup(AbilityPickup),
   ChainSwitch(ChainSwitch),
@@ -599,12 +599,12 @@ impl Object {
       Object::Gate(gate) => MapComponent::Gate(Gate {
         id: gate.id,
         collider: cuboid_collider_from_map(gate.x, gate.y, gate.width, gate.height, map_height)
-          .enabled(matches!(gate.properties.0.value, MapGateState::Close))
+          .enabled(matches!(gate.properties.0.value, TouchSensorAction::Close))
           .build(),
       }),
 
-      Object::GateTrigger(gate_trigger) => MapComponent::GateTrigger(GateTrigger {
-        gate_id: gate_trigger.properties.1.value,
+      Object::GateTrigger(gate_trigger) => MapComponent::GateTrigger(TouchSensor {
+        target_activatable_id: gate_trigger.properties.1.value,
         collider: cuboid_collider_from_map(
           gate_trigger.x,
           gate_trigger.y,
@@ -825,7 +825,7 @@ pub struct Map {
   pub map_transitions: Vec<MapTransition>,
   pub save_points: Vec<SavePoint>,
   pub gates: Vec<Gate>,
-  pub gate_triggers: Vec<GateTrigger>,
+  pub touch_sensors: Vec<TouchSensor>,
   pub gravity_sources: Vec<GravitySource>,
   pub ability_pickups: Vec<AbilityPickup>,
   pub chain_switches: Vec<ChainSwitch>,
@@ -984,7 +984,7 @@ impl RawMap {
       map_transitions,
       save_points,
       gates,
-      gate_triggers,
+      touch_sensors: gate_triggers,
       gravity_sources,
       ability_pickups,
       chain_switches,
