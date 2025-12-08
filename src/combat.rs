@@ -135,7 +135,7 @@ enum ProjectileType {
 #[derive(Clone)]
 pub struct Weapon {
   projectile_type: ProjectileType,
-  slot_positions: HashSet<SlotPosition>,
+  slot_positions: HashTrieSet<SlotPosition>,
   damage_mod: f32,
   velocity_mod: f32,
   current_cooldown: f32,
@@ -165,17 +165,19 @@ impl Weapon {
       return (self.clone(), Vec::new());
     }
 
-    let slot_positions = if self.slot_positions.len() == 0 {
-      &HashSet::from([SlotPosition::FrontAhead])
+    let slot_positions = if self.slot_positions.size() == 0 {
+      &ht_set![SlotPosition::FrontAhead]
     } else {
       &self.slot_positions
     };
 
-    let mut new_weapon = self.clone();
-    new_weapon.current_cooldown = new_weapon.max_cooldown;
+    println!("{}", self.max_cooldown);
 
     return (
-      new_weapon,
+      Weapon {
+        current_cooldown: self.max_cooldown,
+        ..self.clone()
+      },
       slot_positions
         .iter()
         .map(|slot_position| {
@@ -246,7 +248,7 @@ fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> W
   return Weapon {
     projectile_type,
     max_cooldown,
-    slot_positions: HashSet::from([]),
+    slot_positions: ht_set![],
     current_cooldown: max_cooldown,
     damage_mod: 1.0,
     velocity_mod: 1.0,
@@ -262,21 +264,42 @@ fn plasma() -> Weapon {
 
 // F2SL
 fn front_2_slot(weapon: &Weapon) -> Weapon {
-  let mut new_weapon = weapon.clone();
-  new_weapon
-    .slot_positions
-    .insert(SlotPosition::FrontDoubleLeft);
-  new_weapon
-    .slot_positions
-    .insert(SlotPosition::FrontDoubleRight);
-  return new_weapon;
+  Weapon {
+    slot_positions: weapon
+      .slot_positions
+      .insert(SlotPosition::FrontDoubleLeft)
+      .insert(SlotPosition::FrontDoubleRight),
+    ..weapon.clone()
+  }
+}
+
+// 45SL
+fn forty_five_slot(weapon: &Weapon) -> Weapon {
+  Weapon {
+    slot_positions: weapon
+      .slot_positions
+      .insert(SlotPosition::Front45Left)
+      .insert(SlotPosition::Front45Right),
+    ..weapon.clone()
+  }
 }
 
 // PWUP
-fn double_damage(weapon: &Weapon) -> Weapon {
-  let mut new_weapon = weapon.clone();
-  new_weapon.damage_mod *= 2.0;
-  return new_weapon;
+fn double_damage_75_freq(weapon: &Weapon) -> Weapon {
+  Weapon {
+    damage_mod: weapon.damage_mod * 2.0,
+    max_cooldown: weapon.max_cooldown * 1.5,
+    ..weapon.clone()
+  }
+}
+
+// FQUP
+fn double_freq_75_damage(weapon: &Weapon) -> Weapon {
+  Weapon {
+    max_cooldown: weapon.max_cooldown * 0.5,
+    damage_mod: weapon.damage_mod * 0.75,
+    ..weapon.clone()
+  }
 }
 
 pub type UnequippedModules = Vec<WeaponModuleKind>;
@@ -299,7 +322,9 @@ pub type EquippedModules = Matrix<
 pub enum WeaponModuleKind {
   Plasma,
   Front2Slot,
-  DoubleDamage,
+  FortyFiveSlot,
+  DoubleDamage75Freq,
+  DoubleFreq75Damage,
 }
 
 type Generator = fn() -> Weapon;
@@ -314,6 +339,7 @@ pub enum Direction {
   Right,
 }
 use Direction::*;
+use rpds::{HashTrieSet, ht_set};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
@@ -328,8 +354,14 @@ fn weapon_module_from_kind(kind: &WeaponModuleKind) -> WeaponModule {
     WeaponModuleKind::Front2Slot => {
       WeaponModule::Modulator(Rc::new(front_2_slot), HashSet::from([Down]))
     }
-    WeaponModuleKind::DoubleDamage => {
-      WeaponModule::Modulator(Rc::new(double_damage), HashSet::from([Left]))
+    WeaponModuleKind::DoubleDamage75Freq => {
+      WeaponModule::Modulator(Rc::new(double_damage_75_freq), HashSet::from([Left]))
+    }
+    WeaponModuleKind::DoubleFreq75Damage => {
+      WeaponModule::Modulator(Rc::new(double_freq_75_damage), HashSet::from([Right]))
+    }
+    WeaponModuleKind::FortyFiveSlot => {
+      WeaponModule::Modulator(Rc::new(forty_five_slot), HashSet::from([Down]))
     }
   }
 }

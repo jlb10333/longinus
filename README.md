@@ -20,6 +20,43 @@
 
 ## GAME DESIGN:
 
+### Combat
+- Weapons
+  - Missile
+    - Self-propelling, slow moving, low frequency, overall hard to use, while bieng high-damage with an explosive blast radius
+  - Laser
+    - Very fast-moving, almost hitscan, as well as being high frequency, while being low-damage
+- Modules
+  - Slots
+    + Front two
+    + 45 degree
+    - Side
+    - Reverse
+  - Status Effects (all build up an invisible bar before taking effect, like elden ring)
+    - Slow
+    - Paralysis
+    - Decay
+    - Bleed
+    - Stop
+    - Explode
+  - Misc
+    + Double damage, .75 freq
+    + Double freq, .75 damage
+    - Enemy-seeking
+    - Pierce (pass through enemies/walls)
+
+### Enemies
+- Dragonspawn
+  - Goblin
+    - Shoots a slow moving projectile at the player, then moves in a random direction, then fires again once stopped.
+  - Shade
+    - Invulnerable while stopped, remains stopped for a bit before leaping towards the player in an arc, after which it slows down and is invulnerable again once stopped. At the apex of the arc, it fires two slow-moving shots to either side of it.
+  - Spider
+    - Lies dormant on a wall, with an egg separately laying away from it away from the wall. Launches towards the egg if and when the player touches it, at which point it remains in that spot and fires bursts of two quick-moving shots each at the player's location. 
+- Angel automatons
+  + Defender
+  + Seeker
+
 ### Keys & Locks:
 
 + Weapon (P)
