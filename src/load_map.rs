@@ -688,7 +688,7 @@ impl Object {
             0.0,
             map_height,
           ))
-          .linear_damping(20.0)
+          // .linear_damping(20.0)
           .build(),
         switch_joint: PrismaticJointBuilder::new(Unit::new_normalize(vector![1.0, 0.0]))
           .limits([-1.0, 1.0])

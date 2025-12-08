@@ -1182,13 +1182,26 @@ impl System for PhysicsSystem {
         if let Some(switch) = entity.components.get::<Switch>()
           && let Some(activator) = entity.components.get::<Activator>()
         {
-          let joint = impulse_joint_set.get(switch.joint).unwrap();
-          let prismatic = joint.data.as_prismatic().unwrap();
+          let joint = impulse_joint_set.get_mut(switch.joint, true).unwrap();
+          let prismatic = joint.data.as_prismatic_mut().unwrap();
 
-          let activation = Some(
-            (rigid_body_set[joint.body1].translation() - rigid_body_set[joint.body2].translation())
-              .dot(&prismatic.local_axis1()),
+          let activation = (rigid_body_set[joint.body1].translation()
+            - rigid_body_set[joint.body2].translation())
+          .dot(&prismatic.local_axis1());
+
+          let limits = prismatic.limits().unwrap();
+
+          prismatic.set_motor_position(
+            if activation < 0.0 {
+              limits.max
+            } else {
+              limits.min
+            },
+            3.2,
+            2.0,
           );
+
+          prismatic.set_motor_velocity(if activation < 0.0 { 1.0 } else { -1.0 }, 1.0);
 
           (
             handle,
@@ -1196,7 +1209,7 @@ impl System for PhysicsSystem {
               handle,
               label: entity.label.clone(),
               components: entity.components.with(Activator {
-                activation,
+                activation: Some(activation),
                 activatable_ids: activator.activatable_ids.clone(),
               }),
             }),
