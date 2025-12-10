@@ -430,32 +430,46 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
     crate::menu::GameMenuKind::InventoryPickSlot(_, inventory_update) => {
       draw_rectangle(
         screen_width() * 0.45,
-        screen_height() * 0.45,
+        screen_height() * 0.4,
         screen_width() * 0.5,
         screen_height() * 0.5,
-        LIGHTGRAY,
+        COLOR_2,
       );
 
       draw_text(
-        "-",
-        (0.5 + (menu.cursor_position.x as f32 * 0.05)) * screen_width(),
-        (0.5 + (menu.cursor_position.y as f32 * 0.05)) * screen_height(),
+        if menu.cursor_position.x == 0 && menu.cursor_position.y == -1 {
+          "-confirm-"
+        } else {
+          "confirm"
+        },
+        0.5 * screen_width(),
+        0.45 * screen_height(),
         40.0,
-        WHITE,
+        COLOR_1,
       );
+
+      if menu.cursor_position.y > -1 {
+        draw_text(
+          "-",
+          (0.5 + (menu.cursor_position.x as f32 * 0.05)) * screen_width(),
+          (0.5 + (menu.cursor_position.y as f32 * 0.05)) * screen_height(),
+          40.0,
+          COLOR_1,
+        );
+      }
 
       inventory_update
         .equipped_modules
         .iter()
         .enumerate()
         .for_each(|(index, equipped_module)| {
-          if let Some(module_kind) = equipped_module.clone() {
+          if let Some(module_kind) = equipped_module {
             draw_text(
-              debug_module_text(&module_kind),
+              debug_module_text(module_kind),
               (0.5 + ((index as i32 % EQUIP_SLOTS_WIDTH) as f32 * 0.05)) * screen_width(),
               (0.5 + ((index as i32 / EQUIP_SLOTS_WIDTH) as f32 * 0.05)) * screen_height(),
               40.0,
-              WHITE,
+              COLOR_1,
             );
           };
         });
@@ -473,7 +487,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
               * screen_width(),
             (0.5 + ((index as i32 / INVENTORY_WRAP_WIDTH) as f32 * 0.05)) * screen_height(),
             40.0,
-            WHITE,
+            COLOR_1,
           );
         });
     }
@@ -521,5 +535,7 @@ fn debug_module_text(module_kind: &WeaponModuleKind) -> &'static str {
     WeaponModuleKind::DoubleFreq75Damage => "F",
     WeaponModuleKind::Front2Slot => "2",
     WeaponModuleKind::FortyFiveSlot => "4",
+    WeaponModuleKind::SideSlot => "S",
+    WeaponModuleKind::MirrorSlot => "M",
   }
 }

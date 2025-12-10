@@ -22,20 +22,17 @@ use rapier2d::{
 };
 
 pub fn distance_projection_physics(angle: f32, distance: f32) -> PhysicsVector {
-  return PhysicsVector::from_vec(vector![
-    angle.cos() * distance,
-    -1.0 * angle.sin() * distance
-  ]);
+  PhysicsVector::from_vec(vector![angle.cos() * distance, -angle.sin() * distance])
 }
 
 pub fn distance_projection_screen(angle: f32, distance: f32) -> ScreenVector {
-  return ScreenVector::from_vec(vector![angle.cos() * distance, angle.sin() * distance]);
+  ScreenVector::from_vec(vector![angle.cos() * distance, angle.sin() * distance])
 }
 
 const RETICLE_DISTANCE_SCREEN: f32 = 20.0;
 
 pub fn get_reticle_pos(angle: f32) -> ScreenVector {
-  return distance_projection_screen(angle, RETICLE_DISTANCE_SCREEN);
+  distance_projection_screen(angle, RETICLE_DISTANCE_SCREEN)
 }
 
 pub struct Slot {
@@ -64,14 +61,12 @@ pub type ProjectileSlots = HashMap<SlotPosition, Slot>; // 12
 const SLOT_DISTANCE_PHYSICS: f32 = 1.0;
 
 pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
-  let slot = |position_angle_offset: f32, shoot_direction_angle_offset: f32| {
-    return Slot {
-      offset: distance_projection_physics(
-        reticle_angle + position_angle_offset,
-        SLOT_DISTANCE_PHYSICS,
-      ),
-      angle: reticle_angle + shoot_direction_angle_offset,
-    };
+  let slot = |position_angle_offset: f32, shoot_direction_angle_offset: f32| Slot {
+    offset: distance_projection_physics(
+      reticle_angle + position_angle_offset,
+      SLOT_DISTANCE_PHYSICS,
+    ),
+    angle: reticle_angle + shoot_direction_angle_offset,
   };
 
   /* FRONT */
@@ -99,7 +94,7 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
   let back_45_left = slot(PI - PI / 4.0, PI - PI / 4.0);
   let back_45_right = slot(PI + PI / 4.0, PI + PI / 4.0);
 
-  return HashMap::from([
+  HashMap::from([
     (SlotPosition::FrontAhead, front_ahead),
     (SlotPosition::FrontDoubleLeft, front_double_left),
     (SlotPosition::FrontDoubleRight, front_double_right),
@@ -112,9 +107,7 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
     (SlotPosition::BackDoubleRight, back_double_right),
     (SlotPosition::Back45Left, back_45_left),
     (SlotPosition::Back45Right, back_45_right),
-  ]);
-
-  /*  */
+  ])
 }
 
 #[derive(Clone)]
@@ -173,7 +166,7 @@ impl Weapon {
 
     println!("{}", self.max_cooldown);
 
-    return (
+    (
       Weapon {
         current_cooldown: self.max_cooldown,
         ..self.clone()
@@ -190,15 +183,15 @@ impl Weapon {
             base_speed_from_projectile_type(self.projectile_type) * self.velocity_mod,
           );
 
-          return Projectile {
+          Projectile {
             collider: base_projectile.collider,
             damage: base_projectile.damage * self.damage_mod,
             offset: slot.offset,
             initial_force,
-          };
+          }
         })
         .collect(),
-    );
+    )
   }
 }
 
@@ -237,29 +230,29 @@ fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projecti
 }
 
 fn base_speed_from_projectile_type(projectile_type: ProjectileType) -> f32 {
-  return match projectile_type {
+  match projectile_type {
     ProjectileType::Plasma => 1.0,
     ProjectileType::Missle => 1.0,
     ProjectileType::Laser => 1.0,
-  };
+  }
 }
 
 fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> Weapon {
-  return Weapon {
+  Weapon {
     projectile_type,
     max_cooldown,
     slot_positions: ht_set![],
     current_cooldown: max_cooldown,
     damage_mod: 1.0,
     velocity_mod: 1.0,
-  };
+  }
 }
 
 /* WeaponComponent Implementations */
 
 // PLSM
 fn plasma() -> Weapon {
-  return weapon_with_defaults(ProjectileType::Plasma, 30.0);
+  weapon_with_defaults(ProjectileType::Plasma, 30.0)
 }
 
 // F2SL
@@ -280,6 +273,48 @@ fn forty_five_slot(weapon: &Weapon) -> Weapon {
       .slot_positions
       .insert(SlotPosition::Front45Left)
       .insert(SlotPosition::Front45Right),
+    ..weapon.clone()
+  }
+}
+
+// SDSL
+fn side_slot(weapon: &Weapon) -> Weapon {
+  Weapon {
+    slot_positions: weapon
+      .slot_positions
+      .insert(SlotPosition::SideLeft)
+      .insert(SlotPosition::SideRight),
+    ..weapon.clone()
+  }
+}
+
+// MRSL
+fn mirror_slot(weapon: &Weapon) -> Weapon {
+  Weapon {
+    slot_positions: weapon
+      .slot_positions
+      .iter()
+      .flat_map(|&slot_position| {
+        let reversed_slot_position = match slot_position {
+          SlotPosition::Back45Left => Some(SlotPosition::Front45Left),
+          SlotPosition::Back45Right => Some(SlotPosition::Front45Right),
+          SlotPosition::BackAhead => Some(SlotPosition::FrontAhead),
+          SlotPosition::BackDoubleLeft => Some(SlotPosition::FrontDoubleLeft),
+          SlotPosition::BackDoubleRight => Some(SlotPosition::FrontDoubleRight),
+          SlotPosition::Front45Left => Some(SlotPosition::Back45Left),
+          SlotPosition::Front45Right => Some(SlotPosition::Back45Right),
+          SlotPosition::FrontAhead => Some(SlotPosition::BackAhead),
+          SlotPosition::FrontDoubleLeft => Some(SlotPosition::BackDoubleLeft),
+          SlotPosition::FrontDoubleRight => Some(SlotPosition::BackDoubleRight),
+          SlotPosition::SideLeft => None,
+          SlotPosition::SideRight => None,
+        };
+
+        reversed_slot_position
+          .map(|reversed_slot_position| vec![slot_position, reversed_slot_position])
+          .unwrap_or(vec![slot_position])
+      })
+      .collect(),
     ..weapon.clone()
   }
 }
@@ -323,6 +358,8 @@ pub enum WeaponModuleKind {
   Plasma,
   Front2Slot,
   FortyFiveSlot,
+  SideSlot,
+  MirrorSlot,
   DoubleDamage75Freq,
   DoubleFreq75Damage,
 }
@@ -354,14 +391,20 @@ fn weapon_module_from_kind(kind: &WeaponModuleKind) -> WeaponModule {
     WeaponModuleKind::Front2Slot => {
       WeaponModule::Modulator(Rc::new(front_2_slot), HashSet::from([Down]))
     }
+    WeaponModuleKind::FortyFiveSlot => {
+      WeaponModule::Modulator(Rc::new(forty_five_slot), HashSet::from([Down]))
+    }
+    WeaponModuleKind::SideSlot => {
+      WeaponModule::Modulator(Rc::new(side_slot), HashSet::from([Down]))
+    }
     WeaponModuleKind::DoubleDamage75Freq => {
       WeaponModule::Modulator(Rc::new(double_damage_75_freq), HashSet::from([Left]))
     }
     WeaponModuleKind::DoubleFreq75Damage => {
       WeaponModule::Modulator(Rc::new(double_freq_75_damage), HashSet::from([Right]))
     }
-    WeaponModuleKind::FortyFiveSlot => {
-      WeaponModule::Modulator(Rc::new(forty_five_slot), HashSet::from([Down]))
+    WeaponModuleKind::MirrorSlot => {
+      WeaponModule::Modulator(Rc::new(mirror_slot), HashSet::from([Down]))
     }
   }
 }
@@ -370,12 +413,10 @@ fn build_adjacent_modules(
   equipped_modules: EquippedModules,
   current_module_position: Vector2<usize>,
 ) -> RcModulator {
-  let module_left = if current_module_position.x <= 0 {
+  let module_left = if current_module_position.x == 0 {
     None
   } else {
-    let equipped_modules_clone = equipped_modules.clone();
     equipped_modules.data.0[current_module_position.y][current_module_position.x - 1]
-      .clone()
       .bind(weapon_module_from_kind)
       .map(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
@@ -383,7 +424,7 @@ fn build_adjacent_modules(
           if attachment_points.contains(&Right) {
             Some(Rc::new(move |weapon: &Weapon| {
               build_adjacent_modules(
-                equipped_modules_clone.clone(),
+                equipped_modules,
                 vector![current_module_position.x - 1, current_module_position.y],
               )(&modulator(weapon))
             }) as RcModulator)
@@ -398,9 +439,7 @@ fn build_adjacent_modules(
   let module_right = if current_module_position.x >= (EQUIP_SLOTS_WIDTH - 1) as usize {
     None
   } else {
-    let equipped_modules_clone = equipped_modules.clone();
-    equipped_modules.clone().data.0[current_module_position.y][current_module_position.x + 1]
-      .clone()
+    equipped_modules.data.0[current_module_position.y][current_module_position.x + 1]
       .bind(weapon_module_from_kind)
       .map(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
@@ -408,7 +447,7 @@ fn build_adjacent_modules(
           if attachment_points.contains(&Left) {
             Some(Rc::new(move |weapon: &Weapon| {
               build_adjacent_modules(
-                equipped_modules_clone.clone(),
+                equipped_modules,
                 vector![current_module_position.x + 1, current_module_position.y],
               )(&modulator(weapon))
             }) as RcModulator)
@@ -420,12 +459,10 @@ fn build_adjacent_modules(
       .flatten()
   };
 
-  let module_up = if current_module_position.y <= 0 {
+  let module_up = if current_module_position.y == 0 {
     None
   } else {
-    let equipped_modules_clone = equipped_modules.clone();
     equipped_modules.data.0[current_module_position.y - 1][current_module_position.x]
-      .clone()
       .bind(weapon_module_from_kind)
       .map(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
@@ -433,7 +470,7 @@ fn build_adjacent_modules(
           if attachment_points.contains(&Down) {
             Some(Rc::new(move |weapon: &Weapon| {
               build_adjacent_modules(
-                equipped_modules_clone.clone(),
+                equipped_modules,
                 vector![current_module_position.x, current_module_position.y - 1],
               )(&modulator(weapon))
             }) as RcModulator)
@@ -448,9 +485,7 @@ fn build_adjacent_modules(
   let module_down = if current_module_position.y >= (EQUIP_SLOTS_HEIGHT - 1) as usize {
     None
   } else {
-    let equipped_modules_clone = equipped_modules.clone();
     equipped_modules.data.0[current_module_position.y + 1][current_module_position.x]
-      .clone()
       .bind(weapon_module_from_kind)
       .map(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
@@ -458,7 +493,7 @@ fn build_adjacent_modules(
           if attachment_points.contains(&Up) {
             Some(Rc::new(move |weapon: &Weapon| {
               build_adjacent_modules(
-                equipped_modules_clone.clone(),
+                equipped_modules,
                 vector![current_module_position.x, current_module_position.y + 1],
               )(&modulator(&weapon.clone()))
             }) as RcModulator)
@@ -494,15 +529,15 @@ fn build_weapons(equipped_modules: EquippedModules) -> Vec<Weapon> {
         .iter()
         .enumerate()
         .map(|(x, value)| {
-          value.clone().bind(|weapon_module_kind| {
-            match weapon_module_from_kind(weapon_module_kind) {
+          value.bind(
+            |weapon_module_kind| match weapon_module_from_kind(weapon_module_kind) {
               WeaponModule::Modulator(_, _) => None,
               WeaponModule::Generator(generator) => Some(build_adjacent_modules(
-                equipped_modules.clone(),
+                equipped_modules,
                 vector![x, y],
               )(&generator())),
-            }
-          })
+            },
+          )
         })
         .collect::<Vec<_>>()
     })
@@ -552,12 +587,12 @@ impl System for CombatSystem {
     let save_data = ctx.input.clone();
 
     /* Initialize default equipped weapons */
-    let equipped_modules = &EquippedModules::from_data(ArrayStorage(save_data.equipped_modules));
+    let equipped_modules = EquippedModules::from_data(ArrayStorage(save_data.equipped_modules));
 
     return Rc::new(Self {
       unequipped_modules: save_data.unequipped_modules,
-      equipped_modules: equipped_modules.clone(),
-      current_weapons: build_weapons(equipped_modules.clone()),
+      equipped_modules,
+      current_weapons: build_weapons(equipped_modules),
       new_projectiles: vec![],
       reticle_angle: 0.0,
       acquired_items: save_data.acquired_items,
@@ -570,7 +605,7 @@ impl System for CombatSystem {
   ) -> Rc<dyn System<Input = Self::Input>> {
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
 
-    if menu_system.active_menus.len() > 0 {
+    if !menu_system.active_menus.is_empty() {
       if let Some(inventory_update) = &menu_system.inventory_update {
         return Rc::new(Self {
           unequipped_modules: inventory_update.unequipped_modules.clone(),
