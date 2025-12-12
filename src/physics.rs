@@ -589,7 +589,11 @@ impl System for PhysicsSystem {
         let player_velocity = rbs_clone[self.player_handle].linvel();
         rigid_body_set[handle].set_linvel(*player_velocity, true);
 
-        rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
+        rigid_body_set[handle].apply_impulse(projectile.initial_impulse.into_vec(), true);
+        rigid_body_set[handle].add_force(
+          projectile.initial_impulse.into_vec().normalize() * projectile.force_mod,
+          true,
+        );
 
         let handle = EntityHandle::RigidBody(handle);
 
@@ -597,7 +601,8 @@ impl System for PhysicsSystem {
           handle,
           Rc::new(Entity {
             handle,
-            components: ComponentSet::new()
+            components: projectile
+              .component_set
               .insert(DestroyOnCollision)
               .insert(Damager {
                 damage: projectile.damage,
@@ -643,7 +648,7 @@ impl System for PhysicsSystem {
               let enemy_velocity = rbs_clone[rigid_body_handle].linvel();
               rigid_body_set[handle].set_linvel(*enemy_velocity, true);
 
-              rigid_body_set[handle].apply_impulse(projectile.initial_force.into_vec(), true);
+              rigid_body_set[handle].apply_impulse(projectile.initial_impulse.into_vec(), true);
 
               (
                 EntityHandle::RigidBody(handle),

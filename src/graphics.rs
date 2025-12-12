@@ -531,11 +531,12 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
 fn debug_module_text(module_kind: &WeaponModuleKind) -> &'static str {
   match module_kind {
     WeaponModuleKind::Plasma => "P",
+    WeaponModuleKind::Missile => "M",
     WeaponModuleKind::DoubleDamage75Freq => "D",
     WeaponModuleKind::DoubleFreq75Damage => "F",
     WeaponModuleKind::Front2Slot => "2",
     WeaponModuleKind::FortyFiveSlot => "4",
     WeaponModuleKind::SideSlot => "S",
-    WeaponModuleKind::MirrorSlot => "M",
+    WeaponModuleKind::MirrorSlot => "R",
   }
 }

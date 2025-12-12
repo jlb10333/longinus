@@ -6,6 +6,7 @@ use std::{
 
 use crate::{
   controls::{ControlsSystem, angle_from_vec},
+  ecs::{ComponentSet, ExplodeOnCollision},
   f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL, MapSystem,
@@ -114,14 +115,16 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
 pub struct Projectile {
   pub collider: Collider,
   pub offset: PhysicsVector,
-  pub initial_force: PhysicsVector,
+  pub initial_impulse: PhysicsVector,
+  pub force_mod: f32,
   pub damage: f32,
+  pub component_set: ComponentSet,
 }
 
 #[derive(Clone, Copy)]
 enum ProjectileType {
   Plasma,
-  Missle,
+  Missile,
   Laser,
 }
 
@@ -144,10 +147,10 @@ impl Weapon {
       self.current_cooldown
     };
 
-    return Self {
+    Self {
       current_cooldown,
       ..self.clone()
-    };
+    }
   }
 
   pub fn fire_if_ready(&self, available_slots: ProjectileSlots) -> (Self, Vec<Projectile>) {
@@ -161,8 +164,6 @@ impl Weapon {
       &self.slot_positions
     };
 
-    println!("{}", self.max_cooldown);
-
     (
       Weapon {
         current_cooldown: self.max_cooldown,
@@ -175,7 +176,7 @@ impl Weapon {
 
           let slot = available_slots.get(slot_position).unwrap();
 
-          let initial_force = distance_projection_physics(
+          let initial_impulse = distance_projection_physics(
             slot.angle,
             base_speed_from_projectile_type(self.projectile_type) * self.velocity_mod,
           );
@@ -184,7 +185,9 @@ impl Weapon {
             collider: base_projectile.collider,
             damage: base_projectile.damage * self.damage_mod,
             offset: slot.offset,
-            initial_force,
+            component_set: base_projectile.component_set,
+            initial_impulse,
+            force_mod: base_projectile.force_mod,
           }
         })
         .collect(),
@@ -204,32 +207,32 @@ fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projecti
         .collision_groups(collision_groups)
         .build(),
       damage: 10.0,
-      initial_force: PhysicsVector::zero(),
+      force_mod: 0.0,
+      component_set: ComponentSet::new(),
+      initial_impulse: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
     },
-    ProjectileType::Missle => Projectile {
-      collider: ColliderBuilder::ball(0.15)
+    ProjectileType::Missile => Projectile {
+      collider: ColliderBuilder::cuboid(0.3, 0.3)
         .collision_groups(collision_groups)
         .build(),
-      damage: 10.0,
-      initial_force: PhysicsVector::zero(),
+      damage: 20.0,
+      force_mod: 2.0,
+      component_set: ComponentSet::new().insert(ExplodeOnCollision {
+        radius: 1.5,
+        strength: 0.02,
+      }),
+      initial_impulse: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
     },
-    ProjectileType::Laser => Projectile {
-      collider: ColliderBuilder::ball(0.15)
-        .collision_groups(collision_groups)
-        .build(),
-      damage: 10.0,
-      initial_force: PhysicsVector::zero(),
-      offset: PhysicsVector::zero(),
-    },
+    ProjectileType::Laser => todo!(),
   }
 }
 
 fn base_speed_from_projectile_type(projectile_type: ProjectileType) -> f32 {
   match projectile_type {
     ProjectileType::Plasma => 1.0,
-    ProjectileType::Missle => 1.0,
+    ProjectileType::Missile => 0.01,
     ProjectileType::Laser => 1.0,
   }
 }
@@ -251,6 +254,11 @@ fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> W
 // PLSM
 fn plasma() -> Weapon {
   weapon_with_defaults(ProjectileType::Plasma, 30.0)
+}
+
+// MSLE
+fn missile() -> Weapon {
+  weapon_with_defaults(ProjectileType::Missile, 75.0)
 }
 
 // F2SL
@@ -331,6 +339,7 @@ pub type EquippedModules = Matrix<
 #[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 pub enum WeaponModuleKind {
   Plasma,
+  Missile,
   Front2Slot,
   FortyFiveSlot,
   SideSlot,
@@ -363,6 +372,7 @@ enum WeaponModule {
 fn weapon_module_from_kind(kind: &WeaponModuleKind) -> WeaponModule {
   match *kind {
     WeaponModuleKind::Plasma => WeaponModule::Generator(plasma),
+    WeaponModuleKind::Missile => WeaponModule::Generator(missile),
     WeaponModuleKind::Front2Slot => {
       WeaponModule::Modulator(Rc::new(front_2_slot), HashSet::from([Down]))
     }
@@ -393,7 +403,7 @@ fn build_adjacent_modules(
   } else {
     equipped_modules.data.0[current_module_position.y][current_module_position.x - 1]
       .bind(weapon_module_from_kind)
-      .map(|weapon_module| match weapon_module {
+      .and_then(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
           if attachment_points.contains(&Right) {
@@ -408,7 +418,6 @@ fn build_adjacent_modules(
           }
         }
       })
-      .flatten()
   };
 
   let module_right = if current_module_position.x >= (EQUIP_SLOTS_WIDTH - 1) as usize {

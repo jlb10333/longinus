@@ -259,3 +259,9 @@ pub struct Activator {
   pub activation: Option<f32>,
 }
 impl Component for Activator {}
+
+pub struct ExplodeOnCollision {
+  pub strength: f32,
+  pub radius: f32,
+}
+impl Component for ExplodeOnCollision {}

@@ -7,7 +7,7 @@ use rapier2d::{
 
 use crate::{
   combat::{Projectile, distance_projection_physics},
-  ecs::{Enemy, Entity, EntityHandle},
+  ecs::{ComponentSet, Enemy, Entity, EntityHandle},
   load_map::{
     COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL, EnemySpawn,
     MapEnemyName,
@@ -110,8 +110,10 @@ impl EnemyDefender {
             })
             .build(),
           damage: 5.0,
-          initial_force: distance_projection_physics(offset + self.cooldown as f32 / 120.0, 0.7),
+          initial_impulse: distance_projection_physics(offset + self.cooldown as f32 / 120.0, 0.7),
           offset: PhysicsVector::zero(),
+          component_set: ComponentSet::new(),
+          force_mod: 0.0,
         };
         Vec::from([
           projectile(0.0),
