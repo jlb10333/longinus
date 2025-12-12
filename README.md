@@ -13,6 +13,7 @@
 - Add chain ability pickup
 - Prevent infinite boost
 
+- BUG: Explosions don't collide with/damage entities that they should
 - BUG: Culling is over-eager for cuboids in the direct corners of the screen
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
@@ -23,7 +24,7 @@
 ### Combat
 - Weapons
   + Missile
-    - Self-propelling, slow moving, low frequency, overall hard to use, while bieng high-damage with an explosive blast radius
+    + Self-propelling, slow moving, low frequency, overall hard to use, while bieng high-damage with an explosive blast radius
   - Laser
     - Very fast-moving, almost hitscan, as well as being high frequency, while being low-damage
 - Modules
