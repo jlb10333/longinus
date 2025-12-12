@@ -133,6 +133,7 @@ pub struct Weapon {
   velocity_mod: f32,
   current_cooldown: f32,
   max_cooldown: f32,
+  reversed: bool,
 }
 
 impl Weapon {
@@ -144,12 +145,8 @@ impl Weapon {
     };
 
     return Self {
-      projectile_type: self.projectile_type,
-      slot_positions: self.slot_positions.clone(),
-      damage_mod: self.damage_mod,
-      velocity_mod: self.velocity_mod,
-      max_cooldown: self.max_cooldown,
       current_cooldown,
+      ..self.clone()
     };
   }
 
@@ -245,6 +242,7 @@ fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> W
     current_cooldown: max_cooldown,
     damage_mod: 1.0,
     velocity_mod: 1.0,
+    reversed: false,
   }
 }
 
@@ -291,30 +289,7 @@ fn side_slot(weapon: &Weapon) -> Weapon {
 // MRSL
 fn mirror_slot(weapon: &Weapon) -> Weapon {
   Weapon {
-    slot_positions: weapon
-      .slot_positions
-      .iter()
-      .flat_map(|&slot_position| {
-        let reversed_slot_position = match slot_position {
-          SlotPosition::Back45Left => Some(SlotPosition::Front45Left),
-          SlotPosition::Back45Right => Some(SlotPosition::Front45Right),
-          SlotPosition::BackAhead => Some(SlotPosition::FrontAhead),
-          SlotPosition::BackDoubleLeft => Some(SlotPosition::FrontDoubleLeft),
-          SlotPosition::BackDoubleRight => Some(SlotPosition::FrontDoubleRight),
-          SlotPosition::Front45Left => Some(SlotPosition::Back45Left),
-          SlotPosition::Front45Right => Some(SlotPosition::Back45Right),
-          SlotPosition::FrontAhead => Some(SlotPosition::BackAhead),
-          SlotPosition::FrontDoubleLeft => Some(SlotPosition::BackDoubleLeft),
-          SlotPosition::FrontDoubleRight => Some(SlotPosition::BackDoubleRight),
-          SlotPosition::SideLeft => None,
-          SlotPosition::SideRight => None,
-        };
-
-        reversed_slot_position
-          .map(|reversed_slot_position| vec![slot_position, reversed_slot_position])
-          .unwrap_or(vec![slot_position])
-      })
-      .collect(),
+    reversed: true,
     ..weapon.clone()
   }
 }
@@ -543,6 +518,38 @@ fn build_weapons(equipped_modules: EquippedModules) -> Vec<Weapon> {
     })
     .flatten()
     .flatten()
+    /* Apply reverse on slots */
+    .map(|weapon| Weapon {
+      slot_positions: if weapon.reversed {
+        weapon
+          .slot_positions
+          .iter()
+          .flat_map(|&slot_position| {
+            let reversed_slot_position = match slot_position {
+              SlotPosition::Back45Left => Some(SlotPosition::Front45Left),
+              SlotPosition::Back45Right => Some(SlotPosition::Front45Right),
+              SlotPosition::BackAhead => Some(SlotPosition::FrontAhead),
+              SlotPosition::BackDoubleLeft => Some(SlotPosition::FrontDoubleLeft),
+              SlotPosition::BackDoubleRight => Some(SlotPosition::FrontDoubleRight),
+              SlotPosition::Front45Left => Some(SlotPosition::Back45Left),
+              SlotPosition::Front45Right => Some(SlotPosition::Back45Right),
+              SlotPosition::FrontAhead => Some(SlotPosition::BackAhead),
+              SlotPosition::FrontDoubleLeft => Some(SlotPosition::BackDoubleLeft),
+              SlotPosition::FrontDoubleRight => Some(SlotPosition::BackDoubleRight),
+              SlotPosition::SideLeft => None,
+              SlotPosition::SideRight => None,
+            };
+
+            reversed_slot_position
+              .map(|reversed_slot_position| vec![slot_position, reversed_slot_position])
+              .unwrap_or(vec![slot_position])
+          })
+          .collect()
+      } else {
+        weapon.slot_positions.clone()
+      },
+      ..weapon.clone()
+    })
     .collect::<Vec<_>>()
 }
 
@@ -589,14 +596,14 @@ impl System for CombatSystem {
     /* Initialize default equipped weapons */
     let equipped_modules = EquippedModules::from_data(ArrayStorage(save_data.equipped_modules));
 
-    return Rc::new(Self {
+    Rc::new(Self {
       unequipped_modules: save_data.unequipped_modules,
       equipped_modules,
       current_weapons: build_weapons(equipped_modules),
       new_projectiles: vec![],
       reticle_angle: 0.0,
       acquired_items: save_data.acquired_items,
-    });
+    })
   }
 
   fn run(
@@ -609,8 +616,8 @@ impl System for CombatSystem {
       if let Some(inventory_update) = &menu_system.inventory_update {
         return Rc::new(Self {
           unequipped_modules: inventory_update.unequipped_modules.clone(),
-          equipped_modules: inventory_update.equipped_modules.clone(),
-          current_weapons: build_weapons(inventory_update.equipped_modules.clone()),
+          equipped_modules: inventory_update.equipped_modules,
+          current_weapons: build_weapons(inventory_update.equipped_modules),
           new_projectiles: Vec::new(),
           reticle_angle: self.reticle_angle,
           acquired_items: self.acquired_items.clone(),
@@ -689,7 +696,7 @@ impl System for CombatSystem {
 
     return Rc::new(Self {
       unequipped_modules,
-      equipped_modules: self.equipped_modules.clone(),
+      equipped_modules: self.equipped_modules,
       current_weapons: new_weapons,
       new_projectiles,
       reticle_angle,

@@ -12,48 +12,11 @@
 - Allow switches to be loaded with an initial activation
 - Add chain ability pickup
 - Prevent infinite boost
-- Rework weapon module system 
-  - system should model 1 projectile per weapon, and multi slot weapon modules should simply add multiple weapons to the current tree
-  - 
 
 - BUG: Culling is over-eager for cuboids in the direct corners of the screen
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
 - CLEANUP: Replace `HealOnCollision` with `Damager` with negative damage
-
-## SCRATCHPAD
-
-     2
-     M
-D 4  P
-
-
-
- P   M      2
-[P] [P MP] [P MP 2P 2P]
-
-
- P   4         D
-[P] [P 4P 4P] [DP D4P D4P]
-
-
-
-[P MP 2P 2P DP D4P D4P]
-[DP MP 2P 2P D4P D4P]
-
-
-
-  F
-D P
-
- P   D
-[P] [DP]
-
- P   F
-[P] [FP]
-
-[DP FP]
-[DFP]
 
 ## GAME DESIGN:
 
@@ -64,11 +27,11 @@ D P
   - Laser
     - Very fast-moving, almost hitscan, as well as being high frequency, while being low-damage
 - Modules
-  - Slots
+  + Slots
     + Front two
     + 45 degree
     + Side
-    - Reverse
+    + Reverse
   - Status Effects (all build up an invisible bar before taking effect, like elden ring)
     - Slow
     - Paralysis
