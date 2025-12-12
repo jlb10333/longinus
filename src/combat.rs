@@ -221,6 +221,8 @@ fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projecti
       component_set: ComponentSet::new().insert(ExplodeOnCollision {
         radius: 1.5,
         strength: 0.02,
+        damage: 5.0,
+        interaction_groups: collision_groups,
       }),
       initial_impulse: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),

@@ -3,7 +3,8 @@ use std::{any::Any, rc::Rc};
 use rapier2d::{
   na::Vector2,
   prelude::{
-    ColliderHandle, ColliderSet, ImpulseJointHandle, NarrowPhase, RigidBodyHandle, RigidBodySet,
+    ColliderHandle, ColliderSet, ImpulseJointHandle, InteractionGroups, NarrowPhase,
+    RigidBodyHandle, RigidBodySet,
   },
 };
 use rpds::{HashTrieSet, List};
@@ -46,6 +47,7 @@ impl EntityHandle {
 
   pub fn intersecting_with_colliders(
     &self,
+    collider_set: &ColliderSet,
     rigid_body_set: &RigidBodySet,
     narrow_phase: &NarrowPhase,
   ) -> List<ColliderHandle> {
@@ -53,17 +55,34 @@ impl EntityHandle {
       .colliders(rigid_body_set)
       .iter()
       .flat_map(|&&collider_handle| {
-        narrow_phase
-          .intersection_pairs_with(collider_handle)
-          .flat_map(move |(collider1, collider2, colliding)| {
-            if !colliding {
-              return vec![];
-            }
-            return [collider1, collider2]
-              .into_iter()
-              .filter(|&other_handle| other_handle != collider_handle)
-              .collect::<Vec<_>>();
-          })
+        if !collider_set[collider_handle].is_sensor() {
+          narrow_phase
+            .contact_pairs_with(collider_handle)
+            .flat_map(|contact_pair| {
+              if contact_pair.has_any_active_contact {
+                [contact_pair.collider1, contact_pair.collider2]
+                  .into_iter()
+                  .filter(|&other_handle| other_handle != collider_handle)
+                  .collect::<Vec<_>>()
+              } else {
+                vec![]
+              }
+            })
+            .collect::<Vec<_>>()
+        } else {
+          narrow_phase
+            .intersection_pairs_with(collider_handle)
+            .flat_map(move |(collider1, collider2, colliding)| {
+              if !colliding {
+                return vec![];
+              }
+              [collider1, collider2]
+                .into_iter()
+                .filter(|&other_handle| other_handle != collider_handle)
+                .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
+        }
       })
       .collect::<List<_>>()
   }
@@ -263,5 +282,12 @@ impl Component for Activator {}
 pub struct ExplodeOnCollision {
   pub strength: f32,
   pub radius: f32,
+  pub damage: f32,
+  pub interaction_groups: InteractionGroups,
 }
 impl Component for ExplodeOnCollision {}
+
+pub struct DestroyAfterFrames {
+  pub frames: i32,
+}
+impl Component for DestroyAfterFrames {}

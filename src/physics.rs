@@ -12,9 +12,9 @@ use crate::{
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
     Activatable, Activator, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
-    DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity, EntityHandle, Gate,
-    GiveAbilityOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision,
-    MapTransitionOnCollision, SaveMenuOnCollision, Switch, TouchSensor,
+    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity, EntityHandle,
+    ExplodeOnCollision, Gate, GiveAbilityOnCollision, GivesItemOnCollision, GravitySource,
+    HealOnCollision, MapTransitionOnCollision, SaveMenuOnCollision, Switch, TouchSensor,
   },
   enemy::EnemySystem,
   load_map::{
@@ -703,24 +703,66 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
-    /* MARK: Damage all entities colliding with damagers */
+    /* MARK: Spawn explosions for entities marked as explode on collision */
     let entities = entities
       .iter()
-      .map(map_damageable_damage_taken(
-        rigid_body_set,
-        &narrow_phase,
-        &collider_set,
-        &entities,
-      ))
+      .flat_map(|(handle, entity)| {
+        if let Some(explode_on_collision) = entity.components.get::<ExplodeOnCollision>()
+          && handle
+            .colliders(rigid_body_set)
+            .iter()
+            .any(|&&collider_handle| {
+              let collider = &collider_set[collider_handle];
+
+              if collider.is_sensor() {
+                narrow_phase
+                  .intersection_pairs_with(collider_handle)
+                  .any(|(_, _, is_intersecting)| is_intersecting)
+              } else {
+                narrow_phase
+                  .contact_pairs_with(collider_handle)
+                  .any(|contact_pair| contact_pair.has_any_active_contact)
+              }
+            })
+        {
+          let explosion = spawn_explosion(
+            *handle.translation(rigid_body_set, &collider_set),
+            explode_on_collision.as_ref(),
+            &mut collider_set,
+          );
+
+          vec![
+            (*handle, Rc::clone(entity)),
+            (explosion.handle, explosion.into()),
+          ]
+        } else {
+          vec![(*handle, Rc::clone(entity))]
+        }
+      })
       .collect::<HashTrieMap<_, _>>();
 
-    /* MARK: Destroy all entities with 0 health marked as such */
-    let entities = entities
-      .iter()
-      .map(|(handle, entity)| {
-        if let Some(damageable) = entity.components.get::<Damageable>()
-          && damageable.health <= 0.0
-        {
+    /* MARK: Damage all entities colliding with damagers */
+    let entities = entities.iter().map(map_damageable_damage_taken(
+      rigid_body_set,
+      &narrow_phase,
+      &collider_set,
+      &entities,
+    ));
+
+    /* MARK: Destroy all marked to be destroyed on this frame */
+    let entities = entities.map(|(handle, entity)| {
+      if let Some(destroy_after_frames) = entity.components.get::<DestroyAfterFrames>() {
+        if destroy_after_frames.frames > 0 {
+          (
+            handle,
+            Rc::new(Entity {
+              components: entity.components.with(DestroyAfterFrames {
+                frames: destroy_after_frames.frames - 1,
+              }),
+              ..entity.as_ref().clone()
+            }),
+          )
+        } else {
           (
             handle,
             Rc::new(Entity {
@@ -728,15 +770,31 @@ impl System for PhysicsSystem {
               ..entity.as_ref().clone()
             }),
           )
-        } else {
-          (handle, Rc::clone(entity))
         }
-      })
-      .collect::<HashTrieMap<_, _>>();
+      } else {
+        (handle, entity)
+      }
+    });
+
+    /* MARK: Destroy all entities with 0 health marked as such */
+    let entities = entities.map(|(handle, entity)| {
+      if let Some(damageable) = entity.components.get::<Damageable>()
+        && damageable.health <= 0.0
+      {
+        (
+          handle,
+          Rc::new(Entity {
+            components: entity.components.with(Destroyed),
+            ..entity.as_ref().clone()
+          }),
+        )
+      } else {
+        (handle, entity)
+      }
+    });
 
     /* MARK: Destroy colliding entities marked as destroy on collision */
     let entities = entities
-      .into_iter()
       .map(|(handle, entity)| {
         let entity_destroyed = !(entity.components.get::<DestroyOnCollision>().is_none()
           || entity
@@ -779,14 +837,14 @@ impl System for PhysicsSystem {
 
         if entity_destroyed {
           (
-            *handle,
+            handle,
             Rc::new(Entity {
               components: entity.components.with(Destroyed),
               ..entity.as_ref().clone()
             }),
           )
         } else {
-          (*handle, Rc::clone(entity))
+          (handle, entity)
         }
       })
       .collect::<Vec<_>>();
@@ -797,7 +855,7 @@ impl System for PhysicsSystem {
     /* MARK: Drop health pickups from entities with 0 health marked as such */
     let entities = entities
       .into_iter()
-      .flat_map(|(&handle, entity)| {
+      .flat_map(|(handle, entity)| {
         if entity.components.get::<Destroyed>().is_none()
           || entity.components.get::<DropHealthOnDestroy>().is_none()
         {
@@ -1233,7 +1291,7 @@ impl System for PhysicsSystem {
           && let Some(activator) = entity.components.get::<Activator>()
         {
           let activation = if !handle
-            .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+            .intersecting_with_colliders(&collider_set, rigid_body_set, &narrow_phase)
             .is_empty()
           {
             Some(touch_sensor.target_activation)
@@ -1351,7 +1409,7 @@ impl System for PhysicsSystem {
           .into_iter()
           .filter_map(|chain_mount_activation| {
             if !handle
-              .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+              .intersecting_with_colliders(&collider_set, rigid_body_set, &narrow_phase)
               .is_empty()
             {
               Some(chain_mount_activation.target_mount_body)
@@ -1461,31 +1519,19 @@ fn map_damageable_damage_taken(
 
     let damagers = entity
       .handle
-      .colliders(rigid_body_set)
+      .intersecting_with_colliders(collider_set, rigid_body_set, narrow_phase)
       .into_iter()
       .flat_map(|&collider_handle| {
-        narrow_phase
-          .contact_pairs_with(collider_handle)
-          .flat_map(|contact_pairs| {
-            if !contact_pairs.has_any_active_contact {
-              Vec::new()
-            } else {
-              [contact_pairs.collider1, contact_pairs.collider2]
-                .into_iter()
-                .filter(|&handle| collider_handle != handle)
-                .collect::<Vec<_>>()
-            }
-          })
-          .collect::<Vec<_>>()
-      })
-      .flat_map(|collider_handle| {
         collider_set[collider_handle]
           .parent()
           .and_then(|rigid_body_handle| entities.get(&EntityHandle::RigidBody(rigid_body_handle)))
           .and_then(|entity| entity.components.get::<Damager>())
-      });
+      })
+      .collect::<Vec<_>>();
 
-    let incoming_damage = damagers.fold(0.0, |sum, damager| sum + damager.damage);
+    let incoming_damage = damagers
+      .iter()
+      .fold(0.0, |sum, damager| sum + damager.damage);
 
     if incoming_damage == 0.0 {
       if damageable.current_hitstun > 0.0 {
@@ -1515,5 +1561,30 @@ fn map_damageable_damage_taken(
         ..entity.as_ref().clone()
       }),
     )
+  }
+}
+fn spawn_explosion(
+  translation: Vector<f32>,
+  explosion: &ExplodeOnCollision,
+  collider_set: &mut ColliderSet,
+) -> Entity {
+  let collider_handle = collider_set.insert(
+    ColliderBuilder::ball(explosion.radius)
+      .translation(translation)
+      .collision_groups(explosion.interaction_groups)
+      .sensor(true),
+  );
+
+  Entity {
+    handle: EntityHandle::Collider(collider_handle),
+    components: ComponentSet::new()
+      .insert(Damager {
+        damage: explosion.damage,
+      })
+      .insert(GravitySource {
+        strength: explosion.strength,
+      }),
+    // .insert(DestroyAfterFrames { frames: 5 }),
+    label: "boom".to_string(),
   }
 }

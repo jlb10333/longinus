@@ -22,7 +22,7 @@
 
 ### Combat
 - Weapons
-  - Missile
+  + Missile
     - Self-propelling, slow moving, low frequency, overall hard to use, while bieng high-damage with an explosive blast radius
   - Laser
     - Very fast-moving, almost hitscan, as well as being high frequency, while being low-damage
