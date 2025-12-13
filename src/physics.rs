@@ -729,6 +729,7 @@ impl System for PhysicsSystem {
             *handle.translation(rigid_body_set, &collider_set),
             explode_on_collision.as_ref(),
             &mut collider_set,
+            rigid_body_set,
           );
 
           vec![
@@ -1238,6 +1239,23 @@ impl System for PhysicsSystem {
       entities
     };
 
+    entities.iter().for_each(|(handle, entity)| {
+      if let EntityHandle::RigidBody(rb_handle) = entity.handle
+        && rigid_body_set[rb_handle].user_force() != vec_zero()
+      {
+        println!("poo")
+      }
+
+      if entity.components.get::<GravitySource>().is_some() {
+        println!(
+          "{}",
+          handle
+            .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+            .len(),
+        )
+      }
+    });
+
     /* MARK: Calculate activation for chain switches */
     let entities = entities
       .into_iter()
@@ -1291,7 +1309,7 @@ impl System for PhysicsSystem {
           && let Some(activator) = entity.components.get::<Activator>()
         {
           let activation = if !handle
-            .intersecting_with_colliders(&collider_set, rigid_body_set, &narrow_phase)
+            .intersecting_with_colliders(rigid_body_set, &narrow_phase)
             .is_empty()
           {
             Some(touch_sensor.target_activation)
@@ -1409,7 +1427,7 @@ impl System for PhysicsSystem {
           .into_iter()
           .filter_map(|chain_mount_activation| {
             if !handle
-              .intersecting_with_colliders(&collider_set, rigid_body_set, &narrow_phase)
+              .intersecting_with_colliders(rigid_body_set, &narrow_phase)
               .is_empty()
             {
               Some(chain_mount_activation.target_mount_body)
@@ -1519,7 +1537,7 @@ fn map_damageable_damage_taken(
 
     let damagers = entity
       .handle
-      .intersecting_with_colliders(collider_set, rigid_body_set, narrow_phase)
+      .intersecting_with_colliders(rigid_body_set, narrow_phase)
       .into_iter()
       .flat_map(|&collider_handle| {
         collider_set[collider_handle]
@@ -1567,24 +1585,29 @@ fn spawn_explosion(
   translation: Vector<f32>,
   explosion: &ExplodeOnCollision,
   collider_set: &mut ColliderSet,
+  rigid_body_set: &mut RigidBodySet,
 ) -> Entity {
-  let collider_handle = collider_set.insert(
+  let rigid_body_handle =
+    rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(translation));
+  collider_set.insert_with_parent(
     ColliderBuilder::ball(explosion.radius)
-      .translation(translation)
       .collision_groups(explosion.interaction_groups)
+      .enabled(true)
       .sensor(true),
+    rigid_body_handle,
+    rigid_body_set,
   );
 
   Entity {
-    handle: EntityHandle::Collider(collider_handle),
+    handle: EntityHandle::RigidBody(rigid_body_handle),
     components: ComponentSet::new()
       .insert(Damager {
         damage: explosion.damage,
       })
       .insert(GravitySource {
         strength: explosion.strength,
-      }),
-    // .insert(DestroyAfterFrames { frames: 5 }),
+      })
+      .insert(DestroyAfterFrames { frames: 5 }),
     label: "boom".to_string(),
   }
 }

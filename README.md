@@ -13,7 +13,6 @@
 - Add chain ability pickup
 - Prevent infinite boost
 
-- BUG: Explosions don't collide with/damage entities that they should
 - BUG: Culling is over-eager for cuboids in the direct corners of the screen
 - BUG: Seeker enemies will slam into the wall bc the speed cap uses absolute value
 
