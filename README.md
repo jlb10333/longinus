@@ -76,6 +76,7 @@
   + Switches (grab on with chain, pull in direction to flip switch)
     + (can be used to create one-way gates, or areas where the player has to go around a separate path to hit a switch from a different angle in order to progress through the main path)
   + High gravity sections where you have to swing on the chain to get across a gap
+  + High gravity sections where you have to hang on a kinematic elevator to travel vertically
 
 ## STORY:
 

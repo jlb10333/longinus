@@ -266,6 +266,12 @@ pub struct Switch {
 }
 impl Component for Switch {}
 
+pub struct PrismaticMotor {
+  pub joint: ImpulseJointHandle,
+  pub motor_speed: f32,
+}
+impl Component for PrismaticMotor {}
+
 pub struct ChainSegment;
 impl Component for ChainSegment {}
 

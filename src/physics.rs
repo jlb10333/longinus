@@ -14,7 +14,8 @@ use crate::{
     Activatable, Activator, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
     DestroyAfterFrames, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity, EntityHandle,
     ExplodeOnCollision, Gate, GiveAbilityOnCollision, GivesItemOnCollision, GravitySource,
-    HealOnCollision, MapTransitionOnCollision, SaveMenuOnCollision, Switch, TouchSensor,
+    HealOnCollision, MapTransitionOnCollision, PrismaticMotor, SaveMenuOnCollision, Switch,
+    TouchSensor,
   },
   enemy::EnemySystem,
   load_map::{
@@ -321,6 +322,61 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
+  /* MARK: Spawn mount points. */
+  let mount_points = map
+    .mount_points
+    .iter()
+    .flat_map(|mount_point| {
+      let mount_point_handle = rigid_body_set.insert(mount_point.rigid_body.clone());
+      let zone_handle = collider_set.insert_with_parent(
+        mount_point.zone.clone(),
+        mount_point_handle,
+        &mut rigid_body_set,
+      );
+
+      let mount_point_entity = match mount_point.kinematic.as_ref() {
+        Some(kinematic) => {
+          let joint_center_handle = rigid_body_set.insert(kinematic.joint_center.clone());
+          let joint_handle = impulse_joint_set.insert(
+            mount_point_handle,
+            joint_center_handle,
+            kinematic.joint,
+            true,
+          );
+
+          Entity {
+            handle: EntityHandle::RigidBody(mount_point_handle),
+            components: ComponentSet::new().insert(PrismaticMotor {
+              joint: joint_handle,
+              motor_speed: kinematic.motor_speed,
+            }),
+            label: "mount".to_string(),
+          }
+        }
+        None => {
+          rigid_body_set[mount_point_handle].lock_translations(true, true);
+
+          Entity {
+            handle: EntityHandle::RigidBody(mount_point_handle),
+            components: ComponentSet::new(),
+            label: "mount".to_string(),
+          }
+        }
+      };
+
+      [
+        Entity {
+          handle: EntityHandle::Collider(zone_handle),
+          components: ComponentSet::new().insert(ChainMountArea {
+            target_mount_body: mount_point_handle,
+          }),
+          label: "zone".to_string(),
+        },
+        mount_point_entity,
+      ]
+    })
+    .collect::<Vec<_>>();
+
   /* MARK: Create the map colliders. */
   let map_tiles = map
     .colliders
@@ -413,6 +469,7 @@ fn load_new_map(
     .chain(touch_sensors)
     .chain(gravity_sources)
     .chain(chain_switches)
+    .chain(mount_points)
     .map(|entity| (entity.handle, Rc::new(entity)))
     .collect::<HashTrieMap<_, _>>();
 
@@ -1369,6 +1426,36 @@ impl System for PhysicsSystem {
           .for_each(|&&gate_collider| {
             collider_set[gate_collider].set_enabled(enabled);
           });
+      }
+    });
+
+    /* MARK: Prismatic motor behavior */
+    entities.iter().for_each(|(handle, entity)| {
+      if let Some(prismatic_motor) = entity.components.get::<PrismaticMotor>()
+        && let Some(joint) = impulse_joint_set.get_mut(prismatic_motor.joint, true)
+      {
+        let mount_point = joint.body1;
+        let joint_center = joint.body2;
+
+        let prismatic = joint.data.as_prismatic_mut().unwrap();
+
+        let prismatic_limits = prismatic.limits().unwrap();
+
+        let distance = (rigid_body_set[mount_point].translation()
+          - rigid_body_set[joint_center].translation())
+        .magnitude();
+
+        let prismatic_limit_magnitude = prismatic_limits.max - prismatic_limits.min;
+
+        println!("{} {}", distance, prismatic_limit_magnitude);
+
+        let motor_position = if distance > prismatic_limit_magnitude / 2.0 {
+          prismatic_limits.min
+        } else {
+          prismatic_limits.max
+        };
+
+        prismatic.set_motor_position(motor_position, prismatic_motor.motor_speed, 0.0);
       }
     });
 

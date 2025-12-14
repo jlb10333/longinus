@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, fs, rc::Rc};
+use std::{fs, rc::Rc};
 
 use rapier2d::{
   na::{Unit, Vector2},
@@ -312,6 +312,52 @@ struct MapChainSwitch {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MountPointKinematicDirection {
+  Width,
+  Height,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapMountPointKinematicDirectionClass {
+  KinematicDirection,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapMountPointKinematicDirection {
+  #[serde(rename = "name")]
+  _name: MapMountPointKinematicDirectionClass,
+  value: MountPointKinematicDirection,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapMountPointKinematicSpeedClass {
+  KinematicSpeed,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapMountPointKinematicSpeed {
+  #[serde(rename = "name")]
+  _name: MapMountPointKinematicSpeedClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapMountPointClass {
+  MountPoint,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapMountPoint {
+  x: f32,
+  y: f32,
+  width: f32,
+  height: f32,
+  properties: Option<(MapMountPointKinematicSpeed,)>,
+  #[serde(rename = "type")]
+  _class: MapMountPointClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -324,6 +370,7 @@ enum Object {
   GravitySource(MapGravitySource),
   AbilityPickup(MapAbilityPickup),
   ChainSwitch(MapChainSwitch),
+  MountPoint(MapMountPoint),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -507,6 +554,20 @@ pub struct ChainSwitch {
 }
 
 #[derive(Clone)]
+pub struct MountPointKinematic {
+  pub joint_center: RigidBody,
+  pub joint: PrismaticJoint,
+  pub motor_speed: f32,
+}
+
+#[derive(Clone)]
+pub struct MountPoint {
+  pub kinematic: Option<MountPointKinematic>,
+  pub rigid_body: RigidBody,
+  pub zone: Collider,
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -543,6 +604,7 @@ pub enum MapComponent {
   GravitySource(GravitySource),
   AbilityPickup(AbilityPickup),
   ChainSwitch(ChainSwitch),
+  MountPoint(MountPoint),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -706,7 +768,6 @@ impl Object {
             0.0,
             map_height,
           ))
-          // .linear_damping(20.0)
           .build(),
         switch_joint: PrismaticJointBuilder::new(Unit::new_normalize(vector![1.0, 0.0]))
           .limits([-1.0, 1.0])
@@ -714,6 +775,48 @@ impl Object {
           .local_anchor2(vec_zero().into())
           .build(),
       }),
+
+      Object::MountPoint(mount_point) => {
+        let mount_point_translation =
+          physics_translation_from_map(mount_point.x, mount_point.y, 0.0, 0.0, map_height);
+
+        MapComponent::MountPoint(MountPoint {
+          kinematic: mount_point.properties.as_ref().map(|(speed,)| {
+            let end_point_translation = mount_point_translation
+              + vector![
+                *map_scalar_to_physics(mount_point.width),
+                *map_scalar_to_physics(mount_point.height)
+              ];
+
+            let axis = end_point_translation - mount_point_translation;
+
+            let joint = PrismaticJointBuilder::new(UnitVector::new_normalize(axis))
+              .limits([0.0, axis.magnitude()])
+              .build();
+
+            let joint_center = RigidBodyBuilder::dynamic()
+              .lock_translations()
+              .translation(mount_point_translation)
+              .build();
+
+            MountPointKinematic {
+              joint_center,
+              joint,
+              motor_speed: speed.value,
+            }
+          }),
+          rigid_body: RigidBodyBuilder::dynamic()
+            .translation(mount_point_translation)
+            .build(),
+          zone: ColliderBuilder::ball(10.0)
+            .sensor(true)
+            .collision_groups(InteractionGroups {
+              memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+              filter: COLLISION_GROUP_PLAYER,
+            })
+            .build(),
+        })
+      }
     }
   }
 }
@@ -847,6 +950,7 @@ pub struct Map {
   pub gravity_sources: Vec<GravitySource>,
   pub ability_pickups: Vec<AbilityPickup>,
   pub chain_switches: Vec<ChainSwitch>,
+  pub mount_points: Vec<MountPoint>,
 }
 
 impl RawMap {
@@ -994,6 +1098,18 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let mount_points = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::MountPoint(mount_point) = object {
+          Some(mount_point)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     Map {
       colliders,
       enemy_spawns,
@@ -1006,6 +1122,7 @@ impl RawMap {
       gravity_sources,
       ability_pickups,
       chain_switches,
+      mount_points,
     }
   }
 }

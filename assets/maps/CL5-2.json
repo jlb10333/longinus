@@ -127,7 +127,7 @@
                 {
                  "height":0,
                  "id":11,
-                 "name":"Goblin",
+                 "name":"Defender",
                  "rotation":0,
                  "type":"EnemySpawn",
                  "visible":true,
@@ -149,7 +149,7 @@
                 {
                  "height":0,
                  "id":13,
-                 "name":"Goblin",
+                 "name":"Defender",
                  "rotation":0,
                  "type":"EnemySpawn",
                  "visible":true,
@@ -160,7 +160,7 @@
                 {
                  "height":0,
                  "id":14,
-                 "name":"Goblin",
+                 "name":"Defender",
                  "rotation":0,
                  "type":"EnemySpawn",
                  "visible":true,
