@@ -623,15 +623,14 @@ impl System for PhysicsSystem {
         let relevant_decision = enemy_system
           .decisions
           .iter()
-          .find(|&decision| decision.handle == entity.handle);
+          .find(|&decision| EntityHandle::RigidBody(decision.handle) == entity.handle);
         if relevant_decision.is_none() {
           return vec![(entity.handle, entity.clone())];
         }
         let relevant_decision = relevant_decision.unwrap();
 
         if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
-          rigid_body_set[rigid_body_handle]
-            .apply_impulse(relevant_decision.movement_force.into_vec(), true);
+          rigid_body_set[rigid_body_handle].apply_impulse(relevant_decision.movement_force, true);
         }
 
         let new_projectiles = if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
@@ -1238,23 +1237,6 @@ impl System for PhysicsSystem {
     } else {
       entities
     };
-
-    entities.iter().for_each(|(handle, entity)| {
-      if let EntityHandle::RigidBody(rb_handle) = entity.handle
-        && rigid_body_set[rb_handle].user_force() != vec_zero()
-      {
-        println!("poo")
-      }
-
-      if entity.components.get::<GravitySource>().is_some() {
-        println!(
-          "{}",
-          handle
-            .intersecting_with_colliders(rigid_body_set, &narrow_phase)
-            .len(),
-        )
-      }
-    });
 
     /* MARK: Calculate activation for chain switches */
     let entities = entities

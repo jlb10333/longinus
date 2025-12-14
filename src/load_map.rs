@@ -36,6 +36,9 @@ pub enum MapEnemySpawnClass {
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum MapEnemyName {
+  /* Dragonspawn */
+  Goblin,
+  /* Angelic Constructs */
   Defender,
   Seeker,
   SeekerGenerator,
@@ -369,6 +372,7 @@ impl EnemySpawn {
   pub fn new(name: &MapEnemyName, translation: Vector2<f32>) -> Self {
     let collider = collider_from_enemy_name(name.clone());
     let rigid_body_builder = match name {
+      MapEnemyName::Goblin => RigidBodyBuilder::dynamic(),
       MapEnemyName::Defender => RigidBodyBuilder::fixed(),
       MapEnemyName::Seeker => RigidBodyBuilder::dynamic(),
       MapEnemyName::SeekerGenerator => RigidBodyBuilder::fixed(),
@@ -384,6 +388,19 @@ impl EnemySpawn {
 
   pub fn into_entity_components(&self) -> ComponentSet {
     match self.name {
+      Enemy::Goblin(_) => ComponentSet::new()
+        .insert(Damageable {
+          health: 40.0,
+          max_health: 40.0,
+          destroy_on_zero_health: true,
+          current_hitstun: 0.0,
+          max_hitstun: 0.0,
+        })
+        .insert(Damager { damage: 10.0 })
+        .insert(DropHealthOnDestroy {
+          amount: 15.0,
+          chance: 0.5,
+        }),
       Enemy::Defender(_) => ComponentSet::new()
         .insert(Damageable {
           health: 100.0,
@@ -498,6 +515,7 @@ pub struct Wall {
 
 fn collider_from_enemy_name(name: MapEnemyName) -> Collider {
   let collider_builder = match name {
+    MapEnemyName::Goblin => ColliderBuilder::cuboid(0.5, 0.3),
     MapEnemyName::Defender => ColliderBuilder::cuboid(0.5, 0.5),
     MapEnemyName::Seeker => ColliderBuilder::cuboid(0.2, 0.2).mass(1.0),
     MapEnemyName::SeekerGenerator => ColliderBuilder::cuboid(0.7, 0.7),

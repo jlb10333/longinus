@@ -47,8 +47,8 @@
 
 ### Enemies
 - Dragonspawn
-  - Goblin
-    - Shoots a slow moving projectile at the player, then moves in a random direction, then fires again once stopped.
+  + Goblin
+    + Shoots a slow moving projectile at the player, then moves in a random direction, then fires again once stopped.
   - Shade
     - Invulnerable while stopped, remains stopped for a bit before leaping towards the player in an arc, after which it slows down and is invulnerable again once stopped. At the apex of the arc, it fires two slow-moving shots to either side of it.
   - Spider
