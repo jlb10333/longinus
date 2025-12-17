@@ -127,15 +127,6 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
       inventory: controls_system.inventory && !(last_frame.inventory),
     };
 
-    if self.active_menus.iter().count() > 0 {
-      println!(
-        "{} {} {}",
-        self.active_menus.iter().count(),
-        self.active_menus[0].cursor_position.x,
-        self.active_menus[0].cursor_position.y,
-      );
-    }
-
     let save_system = ctx.get::<SaveSystem<_>>().unwrap();
 
     if let Some(ctx) = ctx.downcast::<SaveData>() {

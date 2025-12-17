@@ -29,8 +29,8 @@ use crate::{
   units::{PhysicsVector, UnitConvert2, vec_zero},
 };
 
-const PLAYER_SPEED_LIMIT: f32 = 5.0;
-const PLAYER_ACCELERATION_MOD: f32 = 0.5;
+const PLAYER_SPEED_LIMIT: f32 = 2.5;
+const PLAYER_ACCELERATION_MOD: f32 = 0.25;
 
 const CHAIN_SEGMENT_LENGTH: f32 = 0.5;
 const CHAIN_SEGMENT_HEIGHT: f32 = 0.05;
@@ -1446,8 +1446,6 @@ impl System for PhysicsSystem {
         .magnitude();
 
         let prismatic_limit_magnitude = prismatic_limits.max - prismatic_limits.min;
-
-        println!("{} {}", distance, prismatic_limit_magnitude);
 
         let motor_position = if distance > prismatic_limit_magnitude / 2.0 {
           prismatic_limits.min

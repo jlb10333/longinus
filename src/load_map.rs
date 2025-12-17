@@ -437,8 +437,8 @@ impl EnemySpawn {
     match self.name {
       Enemy::Goblin(_) => ComponentSet::new()
         .insert(Damageable {
-          health: 40.0,
-          max_health: 40.0,
+          health: 50.0,
+          max_health: 50.0,
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,

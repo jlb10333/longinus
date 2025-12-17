@@ -11,7 +11,7 @@ use crate::{
   units::{PhysicsVector, UnitConvert, UnitConvert2},
 };
 
-const BOOST_MOD: f32 = 5.0;
+const BOOST_MOD: f32 = 5.5;
 
 pub struct AbilitySystem {
   pub acquired_boost: bool,

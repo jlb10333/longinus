@@ -6,11 +6,14 @@
 - Add first boss
 - Add gameover menu
 - Add kinematic damaging hazards (use enemy?)
-- Restrict camera movement to map boundaries
-- Add stationary chain mount point map loading
+- Add chain ability pickup
+- Add max health increase pickup 
+- Add map/minimap
+
 - Allow switches to be loaded in any rotation
 - Allow switches to be loaded with an initial activation
-- Add chain ability pickup
+
+- Restrict camera movement to map boundaries
 - Prevent infinite boost
 
 - BUG: Culling is over-eager for cuboids in the direct corners of the screen
@@ -19,6 +22,79 @@
 - CLEANUP: Replace `HealOnCollision` with `Damager` with negative damage
 
 ## GAME DESIGN:
+
+### Activation
+- Interactable
+  + Switch 
+    (Prismatic joint with motor pulling towards the nearest end)
+    + Activator
+      + Emits activation level corresponding to position of the main knob w/r/t the limits of the joint
+      - 0.0 at one end, 1.0 at the other, LERPed in between
+  - Crank
+    (Revolute joint)
+    - Activator
+      - Emits activation corresponding to rotation of the knob w/r/t te limits of the joint
+      - 0.0 at one end, 1.0 at the other, LERPed in between 
+  + Touch Sensor
+    (Fixed sensor collider)
+    + Activator
+      + Emits activation level depending on whether or not an entity is colliding with the sensor
+      - 0.0 if no collision, 1.0 if collision
+  - Magnet
+    (Physics interactable balls; they attract each other)
+    - Activator
+      - Emits activation if touching another magnet
+      - 0.0 if not touching, 1.0 if touching
+
+- Output Objects
+  - Gravity Source
+    (Point that emits gravitational force at given radius and intensity following the inverse square law)
+    - Activatable
+      - 0-1 sources
+      - Sets gravity intensity to activation lerped betwen min and max intensity
+  - Locomotor
+    (Prismatic joint which can have other objects attached to it via glue, e.g. gravity sources, mount points, doors)
+    - Activatable
+      - 1 source
+      - Sets motor target position equal to activation level lerped between joint limits
+  - Rotator
+    (Revolute joint which can have other objects attached to it via glue, e.g. colliders)
+    - Activatable
+      - 1 source
+      - Sets motor target position equal to activation level lerped between joint limits
+
+- Logic
+  - Not
+    - Activatable
+      - 1 source
+    - Activator
+      - Emits activation level of 1.0 - received activation
+  - And
+    - Activatable
+      - 2 sources
+    - Activator
+      - Emits activation level of (0.5 * A)
+  - Or
+    - Activatable
+      - 2 sources
+    - Activator
+      - Emits activation level of (MAX(A, 1.0))
+  - Gate
+    - Activatable
+      - 1 source
+    - Activator
+      - Emits activation at level corresponding to highest historical activation received
+  - Flat
+    - Activatable
+      - 1 source
+    - Activator
+      - Emits activation at level equal to 1.0 if A > 0.5, otherwise 0.0
+  - Engine
+    - Activatable
+      - 1 source
+    - Emits activation at a level that oscillates back and forth between 0.0 and 1.0 in a sinusoidal pattern
+    - Oscillates slower or faster depending on received activation level
+
 
 ### Combat
 - Weapons
@@ -62,6 +138,8 @@
 + Weapon (P)
   + Destructible blocks
   + Areas with enemies
+- Weapon (L)
+  - High gravity sections where you have to hit a target across a gap with a projectile and everything except the laser can't make it far enough
 + Boost
   + Gravity sources
     + Gravity walls you have to boost through

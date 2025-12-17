@@ -8,6 +8,22 @@ use crate::{
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 
+pub fn draw_label(
+  physics_translation: PhysicsVector,
+  camera_position: Vector2<f32>,
+  label: String,
+  color: Option<Color>,
+) {
+  let screen_translation = physics_translation.into_pos(camera_position);
+  draw_text(
+    label.as_ref(),
+    screen_translation.x(),
+    screen_translation.y(),
+    20.0,
+    color.unwrap_or(COLOR_4),
+  );
+}
+
 pub fn draw_collider(
   collider: &Collider,
   camera_position: Vector2<f32>,

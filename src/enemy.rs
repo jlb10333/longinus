@@ -145,7 +145,6 @@ impl EnemyGoblin {
   ) -> EnemyDecision {
     match self.state {
       EnemyGoblinState::Shooting(frames_left) => {
-        println!("shooting");
         if frames_left > 0 {
           EnemyDecision {
             handle,
@@ -172,7 +171,6 @@ impl EnemyGoblin {
         }
       }
       EnemyGoblinState::Cruising(frames_left) => {
-        println!("cruising");
         if frames_left > 0 {
           EnemyDecision {
             handle,
@@ -196,7 +194,6 @@ impl EnemyGoblin {
         }
       }
       EnemyGoblinState::Accelerating(frames_left, direction) => {
-        println!("accelerating");
         if frames_left > 0 {
           EnemyDecision {
             handle,
@@ -220,7 +217,6 @@ impl EnemyGoblin {
         }
       }
       EnemyGoblinState::Decelerating(frames_left) => {
-        println!("decelerating");
         let linvel = rigid_body_set[handle].linvel();
 
         if frames_left > 0 && linvel.magnitude() > 0.0 {

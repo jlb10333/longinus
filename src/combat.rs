@@ -220,7 +220,7 @@ fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projecti
       force_mod: 2.0,
       component_set: ComponentSet::new().insert(ExplodeOnCollision {
         radius: 1.5,
-        strength: 0.02,
+        strength: -0.5,
         damage: 5.0,
         interaction_groups: collision_groups,
       }),

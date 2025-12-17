@@ -2,6 +2,7 @@ use std::{marker::PhantomData, rc::Rc, thread::sleep, time::Duration};
 
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
+use rpds::HashTrieSet;
 
 use crate::{
   camera::CameraSystem,
@@ -10,7 +11,7 @@ use crate::{
     get_slot_positions,
   },
   ecs::{Damageable, EntityHandle},
-  graphics_utils::draw_collider,
+  graphics_utils::{draw_collider, draw_label},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
   save::SaveSystem,
@@ -84,23 +85,27 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         physics_system
           .collider_set
           .iter()
-          .for_each(|(_, collider)| draw_collider(collider, camera_system.translation, None, None));
-      }
-
-      /* Draw entity labels */
-      physics_system.entities.iter().for_each(|(handle, entity)| {
-        handle
-          .colliders(&physics_system.rigid_body_set)
-          .iter()
-          .for_each(|&collider_handle| {
-            draw_collider(
-              &physics_system.collider_set[*collider_handle],
-              camera_system.translation,
-              Some(entity.label.clone()),
-              Some(COLOR_2),
-            )
+          .for_each(|(_, collider)| {
+            draw_collider(collider, camera_system.translation, None, None);
           });
-      });
+
+        /* Draw entity labels */
+        physics_system.entities.iter().for_each(|(handle, entity)| {
+          handle
+            .colliders(&physics_system.rigid_body_set)
+            .into_iter()
+            .for_each(|&collider_handle| {
+              draw_label(
+                PhysicsVector::from_vec(
+                  *physics_system.collider_set[collider_handle].translation(),
+                ),
+                camera_system.translation,
+                entity.label.clone(),
+                Some(COLOR_2),
+              );
+            })
+        });
+      }
 
       /* Draw reticle */
       let player_screen_pos = PhysicsVector::from_vec(

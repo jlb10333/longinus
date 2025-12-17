@@ -55,6 +55,13 @@
             "width": 560,
             "x": 1352,
             "y": 384
+        },
+        {
+            "fileName": "CL5-3.json",
+            "height": 800,
+            "width": 800,
+            "x": 552,
+            "y": 1600
         }
     ],
     "onlyShowAdjacentMaps": false,
