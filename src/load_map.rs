@@ -153,32 +153,19 @@ pub enum TouchSensorAction {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-enum MapGateInitialStateClass {
-  InitialState,
+enum MapBlockClass {
+  Block,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct MapGateInitialState {
-  #[serde(rename = "name")]
-  _name: MapGateInitialStateClass,
-  value: TouchSensorAction,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-enum MapGateClass {
-  Gate,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct MapGate {
+struct MapBlock {
   id: i32,
   x: f32,
   y: f32,
   width: f32,
   height: f32,
-  properties: (MapGateInitialState,),
   #[serde(rename = "type")]
-  _class: MapGateClass,
+  _class: MapBlockClass,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -284,14 +271,14 @@ struct MapTargetActivatableId {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-enum MapChainSwitchInitialDirectionClass {
-  InitialDirection,
+enum MapInitialActivationClass {
+  InitialActivation,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct MapChainSwitchInitialDirection {
+struct MapInitialActivation {
   #[serde(rename = "name")]
-  _name: MapChainSwitchInitialDirectionClass,
+  _name: MapInitialActivationClass,
   value: f32,
 }
 
@@ -301,44 +288,26 @@ enum MapChainSwitchClass {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapRotationClass {
+  Rotation,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapRotation {
+  #[serde(rename = "name")]
+  _name: MapRotationClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 struct MapChainSwitch {
   id: i32,
   x: f32,
   y: f32,
   rotation: f32,
-  properties: (MapChainSwitchInitialDirection, MapTargetActivatableId),
+  properties: (MapInitialActivation, MapRotation),
   #[serde(rename = "type")]
   _class: MapChainSwitchClass,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-enum MountPointKinematicDirection {
-  Width,
-  Height,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-enum MapMountPointKinematicDirectionClass {
-  KinematicDirection,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct MapMountPointKinematicDirection {
-  #[serde(rename = "name")]
-  _name: MapMountPointKinematicDirectionClass,
-  value: MountPointKinematicDirection,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-enum MapMountPointKinematicSpeedClass {
-  KinematicSpeed,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct MapMountPointKinematicSpeed {
-  #[serde(rename = "name")]
-  _name: MapMountPointKinematicSpeedClass,
-  value: f32,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -348,13 +317,26 @@ enum MapMountPointClass {
 
 #[derive(Clone, Debug, Deserialize)]
 struct MapMountPoint {
+  id: i32,
   x: f32,
   y: f32,
-  width: f32,
-  height: f32,
-  properties: Option<(MapMountPointKinematicSpeed,)>,
   #[serde(rename = "type")]
   _class: MapMountPointClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapOrClass {
+  Or,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapOr {
+  id: i32,
+  x: f32,
+  y: f32,
+  properties: (MapActivator1Id, MapActivator2Id),
+  #[serde(rename = "type")]
+  _class: MapOrClass,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -365,7 +347,7 @@ enum Object {
   ItemPickup(MapItemPickup),
   MapTransition(MapMapTransition),
   SavePoint(MapSavePoint),
-  Gate(MapGate),
+  Block(MapBlock),
   GateTrigger(MapGateTrigger),
   GravitySource(MapGravitySource),
   AbilityPickup(MapAbilityPickup),
@@ -676,7 +658,7 @@ impl Object {
           .build(),
       }),
 
-      Object::Gate(gate) => MapComponent::Gate(Gate {
+      Object::Block(gate) => MapComponent::Gate(Gate {
         id: gate.id,
         collider: cuboid_collider_from_map(gate.x, gate.y, gate.width, gate.height, map_height)
           .enabled(matches!(gate.properties.0.value, TouchSensorAction::Close))
