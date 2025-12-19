@@ -300,6 +300,30 @@ struct MapRotation {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapActivator1IdClass {
+  Activator1Id,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapActivator1Id {
+  #[serde(rename = "name")]
+  _name: MapActivator1IdClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapActivator2IdClass {
+  Activator2Id,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapActivator2Id {
+  #[serde(rename = "name")]
+  _name: MapActivator2IdClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 struct MapChainSwitch {
   id: i32,
   x: f32,
@@ -340,6 +364,21 @@ struct MapOr {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapAndClass {
+  And,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapAnd {
+  id: i32,
+  x: f32,
+  y: f32,
+  properties: (MapActivator1Id, MapActivator2Id),
+  #[serde(rename = "type")]
+  _class: MapAndClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -353,6 +392,8 @@ enum Object {
   AbilityPickup(MapAbilityPickup),
   ChainSwitch(MapChainSwitch),
   MountPoint(MapMountPoint),
+  Or(MapOr),
+  And(MapAnd),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -528,7 +569,6 @@ pub struct AbilityPickup {
 #[derive(Clone)]
 pub struct ChainSwitch {
   pub id: i32,
-  pub activatable_id: i32,
   pub collider: Collider,
   pub switch_center: RigidBody,
   pub mount_body: RigidBody,
@@ -544,9 +584,20 @@ pub struct MountPointKinematic {
 
 #[derive(Clone)]
 pub struct MountPoint {
-  pub kinematic: Option<MountPointKinematic>,
   pub rigid_body: RigidBody,
   pub zone: Collider,
+}
+
+#[derive(Clone)]
+pub struct Or {
+  pub rigid_body: RigidBody,
+  pub activatorIds: (i32, i32),
+}
+
+#[derive(Clone)]
+pub struct And {
+  pub rigid_body: RigidBody,
+  pub activatorIds: (i32, i32),
 }
 
 #[derive(Clone)]
@@ -587,6 +638,8 @@ pub enum MapComponent {
   AbilityPickup(AbilityPickup),
   ChainSwitch(ChainSwitch),
   MountPoint(MountPoint),
+  Or(Or),
+  And(And),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -661,7 +714,6 @@ impl Object {
       Object::Block(gate) => MapComponent::Gate(Gate {
         id: gate.id,
         collider: cuboid_collider_from_map(gate.x, gate.y, gate.width, gate.height, map_height)
-          .enabled(matches!(gate.properties.0.value, TouchSensorAction::Close))
           .build(),
       }),
 
@@ -717,7 +769,6 @@ impl Object {
 
       Object::ChainSwitch(chain_switch) => MapComponent::ChainSwitch(ChainSwitch {
         id: chain_switch.id,
-        activatable_id: chain_switch.properties.1.value,
         collider: ColliderBuilder::ball(10.0)
           .translation(physics_translation_from_map(
             chain_switch.x,
@@ -763,30 +814,6 @@ impl Object {
           physics_translation_from_map(mount_point.x, mount_point.y, 0.0, 0.0, map_height);
 
         MapComponent::MountPoint(MountPoint {
-          kinematic: mount_point.properties.as_ref().map(|(speed,)| {
-            let end_point_translation = mount_point_translation
-              + vector![
-                *map_scalar_to_physics(mount_point.width),
-                *map_scalar_to_physics(mount_point.height)
-              ];
-
-            let axis = end_point_translation - mount_point_translation;
-
-            let joint = PrismaticJointBuilder::new(UnitVector::new_normalize(axis))
-              .limits([0.0, axis.magnitude()])
-              .build();
-
-            let joint_center = RigidBodyBuilder::dynamic()
-              .lock_translations()
-              .translation(mount_point_translation)
-              .build();
-
-            MountPointKinematic {
-              joint_center,
-              joint,
-              motor_speed: speed.value,
-            }
-          }),
           rigid_body: RigidBodyBuilder::dynamic()
             .translation(mount_point_translation)
             .build(),
@@ -799,6 +826,24 @@ impl Object {
             .build(),
         })
       }
+
+      Object::Or(or) => MapComponent::Or(Or {
+        activatorIds: (or.properties.0.value, or.properties.1.value),
+        rigid_body: RigidBodyBuilder::dynamic()
+          .translation(physics_translation_from_map(
+            or.x, or.y, 0.0, 0.0, map_height,
+          ))
+          .build(),
+      }),
+
+      Object::And(and) => MapComponent::And(And {
+        activatorIds: (and.properties.0.value, and.properties.1.value),
+        rigid_body: RigidBodyBuilder::dynamic()
+          .translation(physics_translation_from_map(
+            and.x, and.y, 0.0, 0.0, map_height,
+          ))
+          .build(),
+      }),
     }
   }
 }
