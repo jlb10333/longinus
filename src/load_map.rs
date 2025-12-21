@@ -163,6 +163,91 @@ struct MapBlock {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapObject1IdClass {
+  Object1Id,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapObject1Id {
+  name: MapObject1IdClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapObject1LocalXClass {
+  Object1LocalX,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapObject1LocalX {
+  name: MapObject1LocalXClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapObject1LocalYClass {
+  Object1LocalY,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapObject1LocalY {
+  name: MapObject1LocalYClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapObject2IdClass {
+  Object2Id,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapObject2Id {
+  name: MapObject2IdClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapObject2LocalXClass {
+  Object2LocalX,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapObject2LocalX {
+  name: MapObject2LocalXClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapObject2LocalYClass {
+  Object2LocalY,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapObject2LocalY {
+  name: MapObject2LocalYClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapGlueClass {
+  Glue,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGlue {
+  properties: (
+    MapObject1Id,
+    MapObject1LocalX,
+    MapObject1LocalY,
+    MapObject2Id,
+    MapObject2LocalX,
+    MapObject2LocalY,
+  ),
+  #[serde(rename = "type")]
+  _class: MapGlueClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 enum MapTouchSensorTargetActivationClass {
   TargetActivation,
 }
@@ -440,6 +525,7 @@ enum Object {
   And(MapAnd),
   Gate(MapGate),
   Locomotor(MapLocomotor),
+  Glue(MapGlue),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -590,6 +676,7 @@ pub struct SavePoint {
 #[derive(Clone)]
 pub struct Block {
   pub id: i32,
+  pub rigid_body: RigidBody,
   pub collider: Collider,
 }
 
@@ -666,6 +753,11 @@ pub struct Locomotor {
 }
 
 #[derive(Clone)]
+pub struct Glue {
+  pub attachments: [(i32, Vector2<f32>); 2],
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -707,6 +799,7 @@ pub enum MapComponent {
   And(And),
   Gate(Gate),
   Locomotor(Locomotor),
+  Glue(Glue),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -778,10 +871,22 @@ impl Object {
           .build(),
       }),
 
-      Object::Block(gate) => MapComponent::Block(Block {
-        id: gate.id,
-        collider: cuboid_collider_from_map(gate.x, gate.y, gate.width, gate.height, map_height)
+      Object::Block(block) => MapComponent::Block(Block {
+        id: block.id,
+        rigid_body: RigidBodyBuilder::dynamic()
+          .translation(physics_translation_from_map(
+            block.x, block.y, 0.0, 0.0, map_height,
+          ))
           .build(),
+        collider: ColliderBuilder::cuboid(
+          *map_scalar_to_physics(block.width / 2.0),
+          *map_scalar_to_physics(block.height / 2.0),
+        )
+        .collision_groups(InteractionGroups {
+          memberships: COLLISION_GROUP_WALL,
+          filter: !COLLISION_GROUP_WALL,
+        })
+        .build(),
       }),
 
       Object::TouchSensor(touch_sensor) => MapComponent::TouchSensor(TouchSensor {
@@ -944,12 +1049,13 @@ impl Object {
 
         let reverse_direction = locomotor.properties.1.value;
 
-        let knob_base = RigidBodyBuilder::dynamic();
+        let knob_base = RigidBodyBuilder::dynamic().lock_rotations();
 
         MapComponent::Locomotor(Locomotor {
           id: locomotor.id,
           base: RigidBodyBuilder::dynamic()
             .translation((top_left + bottom_right) / 2.0)
+            .lock_rotations()
             .build(),
           joint: PrismaticJointBuilder::new(UnitVector::new_normalize(axis))
             .limits([-axis_len / 2.0, axis_len / 2.0])
@@ -964,6 +1070,31 @@ impl Object {
           activator_id: locomotor.properties.0.value,
         })
       }
+
+      Object::Glue(glue) => MapComponent::Glue(Glue {
+        attachments: [
+          (
+            glue.properties.0.value,
+            physics_translation_from_map(
+              glue.properties.1.value,
+              glue.properties.2.value,
+              0.0,
+              0.0,
+              map_height,
+            ),
+          ),
+          (
+            glue.properties.3.value,
+            physics_translation_from_map(
+              glue.properties.4.value,
+              glue.properties.5.value,
+              0.0,
+              0.0,
+              map_height,
+            ),
+          ),
+        ],
+      }),
     }
   }
 }
@@ -1036,7 +1167,7 @@ const DAMAGING_WALL_DAMAGE: f32 = 10.0;
 
 impl TileLayer {
   pub fn into(&self) -> Vec<MapTile> {
-    return self
+    self
       .data
       .iter()
       .enumerate()
@@ -1081,7 +1212,7 @@ impl TileLayer {
         }
         todo!("unaccounted wall {}", tile_data);
       })
-      .collect();
+      .collect()
   }
 }
 
@@ -1102,6 +1233,7 @@ pub struct Map {
   pub ors: Vec<Or>,
   pub gates: Vec<Gate>,
   pub locomotors: Vec<Locomotor>,
+  pub glues: Vec<Glue>,
 }
 
 impl RawMap {
@@ -1309,6 +1441,18 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let glues = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Glue(glue) = object {
+          Some(glue)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     Map {
       colliders,
       enemy_spawns,
@@ -1326,6 +1470,7 @@ impl RawMap {
       ors,
       gates,
       locomotors,
+      glues,
     }
   }
 }

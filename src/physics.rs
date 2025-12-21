@@ -179,7 +179,7 @@ fn load_new_map(
     .blocks
     .iter()
     .map(|gate| {
-      let rigid_body_handle = rigid_body_set.insert(RigidBodyBuilder::fixed());
+      let rigid_body_handle = rigid_body_set.insert(RigidBodyBuilder::dynamic());
       collider_set.insert_with_parent(
         gate.collider.clone(),
         rigid_body_handle,
@@ -187,7 +187,7 @@ fn load_new_map(
       );
       Entity {
         handle: EntityHandle::RigidBody(rigid_body_handle),
-        components: ComponentSet::new(),
+        components: ComponentSet::new().insert(Id { id: gate.id }),
         label: format!("g{}", gate.id),
       }
     })
@@ -505,7 +505,12 @@ fn load_new_map(
     .cloned()
     .filter_map(|(static_wall, _)| static_wall)
     .collect::<Vec<_>>();
-  collider_set.insert(ColliderBuilder::compound(static_walls).build());
+  collider_set.insert(ColliderBuilder::compound(static_walls).collision_groups(
+    InteractionGroups {
+      memberships: COLLISION_GROUP_WALL,
+      filter: Group::all(),
+    },
+  ));
 
   let interactive_walls = map_tiles
     .iter()
@@ -540,6 +545,55 @@ fn load_new_map(
     .chain(gates)
     .map(|entity| (entity.handle, Rc::new(entity)))
     .collect::<HashTrieMap<_, _>>();
+
+  /* MARK: Spawn glues. */
+  map.glues.iter().for_each(|glue| {
+    let entity_handle_1 = entities
+      .iter()
+      .find_map(|(handle, entity)| {
+        entity.components.get::<Id>().and_then(|id| {
+          if id.id == glue.attachments[0].0 {
+            Some(handle)
+          } else {
+            None
+          }
+        })
+      })
+      .unwrap();
+
+    let entity_handle_2 = entities
+      .iter()
+      .find_map(|(handle, entity)| {
+        entity.components.get::<Id>().and_then(|id| {
+          if id.id == glue.attachments[1].0 {
+            Some(handle)
+          } else {
+            None
+          }
+        })
+      })
+      .unwrap();
+
+    let rigid_body_handle_1 = match entity_handle_1 {
+      EntityHandle::Collider(collider_handle) => collider_set[*collider_handle].parent().unwrap(),
+      EntityHandle::RigidBody(rigid_body_handle) => *rigid_body_handle,
+    };
+
+    let rigid_body_handle_2 = match entity_handle_2 {
+      EntityHandle::Collider(collider_handle) => collider_set[*collider_handle].parent().unwrap(),
+      EntityHandle::RigidBody(rigid_body_handle) => *rigid_body_handle,
+    };
+
+    impulse_joint_set.insert(
+      rigid_body_handle_1,
+      rigid_body_handle_2,
+      PrismaticJointBuilder::new(UnitVector::new_normalize(vector![1.0, 0.0]))
+        .local_anchor1(glue.attachments[0].1.into())
+        .local_anchor2(glue.attachments[1].1.into())
+        .limits([0.0, 0.0]),
+      true,
+    );
+  });
 
   Rc::new(PhysicsSystem {
     rigid_body_set,
