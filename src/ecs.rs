@@ -205,7 +205,6 @@ impl Enemy {
 impl Component for Enemy {}
 
 pub struct GivesItemOnCollision {
-  pub id: i32,
   pub weapon_module_kind: WeaponModuleKind,
 }
 impl Component for GivesItemOnCollision {}
@@ -216,9 +215,7 @@ pub struct MapTransitionOnCollision {
 }
 impl Component for MapTransitionOnCollision {}
 
-pub struct SaveMenuOnCollision {
-  pub id: i32,
-}
+pub struct SaveMenuOnCollision;
 impl Component for SaveMenuOnCollision {}
 
 pub struct DropHealthOnDestroy {
@@ -231,11 +228,6 @@ pub struct HealOnCollision {
   pub amount: f32,
 }
 impl Component for HealOnCollision {}
-
-pub struct Gate {
-  pub id: i32,
-}
-impl Component for Gate {}
 
 pub struct TouchSensor {
   pub target_activation: f32,
@@ -262,7 +254,6 @@ impl Component for ChainMountArea {}
 
 pub struct Switch {
   pub joint: ImpulseJointHandle,
-  pub id: i32,
 }
 impl Component for Switch {}
 
@@ -275,15 +266,14 @@ impl Component for PrismaticMotor {}
 pub struct ChainSegment;
 impl Component for ChainSegment {}
 
-pub struct Activatable {
-  pub id: i32,
+pub struct Activatable<const N: usize> {
   pub activation: f32,
+  pub activator_ids: [i32; N],
 }
-impl Component for Activatable {}
+impl<const N: usize> Component for Activatable<N> {}
 
 pub struct Activator {
-  pub activatable_ids: HashTrieSet<i32>,
-  pub activation: Option<f32>,
+  pub activation: f32,
 }
 impl Component for Activator {}
 
@@ -299,3 +289,19 @@ pub struct DestroyAfterFrames {
   pub frames: i32,
 }
 impl Component for DestroyAfterFrames {}
+
+pub struct And;
+impl Component for And {}
+
+pub struct Or;
+impl Component for Or {}
+
+pub struct Gate {
+  pub highest_historical_activation: f32,
+}
+impl Component for Gate {}
+
+pub struct Id {
+  pub id: i32,
+}
+impl Component for Id {}

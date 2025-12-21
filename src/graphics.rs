@@ -91,6 +91,17 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
         /* Draw entity labels */
         physics_system.entities.iter().for_each(|(handle, entity)| {
+          if let EntityHandle::RigidBody(rigid_body_handle) = handle {
+            draw_label(
+              PhysicsVector::from_vec(
+                *physics_system.rigid_body_set[*rigid_body_handle].translation(),
+              ),
+              camera_system.translation,
+              entity.label.clone(),
+              Some(COLOR_4),
+            );
+          }
+
           handle
             .colliders(&physics_system.rigid_body_set)
             .into_iter()

@@ -300,6 +300,18 @@ struct MapRotation {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapActivatorIdClass {
+  ActivatorId,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapActivatorId {
+  #[serde(rename = "name")]
+  _name: MapActivatorIdClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 enum MapActivator1IdClass {
   Activator1Id,
 }
@@ -379,6 +391,21 @@ struct MapAnd {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapGateClass {
+  Gate,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGate {
+  id: i32,
+  x: f32,
+  y: f32,
+  properties: (MapActivatorId,),
+  #[serde(rename = "type")]
+  _class: MapGateClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -394,6 +421,7 @@ enum Object {
   MountPoint(MapMountPoint),
   Or(MapOr),
   And(MapAnd),
+  Gate(MapGate),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -542,7 +570,7 @@ pub struct SavePoint {
 }
 
 #[derive(Clone)]
-pub struct Gate {
+pub struct Block {
   pub id: i32,
   pub collider: Collider,
 }
@@ -591,13 +619,22 @@ pub struct MountPoint {
 #[derive(Clone)]
 pub struct Or {
   pub rigid_body: RigidBody,
-  pub activatorIds: (i32, i32),
+  pub id: i32,
+  pub activator_ids: (i32, i32),
 }
 
 #[derive(Clone)]
 pub struct And {
   pub rigid_body: RigidBody,
-  pub activatorIds: (i32, i32),
+  pub id: i32,
+  pub activator_ids: (i32, i32),
+}
+
+#[derive(Clone)]
+pub struct Gate {
+  pub rigid_body: RigidBody,
+  pub id: i32,
+  pub activator_id: i32,
 }
 
 #[derive(Clone)]
@@ -632,7 +669,7 @@ pub enum MapComponent {
   ItemPickup(ItemPickup),
   MapTransition(MapTransition),
   SavePoint(SavePoint),
-  Gate(Gate),
+  Block(Block),
   GateTrigger(TouchSensor),
   GravitySource(GravitySource),
   AbilityPickup(AbilityPickup),
@@ -640,6 +677,7 @@ pub enum MapComponent {
   MountPoint(MountPoint),
   Or(Or),
   And(And),
+  Gate(Gate),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -711,7 +749,7 @@ impl Object {
           .build(),
       }),
 
-      Object::Block(gate) => MapComponent::Gate(Gate {
+      Object::Block(gate) => MapComponent::Block(Block {
         id: gate.id,
         collider: cuboid_collider_from_map(gate.x, gate.y, gate.width, gate.height, map_height)
           .build(),
@@ -828,19 +866,31 @@ impl Object {
       }
 
       Object::Or(or) => MapComponent::Or(Or {
-        activatorIds: (or.properties.0.value, or.properties.1.value),
+        activator_ids: (or.properties.0.value, or.properties.1.value),
         rigid_body: RigidBodyBuilder::dynamic()
           .translation(physics_translation_from_map(
             or.x, or.y, 0.0, 0.0, map_height,
           ))
           .build(),
+        id: or.id,
       }),
 
       Object::And(and) => MapComponent::And(And {
-        activatorIds: (and.properties.0.value, and.properties.1.value),
+        activator_ids: (and.properties.0.value, and.properties.1.value),
         rigid_body: RigidBodyBuilder::dynamic()
           .translation(physics_translation_from_map(
             and.x, and.y, 0.0, 0.0, map_height,
+          ))
+          .build(),
+        id: and.id,
+      }),
+
+      Object::Gate(gate) => MapComponent::Gate(Gate {
+        id: gate.id,
+        activator_id: gate.properties.0.value,
+        rigid_body: RigidBodyBuilder::dynamic()
+          .translation(physics_translation_from_map(
+            gate.x, gate.y, 0.0, 0.0, map_height,
           ))
           .build(),
       }),
@@ -972,12 +1022,15 @@ pub struct Map {
   pub item_pickups: Vec<ItemPickup>,
   pub map_transitions: Vec<MapTransition>,
   pub save_points: Vec<SavePoint>,
-  pub gates: Vec<Gate>,
+  pub blocks: Vec<Block>,
   pub touch_sensors: Vec<TouchSensor>,
   pub gravity_sources: Vec<GravitySource>,
   pub ability_pickups: Vec<AbilityPickup>,
   pub chain_switches: Vec<ChainSwitch>,
   pub mount_points: Vec<MountPoint>,
+  pub ands: Vec<And>,
+  pub ors: Vec<Or>,
+  pub gates: Vec<Gate>,
 }
 
 impl RawMap {
@@ -1069,10 +1122,10 @@ impl RawMap {
       })
       .collect::<Vec<_>>();
 
-    let gates = converted_entities
+    let blocks = converted_entities
       .iter()
       .flat_map(|object| {
-        if let MapComponent::Gate(gate) = object {
+        if let MapComponent::Block(gate) = object {
           vec![gate.clone()]
         } else {
           vec![]
@@ -1137,6 +1190,42 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let ands = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::And(and) = object {
+          Some(and)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
+    let ors = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Or(or) = object {
+          Some(or)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
+    let gates = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Gate(gate) = object {
+          Some(gate)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     Map {
       colliders,
       enemy_spawns,
@@ -1144,12 +1233,15 @@ impl RawMap {
       item_pickups,
       map_transitions,
       save_points,
-      gates,
+      blocks,
       touch_sensors: gate_triggers,
       gravity_sources,
       ability_pickups,
       chain_switches,
       mount_points,
+      ands,
+      ors,
+      gates,
     }
   }
 }

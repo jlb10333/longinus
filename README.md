@@ -23,13 +23,21 @@
 
 ## GAME DESIGN:
 
+### Scenarios
+- Two engines active at opposite periods. When one is at 1.0, the other is at 0.0, and vice versa. An And activatable on the two engines prevents the player from progressing. The player must stop one of the engines, and restart it in sync with the other engine so that the combined signal will cause the and to reach 1.0 during the period.
+- An engine is giving activation to a rotator, which has 4 lasers attached at 90 degree angles. The player must disable and enable the rotator via a switch, until the laser reaches the desired path.
+
+- The player is in a big dyson-sphere like ring area with strong gravity pushing outwards. The player must activate a locomotor with a mount point attached, in order to mount onto the point and ride it as an elevator towards the center of the ring.
+
+- Player has to tug a magnet ball and launch it past a laser, meeting another ball to create an activation which disables the laser and allows the player to proceed.
+
 ### Activation
 - Interactable
   + Switch 
     (Prismatic joint with motor pulling towards the nearest end)
     + Activator
       + Emits activation level corresponding to position of the main knob w/r/t the limits of the joint
-      - 0.0 at one end, 1.0 at the other, LERPed in between
+      + 0.0 at one end, 1.0 at the other, LERPed in between
   - Crank
     (Revolute joint)
     - Activator
@@ -62,6 +70,11 @@
     - Activatable
       - 1 source
       - Sets motor target position equal to activation level lerped between joint limits
+  - Laser
+    (Constant damaging sensor collider proceeding in a straight line from a given point)
+    - Activatable
+      - 0-1 sources
+      - Sets laser intensity to activation lerped between min and max intensity
 
 - Logic
   - Not
@@ -69,21 +82,21 @@
       - 1 source
     - Activator
       - Emits activation level of 1.0 - received activation
-  - And
-    - Activatable
-      - 2 sources
-    - Activator
-      - Emits activation level of (0.5 * A)
-  - Or
-    - Activatable
-      - 2 sources
-    - Activator
-      - Emits activation level of (MAX(A, 1.0))
-  - Gate
-    - Activatable
-      - 1 source
-    - Activator
-      - Emits activation at level corresponding to highest historical activation received
+  + And
+    + Activatable
+      + 2 sources
+    + Activator
+      + Emits activation level of (0.5 * A)
+  + Or
+    + Activatable
+      + 2 sources
+    + Activator
+      + Emits activation level of (MAX(A, 1.0))
+  + Gate
+    + Activatable
+      + 1 source
+    + Activator
+      + Emits activation at level corresponding to highest historical activation received
   - Flat
     - Activatable
       - 1 source
