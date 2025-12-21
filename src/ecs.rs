@@ -257,20 +257,20 @@ pub struct Switch {
 }
 impl Component for Switch {}
 
-pub struct PrismaticMotor {
+pub struct Locomotor {
   pub joint: ImpulseJointHandle,
-  pub motor_speed: f32,
+  pub reverse_direction: bool,
 }
-impl Component for PrismaticMotor {}
+impl Component for Locomotor {}
 
 pub struct ChainSegment;
 impl Component for ChainSegment {}
 
-pub struct Activatable<const N: usize> {
+pub struct SimpleActivatable {
   pub activation: f32,
-  pub activator_ids: [i32; N],
+  pub activator_id: i32,
 }
-impl<const N: usize> Component for Activatable<N> {}
+impl Component for SimpleActivatable {}
 
 pub struct Activator {
   pub activation: f32,
@@ -290,13 +290,18 @@ pub struct DestroyAfterFrames {
 }
 impl Component for DestroyAfterFrames {}
 
-pub struct And;
+pub struct And {
+  pub activator_ids: (i32, i32),
+}
 impl Component for And {}
 
-pub struct Or;
+pub struct Or {
+  pub activator_ids: (i32, i32),
+}
 impl Component for Or {}
 
 pub struct Gate {
+  pub activator_id: i32,
   pub highest_historical_activation: f32,
 }
 impl Component for Gate {}

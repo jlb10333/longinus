@@ -30,6 +30,7 @@
 - The player is in a big dyson-sphere like ring area with strong gravity pushing outwards. The player must activate a locomotor with a mount point attached, in order to mount onto the point and ride it as an elevator towards the center of the ring.
 
 - Player has to tug a magnet ball and launch it past a laser, meeting another ball to create an activation which disables the laser and allows the player to proceed.
+- Player has to activate an engine which activates a gravity source which pushes a switch away from its negative end in a bouncing motion, not quite enough force to make it past the center even at the height of the gravity source activation. The player must grab onto the switch's mount point, the zone of which just barely crosses over a laser at the height of the gravity source activation.
 
 - The player passes through an area where they trigger a touch sensor which is gated, and the resulting activation causes a gate to swing shut behind them.
 
@@ -62,11 +63,11 @@
     - Activatable
       - 0-1 sources
       - Sets gravity intensity to activation lerped betwen min and max intensity
-  - Locomotor
+  + Locomotor
     (Prismatic joint which can have other objects attached to it via glue, e.g. gravity sources, mount points, doors)
-    - Activatable
-      - 1 source
-      - Sets motor target position equal to activation level lerped between joint limits
+    + Activatable
+      + 1 source
+      + Sets motor target position equal to activation level lerped between joint limits
   - Rotator
     (Revolute joint which can have other objects attached to it via glue, e.g. colliders)
     - Activatable
@@ -143,7 +144,7 @@
   - Shade
     - Invulnerable while stopped, remains stopped for a bit before leaping towards the player in an arc, after which it slows down and is invulnerable again once stopped. At the apex of the arc, it fires two slow-moving shots to either side of it.
   - Spider
-    - Lies dormant on a wall, with an egg separately laying away from it away from the wall. Launches towards the egg if and when the player touches it, at which point it remains in that spot and fires bursts of two quick-moving shots each at the player's location. 
+    - Lies dormant on a wall, with an egg separately laying away from it away from the wall. Launches towards the egg if and when the player touches it, at which point it remains in that spot and fires bursts of two quick-moving shots each at the player's . 
 - Angel automatons
   + Defender
   + Seeker

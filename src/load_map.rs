@@ -389,6 +389,40 @@ struct MapGate {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapReverseDirectionClass {
+  ReverseDirection,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapReverseDirection {
+  #[serde(rename = "name")]
+  _name: MapReverseDirectionClass,
+  value: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapPoint {
+  x: f32,
+  y: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapLocomotorClass {
+  Locomotor,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapLocomotor {
+  id: i32,
+  x: f32,
+  y: f32,
+  polyline: [MapPoint; 2],
+  properties: (MapActivatorId, MapReverseDirection),
+  #[serde(rename = "type")]
+  _class: MapLocomotorClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -405,6 +439,7 @@ enum Object {
   Or(MapOr),
   And(MapAnd),
   Gate(MapGate),
+  Locomotor(MapLocomotor),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -621,6 +656,16 @@ pub struct Gate {
 }
 
 #[derive(Clone)]
+pub struct Locomotor {
+  pub id: i32,
+  pub base: RigidBody,
+  pub joint: PrismaticJoint,
+  pub knob: RigidBody,
+  pub reverse_direction: bool,
+  pub activator_id: i32,
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -661,6 +706,7 @@ pub enum MapComponent {
   Or(Or),
   And(And),
   Gate(Gate),
+  Locomotor(Locomotor),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -877,6 +923,47 @@ impl Object {
           ))
           .build(),
       }),
+
+      Object::Locomotor(locomotor) => {
+        let top_left = physics_translation_from_map(
+          locomotor.x + locomotor.polyline[0].x,
+          locomotor.y + locomotor.polyline[0].y,
+          0.0,
+          0.0,
+          map_height,
+        );
+        let bottom_right = physics_translation_from_map(
+          locomotor.x + locomotor.polyline[1].x,
+          locomotor.y + locomotor.polyline[1].y,
+          0.0,
+          0.0,
+          map_height,
+        );
+        let axis = top_left - bottom_right;
+        let axis_len = axis.magnitude();
+
+        let reverse_direction = locomotor.properties.1.value;
+
+        let knob_base = RigidBodyBuilder::dynamic();
+
+        MapComponent::Locomotor(Locomotor {
+          id: locomotor.id,
+          base: RigidBodyBuilder::dynamic()
+            .translation((top_left + bottom_right) / 2.0)
+            .build(),
+          joint: PrismaticJointBuilder::new(UnitVector::new_normalize(axis))
+            .limits([-axis_len / 2.0, axis_len / 2.0])
+            .contacts_enabled(false)
+            .build(),
+          knob: if reverse_direction {
+            knob_base.translation(top_left).build()
+          } else {
+            knob_base.translation(bottom_right).build()
+          },
+          reverse_direction,
+          activator_id: locomotor.properties.0.value,
+        })
+      }
     }
   }
 }
@@ -1014,6 +1101,7 @@ pub struct Map {
   pub ands: Vec<And>,
   pub ors: Vec<Or>,
   pub gates: Vec<Gate>,
+  pub locomotors: Vec<Locomotor>,
 }
 
 impl RawMap {
@@ -1209,6 +1297,18 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let locomotors = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Locomotor(locomotor) = object {
+          Some(locomotor)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     Map {
       colliders,
       enemy_spawns,
@@ -1225,6 +1325,7 @@ impl RawMap {
       ands,
       ors,
       gates,
+      locomotors,
     }
   }
 }

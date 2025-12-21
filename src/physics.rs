@@ -4,7 +4,7 @@ use rapier2d::{
   na::{Isometry2, OPoint, Unit},
   prelude::*,
 };
-use rpds::{HashTrieMap, List, ht_set, list};
+use rpds::{HashTrieMap, List, list};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
@@ -12,11 +12,11 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
-    Activatable, Activator, And, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
+    Activator, And, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
     DestroyAfterFrames, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity, EntityHandle,
     ExplodeOnCollision, Gate, GiveAbilityOnCollision, GivesItemOnCollision, GravitySource,
-    HealOnCollision, Id, MapTransitionOnCollision, Or, PrismaticMotor, SaveMenuOnCollision, Switch,
-    TouchSensor,
+    HealOnCollision, Id, Locomotor, MapTransitionOnCollision, Or, SaveMenuOnCollision,
+    SimpleActivatable, Switch, TouchSensor,
   },
   enemy::EnemySystem,
   load_map::{
@@ -310,6 +310,41 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
+  /* MARK: Spawn locomotors */
+  let locomotors = map
+    .locomotors
+    .iter()
+    .map(|locomotor| {
+      let base_handle = rigid_body_set.insert(locomotor.base.clone());
+      let knob_handle = rigid_body_set.insert(locomotor.knob.clone());
+      collider_set.insert_with_parent(
+        ColliderBuilder::ball(0.1)
+          .mass(1.0)
+          .collision_groups(InteractionGroups {
+            memberships: Group::all(),
+            filter: Group::empty(),
+          }),
+        knob_handle,
+        &mut rigid_body_set,
+      );
+      let joint_handle = impulse_joint_set.insert(base_handle, knob_handle, locomotor.joint, true);
+      Entity {
+        handle: EntityHandle::RigidBody(knob_handle),
+        components: ComponentSet::new()
+          .insert(Locomotor {
+            joint: joint_handle,
+            reverse_direction: locomotor.reverse_direction,
+          })
+          .insert(Id { id: locomotor.id })
+          .insert(SimpleActivatable {
+            activation: 0.0,
+            activator_id: locomotor.activator_id,
+          }),
+        label: "locomotor".to_string(),
+      }
+    })
+    .collect::<Vec<_>>();
+
   /* MARK: Spawn mount points. */
   let mount_points = map
     .mount_points
@@ -355,10 +390,8 @@ fn load_new_map(
       Entity {
         handle: EntityHandle::RigidBody(and_handle),
         components: ComponentSet::new()
-          .insert(And)
-          .insert(Activatable {
-            activation: 0.0,
-            activator_ids: [and.activator_ids.0, and.activator_ids.1],
+          .insert(And {
+            activator_ids: (and.activator_ids.0, and.activator_ids.1),
           })
           .insert(Activator { activation: 0.0 })
           .insert(Id { id: and.id }),
@@ -377,10 +410,8 @@ fn load_new_map(
       Entity {
         handle: EntityHandle::RigidBody(or_handle),
         components: ComponentSet::new()
-          .insert(Or)
-          .insert(Activatable {
-            activation: 0.0,
-            activator_ids: [or.activator_ids.0, or.activator_ids.1],
+          .insert(Or {
+            activator_ids: (or.activator_ids.0, or.activator_ids.1),
           })
           .insert(Activator { activation: 0.0 })
           .insert(Id { id: or.id }),
@@ -400,11 +431,8 @@ fn load_new_map(
         handle: EntityHandle::RigidBody(gate_handle),
         components: ComponentSet::new()
           .insert(Gate {
+            activator_id: gate.activator_id,
             highest_historical_activation: 0.0,
-          })
-          .insert(Activatable {
-            activation: 0.0,
-            activator_ids: [gate.activator_id],
           })
           .insert(Activator { activation: 0.0 })
           .insert(Id { id: gate.id }),
@@ -505,6 +533,7 @@ fn load_new_map(
     .chain(touch_sensors)
     .chain(gravity_sources)
     .chain(chain_switches)
+    .chain(locomotors)
     .chain(mount_points)
     .chain(ands)
     .chain(ors)
@@ -1407,18 +1436,50 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
+    /* MARK: Calculate SimpleActivatable activation */
+    let entities = entities
+      .iter()
+      .map(|(&handle, entity)| {
+        if let Some(activatable) = entity.components.get::<SimpleActivatable>()
+          && let Some(activation) = entities.iter().find_map(|(_, entity)| {
+            if let Some(activator) = entity.components.get::<Activator>()
+              && let Some(id) = entity.components.get::<Id>()
+              && activatable.activator_id == id.id
+            {
+              Some(activator.activation)
+            } else {
+              None
+            }
+          })
+        {
+          (
+            handle,
+            Rc::new(Entity {
+              handle,
+              components: entity.components.with(SimpleActivatable {
+                activation,
+                activator_id: activatable.activator_id,
+              }),
+              label: entity.label.clone(),
+            }),
+          )
+        } else {
+          (handle, Rc::clone(entity))
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
+
     /* MARK: Calculate And activation */
     let entities = entities
       .iter()
       .map(|(&handle, entity)| {
-        if let Some(activatable) = entity.components.get::<Activatable<2>>()
-          && entity.components.get::<And>().is_some()
+        if let Some(and) = entity.components.get::<And>()
           && let Some((activation_1, activation_2)) = entities
             .iter()
             .filter_map(|(_, entity)| {
               if let Some(activator) = entity.components.get::<Activator>()
                 && let Some(id) = entity.components.get::<Id>()
-                && activatable.activator_ids.contains(&id.id)
+                && (and.activator_ids.0 == id.id || and.activator_ids.1 == id.id)
               {
                 Some(activator.activation)
               } else {
@@ -1433,13 +1494,7 @@ impl System for PhysicsSystem {
             Rc::new(Entity {
               handle,
               label: format!("and {}", activation),
-              components: entity
-                .components
-                .with(Activatable {
-                  activation,
-                  activator_ids: activatable.activator_ids,
-                })
-                .with(Activator { activation }),
+              components: entity.components.with(Activator { activation }),
             }),
           )
         } else {
@@ -1452,14 +1507,13 @@ impl System for PhysicsSystem {
     let entities = entities
       .iter()
       .map(|(&handle, entity)| {
-        if let Some(activatable) = entity.components.get::<Activatable<2>>()
-          && entity.components.get::<Or>().is_some()
+        if let Some(or) = entity.components.get::<Or>()
           && let Some((activation_1, activation_2)) = entities
             .iter()
             .filter_map(|(_, entity)| {
               if let Some(activator) = entity.components.get::<Activator>()
                 && let Some(id) = entity.components.get::<Id>()
-                && activatable.activator_ids.contains(&id.id)
+                && (or.activator_ids.0 == id.id || or.activator_ids.1 == id.id)
               {
                 Some(activator.activation)
               } else {
@@ -1475,13 +1529,7 @@ impl System for PhysicsSystem {
               handle,
               label: format!("or {}", activation),
 
-              components: entity
-                .components
-                .with(Activatable {
-                  activation,
-                  activator_ids: activatable.activator_ids,
-                })
-                .with(Activator { activation }),
+              components: entity.components.with(Activator { activation }),
             }),
           )
         } else {
@@ -1494,12 +1542,11 @@ impl System for PhysicsSystem {
     let entities = entities
       .iter()
       .map(|(&handle, entity)| {
-        if let Some(activatable) = entity.components.get::<Activatable<1>>()
-          && let Some(gate) = entity.components.get::<Gate>()
+        if let Some(gate) = entity.components.get::<Gate>()
           && let Some(incoming_activation) = entities.iter().find_map(|(_, entity)| {
             if let Some(activator) = entity.components.get::<Activator>()
               && let Some(id) = entity.components.get::<Id>()
-              && activatable.activator_ids.contains(&id.id)
+              && gate.activator_id == id.id
             {
               Some(activator.activation)
             } else {
@@ -1514,16 +1561,10 @@ impl System for PhysicsSystem {
               handle,
               label: format!("gate {}", activation),
 
-              components: entity
-                .components
-                .with(Activatable {
-                  activation,
-                  activator_ids: activatable.activator_ids,
-                })
-                .with(Activator { activation })
-                .with(Gate {
-                  highest_historical_activation: activation,
-                }),
+              components: entity.components.with(Activator { activation }).with(Gate {
+                activator_id: gate.activator_id,
+                highest_historical_activation: activation,
+              }),
             }),
           )
         } else {
@@ -1532,31 +1573,27 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
-    /* MARK: Prismatic motor behavior */
-    entities.iter().for_each(|(handle, entity)| {
-      if let Some(prismatic_motor) = entity.components.get::<PrismaticMotor>()
-        && let Some(joint) = impulse_joint_set.get_mut(prismatic_motor.joint, true)
+    /* MARK: Locomotor behavior */
+    entities.iter().for_each(|(_, entity)| {
+      if let Some(locomotor) = entity.components.get::<Locomotor>()
+        && let Some(activatable) = entity.components.get::<SimpleActivatable>()
+        && let Some(joint) = impulse_joint_set.get_mut(locomotor.joint, true)
       {
-        let mount_point = joint.body1;
-        let joint_center = joint.body2;
-
         let prismatic = joint.data.as_prismatic_mut().unwrap();
 
         let prismatic_limits = prismatic.limits().unwrap();
 
-        let distance = (rigid_body_set[mount_point].translation()
-          - rigid_body_set[joint_center].translation())
-        .magnitude();
-
         let prismatic_limit_magnitude = prismatic_limits.max - prismatic_limits.min;
 
-        let motor_position = if distance > prismatic_limit_magnitude / 2.0 {
-          prismatic_limits.min
+        let target_ratio = activatable.activation * prismatic_limit_magnitude;
+
+        let motor_position = if locomotor.reverse_direction {
+          prismatic_limits.min + target_ratio
         } else {
-          prismatic_limits.max
+          prismatic_limits.max - target_ratio
         };
 
-        prismatic.set_motor_position(motor_position, prismatic_motor.motor_speed, 0.0);
+        prismatic.set_motor_position(motor_position, 10.0, 5.0);
       }
     });
 
