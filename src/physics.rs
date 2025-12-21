@@ -201,13 +201,13 @@ fn load_new_map(
       handle: EntityHandle::Collider(collider_set.insert(touch_sensor.collider.clone())),
       components: ComponentSet::new()
         .insert(TouchSensor {
-          target_activation: match touch_sensor.action {
-            crate::load_map::TouchSensorAction::Close => 1.0,
-            crate::load_map::TouchSensorAction::Open => -1.0,
-          },
+          target_activation: touch_sensor.target_activation,
         })
-        .insert(Activator { activation: 0.0 }),
-      label: format!("gt{}", touch_sensor.target_activatable_id),
+        .insert(Activator { activation: 0.0 })
+        .insert(Id {
+          id: touch_sensor.id,
+        }),
+      label: "gt".to_string(),
     })
     .collect::<Vec<_>>();
 

@@ -147,12 +147,6 @@ struct MapSavePoint {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub enum TouchSensorAction {
-  Open,
-  Close,
-}
-
-#[derive(Clone, Debug, Deserialize)]
 enum MapBlockClass {
   Block,
 }
@@ -169,36 +163,25 @@ struct MapBlock {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-enum MapGateTriggerGateActionClass {
-  GateAction,
+enum MapTouchSensorTargetActivationClass {
+  TargetActivation,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct MapGateTriggerGateAction {
+struct MapTouchSensorTargetActivation {
   #[serde(rename = "name")]
-  _name: MapGateTriggerGateActionClass,
-  value: TouchSensorAction,
+  _name: MapTouchSensorTargetActivationClass,
+  value: f32,
 }
 
 #[derive(Clone, Debug, Deserialize)]
-enum MapGateTriggerTargetGateClass {
-  TargetGate,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct MapGateTriggerTargetGate {
-  #[serde(rename = "name")]
-  _name: MapGateTriggerTargetGateClass,
-  value: i32,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct MapGateTrigger {
+struct MapTouchSensor {
+  id: i32,
   x: f32,
   y: f32,
   width: f32,
   height: f32,
-  properties: (MapGateTriggerGateAction, MapGateTriggerTargetGate),
+  properties: (MapTouchSensorTargetActivation,),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -414,7 +397,7 @@ enum Object {
   MapTransition(MapMapTransition),
   SavePoint(MapSavePoint),
   Block(MapBlock),
-  GateTrigger(MapGateTrigger),
+  TouchSensor(MapTouchSensor),
   GravitySource(MapGravitySource),
   AbilityPickup(MapAbilityPickup),
   ChainSwitch(MapChainSwitch),
@@ -577,9 +560,9 @@ pub struct Block {
 
 #[derive(Clone)]
 pub struct TouchSensor {
-  pub target_activatable_id: i32,
   pub collider: Collider,
-  pub action: TouchSensorAction,
+  pub target_activation: f32,
+  pub id: i32,
 }
 
 #[derive(Clone)]
@@ -670,7 +653,7 @@ pub enum MapComponent {
   MapTransition(MapTransition),
   SavePoint(SavePoint),
   Block(Block),
-  GateTrigger(TouchSensor),
+  TouchSensor(TouchSensor),
   GravitySource(GravitySource),
   AbilityPickup(AbilityPickup),
   ChainSwitch(ChainSwitch),
@@ -755,13 +738,12 @@ impl Object {
           .build(),
       }),
 
-      Object::GateTrigger(gate_trigger) => MapComponent::GateTrigger(TouchSensor {
-        target_activatable_id: gate_trigger.properties.1.value,
+      Object::TouchSensor(touch_sensor) => MapComponent::TouchSensor(TouchSensor {
         collider: cuboid_collider_from_map(
-          gate_trigger.x,
-          gate_trigger.y,
-          gate_trigger.width,
-          gate_trigger.height,
+          touch_sensor.x,
+          touch_sensor.y,
+          touch_sensor.width,
+          touch_sensor.height,
           map_height,
         )
         .sensor(true)
@@ -770,7 +752,8 @@ impl Object {
           filter: COLLISION_GROUP_PLAYER,
         })
         .build(),
-        action: gate_trigger.properties.0.value.clone(),
+        target_activation: touch_sensor.properties.0.value,
+        id: touch_sensor.id,
       }),
 
       Object::GravitySource(gravity_source) => MapComponent::GravitySource(GravitySource {
@@ -1133,11 +1116,11 @@ impl RawMap {
       })
       .collect::<Vec<_>>();
 
-    let gate_triggers = converted_entities
+    let touch_sensors = converted_entities
       .iter()
       .flat_map(|object| {
-        if let MapComponent::GateTrigger(gate_trigger) = object {
-          vec![gate_trigger.clone()]
+        if let MapComponent::TouchSensor(touch_sensor) = object {
+          vec![touch_sensor.clone()]
         } else {
           vec![]
         }
@@ -1234,7 +1217,7 @@ impl RawMap {
       map_transitions,
       save_points,
       blocks,
-      touch_sensors: gate_triggers,
+      touch_sensors,
       gravity_sources,
       ability_pickups,
       chain_switches,

@@ -31,6 +31,8 @@
 
 - Player has to tug a magnet ball and launch it past a laser, meeting another ball to create an activation which disables the laser and allows the player to proceed.
 
+- The player passes through an area where they trigger a touch sensor which is gated, and the resulting activation causes a gate to swing shut behind them.
+
 ### Activation
 - Interactable
   + Switch 
@@ -47,7 +49,7 @@
     (Fixed sensor collider)
     + Activator
       + Emits activation level depending on whether or not an entity is colliding with the sensor
-      - 0.0 if no collision, 1.0 if collision
+      + 0.0 if no collision, 1.0 if collision
   - Magnet
     (Physics interactable balls; they attract each other)
     - Activator
