@@ -129,6 +129,12 @@
                  "height":32,
                  "id":6,
                  "name":"Touch Sensor",
+                 "properties":[
+                        {
+                         "name":"TargetActivation",
+                         "type":"float",
+                         "value":1
+                        }],
                  "rotation":0,
                  "type":"TouchSensor",
                  "visible":true,
@@ -144,7 +150,7 @@
                         {
                          "name":"TargetPlayerSpawn",
                          "type":"int",
-                         "value":2
+                         "value":1
                         }],
                  "rotation":0,
                  "type":"MapTransition",
@@ -189,9 +195,9 @@
                 {
                  "height":24,
                  "id":21,
-                 "name":"Dynamic Block",
+                 "name":"Block",
                  "rotation":0,
-                 "type":"DynamicBlock",
+                 "type":"Block",
                  "visible":true,
                  "width":8,
                  "x":208,
@@ -261,7 +267,7 @@
                  "visible":true,
                  "width":0,
                  "x":144,
-                 "y":296
+                 "y":305
                 }, 
                 {
                  "height":0,
@@ -296,11 +302,11 @@
                         }, 
                         {
                          "x":0,
-                         "y":-32
+                         "y":-24
                         }],
                  "properties":[
                         {
-                         "name":"Activator",
+                         "name":"ActivatorId",
                          "type":"object",
                          "value":41
                         }, 
@@ -361,9 +367,9 @@
                 {
                  "height":24,
                  "id":44,
-                 "name":"Dynamic Block",
+                 "name":"Block",
                  "rotation":0,
-                 "type":"DynamicBlock",
+                 "type":"Block",
                  "visible":true,
                  "width":8,
                  "x":344,
@@ -384,14 +390,14 @@
                         }],
                  "properties":[
                         {
-                         "name":"Activator",
+                         "name":"ActivatorId",
                          "type":"object",
                          "value":47
                         }, 
                         {
                          "name":"ReverseDirection",
                          "type":"bool",
-                         "value":false
+                         "value":true
                         }],
                  "rotation":0,
                  "type":"Locomotor",
