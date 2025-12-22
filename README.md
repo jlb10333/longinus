@@ -105,11 +105,11 @@
       - 1 source
     - Activator
       - Emits activation at level equal to 1.0 if A > 0.5, otherwise 0.0
-  - Engine
-    - Activatable
-      - 1 source
-    - Emits activation at a level that oscillates back and forth between 0.0 and 1.0 in a sinusoidal pattern
-    - Oscillates slower or faster depending on received activation level
+  + Engine
+    + Activatable
+      + 1 source
+    + Emits activation at a level that oscillates back and forth between 0.0 and 1.0 in a sinusoidal pattern
+    + Oscillates slower or faster depending on received activation level
 
 
 ### Combat

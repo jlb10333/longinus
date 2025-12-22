@@ -13,10 +13,10 @@ use crate::{
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
     Activator, And, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
-    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Entity, EntityHandle,
-    ExplodeOnCollision, Gate, GiveAbilityOnCollision, GivesItemOnCollision, GravitySource,
-    HealOnCollision, Id, Locomotor, MapTransitionOnCollision, Or, SaveMenuOnCollision,
-    SimpleActivatable, Switch, TouchSensor,
+    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Engine, Entity,
+    EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision, GivesItemOnCollision,
+    GravitySource, HealOnCollision, Id, Locomotor, MapTransitionOnCollision, Or,
+    SaveMenuOnCollision, SimpleActivatable, Switch, TouchSensor,
   },
   enemy::EnemySystem,
   load_map::{
@@ -37,6 +37,8 @@ const CHAIN_SEGMENT_LENGTH: f32 = 0.5;
 const CHAIN_SEGMENT_HEIGHT: f32 = 0.05;
 // const CHAIN_SEGMENT_LIMITS: [f32; 2] = [-90.0, 90.0];
 pub const CHAIN_ANGULAR_DAMPING: f32 = 1.0;
+
+pub const ENGINE_MAX_SPEED: f32 = 0.005;
 
 pub struct PhysicsSystem {
   pub rigid_body_set: RigidBodySet,
@@ -357,12 +359,19 @@ fn load_new_map(
         &mut rigid_body_set,
       );
 
-      let mount_point_entity = {
-        rigid_body_set[mount_point_handle].lock_translations(true, true);
+      collider_set.insert_with_parent(
+        ColliderBuilder::ball(0.1).collision_groups(InteractionGroups {
+          memberships: Group::all(),
+          filter: Group::empty(),
+        }),
+        mount_point_handle,
+        &mut rigid_body_set,
+      );
 
+      let mount_point_entity = {
         Entity {
           handle: EntityHandle::RigidBody(mount_point_handle),
-          components: ComponentSet::new(),
+          components: ComponentSet::new().insert(Id { id: mount_point.id }),
           label: "mount".to_string(),
         }
       };
@@ -437,6 +446,27 @@ fn load_new_map(
           .insert(Activator { activation: 0.0 })
           .insert(Id { id: gate.id }),
         label: "gate".to_string(),
+      }
+    })
+    .collect::<Vec<_>>();
+
+  /* MARK: Spawn engines. */
+  let engines = map
+    .engines
+    .iter()
+    .map(|engine| {
+      let engine_handle = rigid_body_set.insert(engine.rigid_body.clone());
+
+      Entity {
+        handle: EntityHandle::RigidBody(engine_handle),
+        components: ComponentSet::new()
+          .insert(Engine {
+            activator_id: engine.activator_id,
+            currently_increasing: true,
+          })
+          .insert(Activator { activation: 0.0 })
+          .insert(Id { id: engine.id }),
+        label: "engine".to_string(),
       }
     })
     .collect::<Vec<_>>();
@@ -543,6 +573,7 @@ fn load_new_map(
     .chain(ands)
     .chain(ors)
     .chain(gates)
+    .chain(engines)
     .map(|entity| (entity.handle, Rc::new(entity)))
     .collect::<HashTrieMap<_, _>>();
 
@@ -1490,6 +1521,65 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
+    /* MARK: Calculate activation for engines */
+
+    let entities = entities
+      .into_iter()
+      .map(|(&handle, entity)| {
+        if let Some(engine) = entity.components.get::<Engine>()
+          && let Some(activator) = entity.components.get::<Activator>()
+          && let Some(incoming_activation) = engine
+            .activator_id
+            .map(|activator_id| {
+              entities.iter().find_map(|(_, entity)| {
+                if let Some(activator) = entity.components.get::<Activator>()
+                  && let Some(id) = entity.components.get::<Id>()
+                  && activator_id == id.id
+                {
+                  Some(activator.activation)
+                } else {
+                  None
+                }
+              })
+            })
+            .unwrap_or(Some(0.0))
+        {
+          let activation_change = ENGINE_MAX_SPEED * incoming_activation;
+
+          let (activation, currently_increasing) = if engine.currently_increasing {
+            if activator.activation >= 1.0 {
+              (activator.activation - activation_change, false)
+            } else {
+              (activator.activation + activation_change, true)
+            }
+          } else {
+            if activator.activation <= 0.0 {
+              (activator.activation + activation_change, true)
+            } else {
+              (activator.activation - activation_change, false)
+            }
+          };
+
+          (
+            handle,
+            Rc::new(Entity {
+              handle,
+              label: format!("engine {}", activation),
+              components: entity
+                .components
+                .with(Engine {
+                  activator_id: engine.activator_id,
+                  currently_increasing,
+                })
+                .with(Activator { activation }),
+            }),
+          )
+        } else {
+          (handle, Rc::clone(entity))
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
+
     /* MARK: Calculate SimpleActivatable activation */
     let entities = entities
       .iter()
@@ -1647,7 +1737,7 @@ impl System for PhysicsSystem {
           prismatic_limits.max - target_ratio
         };
 
-        prismatic.set_motor_position(motor_position, 10.0, 5.0);
+        prismatic.set_motor_position(motor_position, 500.0, 400.0);
       }
     });
 

@@ -291,14 +291,14 @@
                          "y":0
                         }, 
                         {
-                         "x":50,
+                         "x":24,
                          "y":0
                         }],
                  "properties":[
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":31
+                         "value":38
                         }, 
                         {
                          "name":"ReverseDirection",
@@ -322,14 +322,14 @@
                          "y":0
                         }, 
                         {
-                         "x":-60,
+                         "x":-24,
                          "y":0
                         }],
                  "properties":[
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":32
+                         "value":39
                         }, 
                         {
                          "name":"ReverseDirection",
@@ -578,6 +578,84 @@
                  "width":0,
                  "x":176,
                  "y":96
+                }, 
+                {
+                 "height":16,
+                 "id":37,
+                 "name":"Touch Sensor",
+                 "properties":[
+                        {
+                         "name":"TargetActivation",
+                         "type":"float",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"TouchSensor",
+                 "visible":true,
+                 "width":16,
+                 "x":192,
+                 "y":40
+                }, 
+                {
+                 "height":0,
+                 "id":38,
+                 "name":"Or",
+                 "properties":[
+                        {
+                         "name":"Activator1Id",
+                         "type":"object",
+                         "value":40
+                        }, 
+                        {
+                         "name":"Activator2Id",
+                         "type":"object",
+                         "value":31
+                        }],
+                 "rotation":0,
+                 "type":"Or",
+                 "visible":true,
+                 "width":0,
+                 "x":216,
+                 "y":72
+                }, 
+                {
+                 "height":0,
+                 "id":39,
+                 "name":"Or",
+                 "properties":[
+                        {
+                         "name":"Activator1Id",
+                         "type":"object",
+                         "value":32
+                        }, 
+                        {
+                         "name":"Activator2Id",
+                         "type":"object",
+                         "value":40
+                        }],
+                 "rotation":0,
+                 "type":"Or",
+                 "visible":true,
+                 "width":0,
+                 "x":144,
+                 "y":48
+                }, 
+                {
+                 "height":16,
+                 "id":40,
+                 "name":"Gate",
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":37
+                        }],
+                 "rotation":0,
+                 "type":"Gate",
+                 "visible":true,
+                 "width":16,
+                 "x":160,
+                 "y":32
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -647,7 +725,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":37,
+ "nextobjectid":41,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

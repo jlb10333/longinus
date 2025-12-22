@@ -306,6 +306,12 @@ pub struct Gate {
 }
 impl Component for Gate {}
 
+pub struct Engine {
+  pub activator_id: Option<i32>,
+  pub currently_increasing: bool,
+}
+impl Component for Engine {}
+
 pub struct Id {
   pub id: i32,
 }

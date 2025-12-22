@@ -508,6 +508,21 @@ struct MapLocomotor {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapEngineClass {
+  Engine,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapEngine {
+  id: i32,
+  x: f32,
+  y: f32,
+  properties: (Option<MapActivatorId>,),
+  #[serde(rename = "type")]
+  _class: MapEngineClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -526,6 +541,7 @@ enum Object {
   Gate(MapGate),
   Locomotor(MapLocomotor),
   Glue(MapGlue),
+  Engine(MapEngine),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -717,6 +733,7 @@ pub struct MountPointKinematic {
 
 #[derive(Clone)]
 pub struct MountPoint {
+  pub id: i32,
   pub rigid_body: RigidBody,
   pub zone: Collider,
 }
@@ -755,6 +772,13 @@ pub struct Locomotor {
 #[derive(Clone)]
 pub struct Glue {
   pub attachments: [(i32, Vector2<f32>); 2],
+}
+
+#[derive(Clone)]
+pub struct Engine {
+  pub id: i32,
+  pub activator_id: Option<i32>,
+  pub rigid_body: RigidBody,
 }
 
 #[derive(Clone)]
@@ -800,6 +824,7 @@ pub enum MapComponent {
   Gate(Gate),
   Locomotor(Locomotor),
   Glue(Glue),
+  Engine(Engine),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -996,6 +1021,7 @@ impl Object {
               filter: COLLISION_GROUP_PLAYER,
             })
             .build(),
+          id: mount_point.id,
         })
       }
 
@@ -1094,6 +1120,19 @@ impl Object {
             ),
           ),
         ],
+      }),
+      Object::Engine(engine) => MapComponent::Engine(Engine {
+        id: engine.id,
+        activator_id: engine
+          .properties
+          .0
+          .as_ref()
+          .map(|activator_id| activator_id.value),
+        rigid_body: RigidBodyBuilder::fixed()
+          .translation(physics_translation_from_map(
+            engine.x, engine.y, 0.0, 0.0, map_height,
+          ))
+          .build(),
       }),
     }
   }
@@ -1234,6 +1273,7 @@ pub struct Map {
   pub gates: Vec<Gate>,
   pub locomotors: Vec<Locomotor>,
   pub glues: Vec<Glue>,
+  pub engines: Vec<Engine>,
 }
 
 impl RawMap {
@@ -1453,6 +1493,18 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let engines = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Engine(engine) = object {
+          Some(engine)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     Map {
       colliders,
       enemy_spawns,
@@ -1471,6 +1523,7 @@ impl RawMap {
       gates,
       locomotors,
       glues,
+      engines,
     }
   }
 }
