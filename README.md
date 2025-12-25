@@ -10,9 +10,6 @@
 - Add max health increase pickup 
 - Add map/minimap
 
-- Allow switches to be loaded in any rotation
-- Allow switches to be loaded with an initial activation
-
 - Restrict camera movement to map boundaries
 - Prevent infinite boost
 
@@ -100,11 +97,16 @@
       + 1 source
     + Activator
       + Emits activation at level corresponding to highest historical activation received
-  - Flat
+  - Min
     - Activatable
       - 1 source
     - Activator
-      - Emits activation at level equal to 1.0 if A > 0.5, otherwise 0.0
+      - Emits activation at level equal to (MIN(A, M)), where A is incoming activation and M is the given threshold
+  - Max
+    - Activatable
+      - 1 source
+    - Activator
+      - Emits activation at level equal to (MAX(A, M)), where A is incoming activation and M is the given threshold
   + Engine
     + Activatable
       + 1 source

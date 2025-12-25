@@ -1,4 +1,4 @@
-use std::{fs, rc::Rc};
+use std::{f32::consts::PI, fs, rc::Rc};
 
 use rapier2d::{
   na::{Unit, Vector2},
@@ -7,7 +7,7 @@ use rapier2d::{
 use serde::Deserialize;
 
 use crate::{
-  combat::WeaponModuleKind,
+  combat::{WeaponModuleKind, distance_projection_physics},
   ecs::{ComponentSet, Damageable, Damager, DropHealthOnDestroy, Enemy},
   f::MonadTranslate,
   physics::PhysicsSystem,
@@ -966,47 +966,49 @@ impl Object {
           .build(),
       }),
 
-      Object::ChainSwitch(chain_switch) => MapComponent::ChainSwitch(ChainSwitch {
-        id: chain_switch.id,
-        collider: ColliderBuilder::ball(10.0)
-          .translation(physics_translation_from_map(
-            chain_switch.x,
-            chain_switch.y,
-            0.0,
-            0.0,
-            map_height,
-          ))
-          .sensor(true)
-          .collision_groups(InteractionGroups {
-            memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
-            filter: COLLISION_GROUP_PLAYER,
-          })
-          .build(),
-        switch_center: RigidBodyBuilder::dynamic()
-          .lock_translations()
-          .translation(physics_translation_from_map(
-            chain_switch.x,
-            chain_switch.y,
-            0.0,
-            0.0,
-            map_height,
-          ))
-          .build(),
-        mount_body: RigidBodyBuilder::dynamic()
-          .translation(physics_translation_from_map(
-            chain_switch.x,
-            chain_switch.y,
-            0.0,
-            0.0,
-            map_height,
-          ))
-          .build(),
-        switch_joint: PrismaticJointBuilder::new(Unit::new_normalize(vector![1.0, 0.0]))
-          .limits([-1.0, 1.0])
-          .local_anchor1(vec_zero().into())
-          .local_anchor2(vec_zero().into())
-          .build(),
-      }),
+      Object::ChainSwitch(chain_switch) => {
+        let center_position =
+          physics_translation_from_map(chain_switch.x, chain_switch.y, 0.0, 0.0, map_height);
+
+        let switch_half_limits = 1.0; // TODO: load from map
+
+        let rotation_vec =
+          distance_projection_physics(chain_switch.rotation * PI / 180.0, 1.0).into_vec();
+
+        let initial_activation = chain_switch.properties.0.value;
+
+        let knob_position = center_position + (2.0 * initial_activation - 1.0) * rotation_vec;
+
+        MapComponent::ChainSwitch(ChainSwitch {
+          id: chain_switch.id,
+          collider: ColliderBuilder::ball(10.0)
+            .translation(physics_translation_from_map(
+              chain_switch.x,
+              chain_switch.y,
+              0.0,
+              0.0,
+              map_height,
+            ))
+            .sensor(true)
+            .collision_groups(InteractionGroups {
+              memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+              filter: COLLISION_GROUP_PLAYER,
+            })
+            .build(),
+          switch_center: RigidBodyBuilder::dynamic()
+            .lock_translations()
+            .translation(center_position)
+            .build(),
+          mount_body: RigidBodyBuilder::dynamic()
+            .translation(knob_position)
+            .build(),
+          switch_joint: PrismaticJointBuilder::new(Unit::new_normalize(rotation_vec))
+            .limits([-1.0, 1.0])
+            .local_anchor1(vec_zero().into())
+            .local_anchor2(vec_zero().into())
+            .build(),
+        })
+      }
 
       Object::MountPoint(mount_point) => {
         let mount_point_translation =

@@ -90,7 +90,6 @@ fn load_new_map(
     .build();
   player_rigid_body.wake_up(true);
   let player_collider = &ColliderBuilder::ball(0.25)
-    .restitution(0.7)
     .collision_groups(InteractionGroups {
       memberships: COLLISION_GROUP_PLAYER,
       filter: COLLISION_GROUP_WALL
@@ -267,26 +266,10 @@ fn load_new_map(
         target_mount_body,
         &mut rigid_body_set,
       );
-      impulse_joint_set.insert(
-        target_mount_body,
-        rigid_body_set.insert(chain_switch.switch_center.clone()),
-        PrismaticJointBuilder::new(Unit::new_normalize(vector![1.0, 0.0]))
-          .limits([-1.0, 1.0])
-          .local_anchor1(vec_zero().into())
-          .local_anchor2(vec_zero().into())
-          .motor_position(-1.0, 0.3, 0.0)
-          .build(),
-        true,
-      );
       let joint_handle = impulse_joint_set.insert(
         target_mount_body,
         rigid_body_set.insert(chain_switch.switch_center.clone()),
-        PrismaticJointBuilder::new(Unit::new_normalize(vector![1.0, 0.0]))
-          .limits([-1.0, 1.0])
-          .local_anchor1(vec_zero().into())
-          .local_anchor2(vec_zero().into())
-          .motor_position(1.0, 0.3, 0.0)
-          .build(),
+        chain_switch.switch_joint,
         true,
       );
 
