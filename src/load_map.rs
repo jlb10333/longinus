@@ -234,15 +234,24 @@ enum MapGlueClass {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct MapGlue {
-  properties: (
-    MapObject1Id,
-    MapObject1LocalX,
-    MapObject1LocalY,
-    MapObject2Id,
-    MapObject2LocalX,
-    MapObject2LocalY,
+#[serde(untagged)]
+enum MapGlueMapObjects {
+  MultiObject(
+    (
+      MapObject1Id,
+      MapObject1LocalX,
+      MapObject1LocalY,
+      MapObject2Id,
+      MapObject2LocalX,
+      MapObject2LocalY,
+    ),
   ),
+  SingleObject((MapObject1Id, MapObject1LocalX, MapObject1LocalY)),
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapGlue {
+  properties: MapGlueMapObjects,
   #[serde(rename = "type")]
   _class: MapGlueClass,
 }
@@ -361,13 +370,6 @@ enum MapRotationClass {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct MapRotation {
-  #[serde(rename = "name")]
-  _name: MapRotationClass,
-  value: f32,
-}
-
-#[derive(Clone, Debug, Deserialize)]
 enum MapActivatorIdClass {
   ActivatorId,
 }
@@ -409,7 +411,7 @@ struct MapChainSwitch {
   x: f32,
   y: f32,
   rotation: f32,
-  properties: (MapInitialActivation, MapRotation),
+  properties: (MapInitialActivation,),
   #[serde(rename = "type")]
   _class: MapChainSwitchClass,
 }
@@ -579,6 +581,11 @@ pub const COLLISION_GROUP_ENEMY_PROJECTILE: Group = Group::GROUP_5;
 pub const COLLISION_GROUP_PLAYER_INTERACTIBLE: Group = Group::GROUP_6;
 pub const COLLISION_GROUP_CHAIN: Group = Group::GROUP_7;
 
+pub const GRAVITY_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
+  memberships: Group::all(),
+  filter: COLLISION_GROUP_WALL.complement(),
+};
+
 #[derive(Clone)]
 pub struct EnemySpawn {
   pub name: Enemy,
@@ -725,17 +732,11 @@ pub struct ChainSwitch {
 }
 
 #[derive(Clone)]
-pub struct MountPointKinematic {
-  pub joint_center: RigidBody,
-  pub joint: PrismaticJoint,
-  pub motor_speed: f32,
-}
-
-#[derive(Clone)]
 pub struct MountPoint {
   pub id: i32,
   pub rigid_body: RigidBody,
   pub zone: Collider,
+  pub knob: Collider,
 }
 
 #[derive(Clone)]
@@ -771,7 +772,7 @@ pub struct Locomotor {
 
 #[derive(Clone)]
 pub struct Glue {
-  pub attachments: [(i32, Vector2<f32>); 2],
+  pub attachments: ((i32, Vector2<f32>), (Option<i32>, Vector2<f32>)),
 }
 
 #[derive(Clone)]
@@ -942,6 +943,7 @@ impl Object {
             map_height,
           ))
           .sensor(true)
+          .collision_groups(GRAVITY_INTERACTION_GROUPS)
           .build(),
         strength: gravity_source.properties.1.value,
       }),
@@ -1021,6 +1023,12 @@ impl Object {
               filter: COLLISION_GROUP_PLAYER,
             })
             .build(),
+          knob: ColliderBuilder::ball(0.1)
+            .collision_groups(InteractionGroups {
+              memberships: COLLISION_GROUP_WALL,
+              filter: Group::empty(),
+            })
+            .build(),
           id: mount_point.id,
         })
       }
@@ -1098,28 +1106,59 @@ impl Object {
       }
 
       Object::Glue(glue) => MapComponent::Glue(Glue {
-        attachments: [
-          (
-            glue.properties.0.value,
-            physics_translation_from_map(
-              glue.properties.1.value,
-              glue.properties.2.value,
-              0.0,
-              0.0,
-              map_height,
+        attachments: match &glue.properties {
+          MapGlueMapObjects::MultiObject((
+            object_1_id,
+            object_1_x,
+            object_1_y,
+            object_2_id,
+            object_2_x,
+            object_2_y,
+          )) => (
+            (
+              object_1_id.value,
+              physics_translation_from_map(
+                object_1_x.value,
+                object_1_y.value,
+                0.0,
+                0.0,
+                map_height,
+              ),
+            ),
+            (
+              Some(object_2_id.value),
+              physics_translation_from_map(
+                object_2_x.value,
+                object_2_y.value,
+                0.0,
+                0.0,
+                map_height,
+              ),
             ),
           ),
-          (
-            glue.properties.3.value,
-            physics_translation_from_map(
-              glue.properties.4.value,
-              glue.properties.5.value,
-              0.0,
-              0.0,
-              map_height,
+          MapGlueMapObjects::SingleObject((object_1_id, object_1_x, object_1_y)) => (
+            (
+              object_1_id.value,
+              physics_translation_from_map(
+                object_1_x.value,
+                object_1_y.value,
+                0.0,
+                0.0,
+                map_height,
+              ),
+            ),
+            (
+              None,
+              physics_translation_from_map(
+                object_1_x.value,
+                object_1_y.value,
+                0.0,
+                0.0,
+                map_height,
+              ),
             ),
           ),
-        ],
+        },
       }),
       Object::Engine(engine) => MapComponent::Engine(Engine {
         id: engine.id,

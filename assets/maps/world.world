@@ -53,8 +53,8 @@
             "fileName": "CL4-1.json",
             "height": 560,
             "width": 560,
-            "x": 1352,
-            "y": 384
+            "x": 1752,
+            "y": 32
         },
         {
             "fileName": "CL5-3.json",
@@ -62,6 +62,13 @@
             "width": 800,
             "x": 552,
             "y": 1600
+        },
+        {
+            "fileName": "CL4-2.json",
+            "height": 400,
+            "width": 400,
+            "x": 1352,
+            "y": 280
         }
     ],
     "onlyShowAdjacentMaps": false,

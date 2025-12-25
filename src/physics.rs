@@ -360,10 +360,7 @@ fn load_new_map(
       );
 
       collider_set.insert_with_parent(
-        ColliderBuilder::ball(0.1).collision_groups(InteractionGroups {
-          memberships: Group::all(),
-          filter: Group::empty(),
-        }),
+        mount_point.knob.clone(),
         mount_point_handle,
         &mut rigid_body_set,
       );
@@ -583,7 +580,7 @@ fn load_new_map(
       .iter()
       .find_map(|(handle, entity)| {
         entity.components.get::<Id>().and_then(|id| {
-          if id.id == glue.attachments[0].0 {
+          if id.id == glue.attachments.0.0 {
             Some(handle)
           } else {
             None
@@ -592,18 +589,27 @@ fn load_new_map(
       })
       .unwrap();
 
-    let entity_handle_2 = entities
-      .iter()
-      .find_map(|(handle, entity)| {
-        entity.components.get::<Id>().and_then(|id| {
-          if id.id == glue.attachments[1].0 {
-            Some(handle)
-          } else {
-            None
-          }
+    let entity_handle_2 = if let Some(entity_id_2) = glue.attachments.1.0 {
+      entities
+        .iter()
+        .find_map(|(handle, entity)| {
+          entity.components.get::<Id>().and_then(|id| {
+            if id.id == entity_id_2 {
+              Some(handle)
+            } else {
+              None
+            }
+          })
         })
-      })
-      .unwrap();
+        .unwrap()
+    } else {
+      &EntityHandle::RigidBody(
+        rigid_body_set.insert(
+          RigidBodyBuilder::fixed()
+            .translation(*entity_handle_1.translation(&rigid_body_set, &collider_set)),
+        ),
+      )
+    };
 
     let rigid_body_handle_1 = match entity_handle_1 {
       EntityHandle::Collider(collider_handle) => collider_set[*collider_handle].parent().unwrap(),
@@ -619,8 +625,8 @@ fn load_new_map(
       rigid_body_handle_1,
       rigid_body_handle_2,
       PrismaticJointBuilder::new(UnitVector::new_normalize(vector![1.0, 0.0]))
-        .local_anchor1(glue.attachments[0].1.into())
-        .local_anchor2(glue.attachments[1].1.into())
+        .local_anchor1(glue.attachments.0.1.into())
+        .local_anchor2(glue.attachments.1.1.into())
         .limits([0.0, 0.0]),
       true,
     );

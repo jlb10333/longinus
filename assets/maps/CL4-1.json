@@ -162,17 +162,6 @@
                 }, 
                 {
                  "height":0,
-                 "id":16,
-                 "name":"Mount Point",
-                 "rotation":0,
-                 "type":"MountPoint",
-                 "visible":true,
-                 "width":0,
-                 "x":448,
-                 "y":232
-                }, 
-                {
-                 "height":0,
                  "id":17,
                  "name":"Mount Point",
                  "rotation":0,
@@ -181,17 +170,6 @@
                  "width":0,
                  "x":536,
                  "y":112
-                }, 
-                {
-                 "height":0,
-                 "id":19,
-                 "name":"Mount Point",
-                 "rotation":0,
-                 "type":"MountPoint",
-                 "visible":true,
-                 "width":0,
-                 "x":456,
-                 "y":24
                 }, 
                 {
                  "height":32,
@@ -540,6 +518,82 @@
                  "width":16,
                  "x":560,
                  "y":176
+                }, 
+                {
+                 "height":0,
+                 "id":40,
+                 "name":"Glue",
+                 "properties":[
+                        {
+                         "name":"Object1Id",
+                         "type":"object",
+                         "value":41
+                        }, 
+                        {
+                         "name":"Object1LocalX",
+                         "type":"float",
+                         "value":0
+                        }, 
+                        {
+                         "name":"Object1LocalY",
+                         "type":"float",
+                         "value":0
+                        }],
+                 "rotation":0,
+                 "type":"Glue",
+                 "visible":true,
+                 "width":0,
+                 "x":424,
+                 "y":216
+                }, 
+                {
+                 "height":0,
+                 "id":41,
+                 "name":"Mount Point",
+                 "rotation":0,
+                 "type":"MountPoint",
+                 "visible":true,
+                 "width":0,
+                 "x":448,
+                 "y":232
+                }, 
+                {
+                 "height":0,
+                 "id":45,
+                 "name":"Glue",
+                 "properties":[
+                        {
+                         "name":"Object1Id",
+                         "type":"object",
+                         "value":46
+                        }, 
+                        {
+                         "name":"Object1LocalX",
+                         "type":"float",
+                         "value":0
+                        }, 
+                        {
+                         "name":"Object1LocalY",
+                         "type":"float",
+                         "value":0
+                        }],
+                 "rotation":0,
+                 "type":"Glue",
+                 "visible":true,
+                 "width":0,
+                 "x":432,
+                 "y":8
+                }, 
+                {
+                 "height":0,
+                 "id":46,
+                 "name":"Mount Point",
+                 "rotation":0,
+                 "type":"MountPoint",
+                 "visible":true,
+                 "width":0,
+                 "x":456,
+                 "y":24
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -548,7 +602,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":39,
+ "nextobjectid":47,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",
