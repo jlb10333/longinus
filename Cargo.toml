@@ -8,6 +8,7 @@ archery = "1.2.2"
 chrono = "0.4.42"
 derive_more = { version = "2.0.1", features = ["add", "mul"	] }
 device_query = "4.0.1"
+gilrs = "0.11.0"
 itertools = "0.14.0"
 macroquad = "0.4.14"
 rapier2d = "0.29.0"

@@ -1,6 +1,6 @@
 use std::{f32::consts::PI, marker::PhantomData, rc::Rc};
 
-use device_query::{DeviceQuery, DeviceState, Keycode};
+use gilrs::{Axis, Button, ConnectedGamepadsIterator, Gamepad, Gilrs};
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
@@ -10,40 +10,6 @@ use crate::{
 
 const INPUT_FORCE: f32 = 0.1;
 const EMPTY_VECTOR: Vector2<f32> = vector![0.0, 0.0];
-
-struct KeyBindings {
-  up: Keycode,
-  down: Keycode,
-  left: Keycode,
-  right: Keycode,
-}
-
-fn handle_stick_input(keys: &Vec<Keycode>, bindings: KeyBindings) -> PhysicsVector {
-  let component_vectors = [
-    if keys.contains(&bindings.up) {
-      vector![0.0, INPUT_FORCE]
-    } else {
-      EMPTY_VECTOR
-    },
-    if keys.contains(&bindings.down) {
-      vector![0.0, -INPUT_FORCE]
-    } else {
-      EMPTY_VECTOR
-    },
-    if keys.contains(&bindings.left) {
-      vector![-INPUT_FORCE, 0.0]
-    } else {
-      EMPTY_VECTOR
-    },
-    if keys.contains(&bindings.right) {
-      vector![INPUT_FORCE, 0.0]
-    } else {
-      EMPTY_VECTOR
-    },
-  ];
-
-  return PhysicsVector::from_vec(component_vectors.iter().sum());
-}
 
 #[derive(Clone)]
 pub struct ControlsSystem<Input> {
@@ -55,6 +21,7 @@ pub struct ControlsSystem<Input> {
   pub boost: bool,
   pub chain: bool,
   pub last_frame: Option<Rc<ControlsSystem<Input>>>,
+  pub gilrs: Rc<Gilrs>,
   phantom: PhantomData<Input>,
 }
 
@@ -68,30 +35,61 @@ pub fn angle_from_vec(direction: PhysicsVector) -> f32 {
   }
 }
 
+struct StickBindings {
+  vertical: Axis,
+  horizontal: Axis,
+}
+
+fn handle_stick_input(
+  gamepads: ConnectedGamepadsIterator,
+  bindings: StickBindings,
+) -> PhysicsVector {
+  let input_vectors = gamepads
+    .map(|(_, gamepad)| {
+      let horizontal_axis_value = gamepad
+        .axis_data(bindings.horizontal)
+        .map(|axis_data| axis_data.value())
+        .unwrap_or(0.0);
+      let vertical_axis_value = gamepad
+        .axis_data(bindings.vertical)
+        .map(|axis_data| axis_data.value())
+        .unwrap_or(0.0);
+
+      vector![horizontal_axis_value, vertical_axis_value].normalize()
+    })
+    .collect::<Vec<_>>();
+
+  PhysicsVector::from_vec(input_vectors.iter().sum() / input_vectors.len())
+}
+
+fn handle_button_input(gamepads: ConnectedGamepadsIterator, button: Button) -> bool {
+  gamepads.any(|(_, gamepad)| {
+    gamepad
+      .button_data(button)
+      .map(|button_data| button_data.is_pressed())
+      .unwrap_or(false)
+  })
+}
+
 impl<Input: Clone + 'static> System for ControlsSystem<Input> {
   type Input = Input;
 
   fn start(_: &ProcessContext<Input>) -> Rc<dyn System<Input = Self::Input>> {
-    let device_state = DeviceState::new();
-    let keys: Vec<Keycode> = device_state.get_keys();
+    let gilrs = Rc::new(Gilrs::new().unwrap());
 
     Rc::new(Self {
       left_stick: handle_stick_input(
-        &keys,
-        KeyBindings {
-          up: Keycode::Up,
-          down: Keycode::Down,
-          left: Keycode::Left,
-          right: Keycode::Right,
+        gilrs.gamepads(),
+        StickBindings {
+          vertical: Axis::LeftStickX,
+          horizontal: Axis::LeftStickY,
         },
       ),
       right_stick: handle_stick_input(
-        &keys,
-        KeyBindings {
-          up: Keycode::W,
-          down: Keycode::S,
-          left: Keycode::A,
-          right: Keycode::D,
+        gilrs.gamepads(),
+        StickBindings {
+          vertical: Axis::RightStickX,
+          horizontal: Axis::RightStickY,
         },
       ),
       firing: keys.contains(&Keycode::Space),

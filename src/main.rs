@@ -1,3 +1,4 @@
+use macroquad::prelude::*;
 use std::rc::Rc;
 
 use crate::ability::AbilitySystem;
@@ -37,7 +38,16 @@ enum State {
   Exit,
 }
 
-#[macroquad::main("MyGame")]
+fn window_conf() -> Conf {
+  Conf {
+    window_title: "Longinus".to_string(),
+    window_width: 1920,
+    window_height: 1080,
+    ..Default::default()
+  }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
   let mut state = State::MainMenu;
 

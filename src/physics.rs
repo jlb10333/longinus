@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use macroquad::prelude::rand;
 use rapier2d::{
-  na::{Isometry2, OPoint, Unit},
+  na::{Isometry2, OPoint},
   prelude::*,
 };
 use rpds::{HashTrieMap, List, list};
@@ -27,7 +27,7 @@ use crate::{
   menu::MenuSystem,
   save::SaveData,
   system::System,
-  units::{PhysicsVector, UnitConvert2, vec_zero},
+  units::{PhysicsVector, UnitConvert2},
 };
 
 const PLAYER_SPEED_LIMIT: f32 = 2.5;

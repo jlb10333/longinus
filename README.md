@@ -9,6 +9,7 @@
 - Add chain ability pickup
 - Add max health increase pickup 
 - Add map/minimap
+- Add saving/loading of activation levels of chain switches, gates
 
 - Restrict camera movement to map boundaries
 - Prevent infinite boost
@@ -20,6 +21,23 @@
 
 ## GAME DESIGN:
 
+### Tasks to Accomplish
+- Communicate that exploration is valuable/necessary
+- Communicate that backtracking is valuable/necessary
+- Introduce boost
+- Provide a space to practice boost
+- Provide a space to demonstrate mastery of boost
+- Introduce chain
+- Introduce activation
+- Create a frighteningly intense atmosphere
+- Create a frighteningly desolate atmosphere
+  - ideas
+    - petrified forest
+      - off-white grey
+      - enemies exist, but as petrified husks which crumble when touched
+
+
+
 ### Scenarios
 - Two engines active at opposite periods. When one is at 1.0, the other is at 0.0, and vice versa. An And activatable on the two engines prevents the player from progressing. The player must stop one of the engines, and restart it in sync with the other engine so that the combined signal will cause the and to reach 1.0 during the period.
 - An engine is giving activation to a rotator, which has 4 lasers attached at 90 degree angles. The player must disable and enable the rotator via a switch, until the laser reaches the desired path.
@@ -29,7 +47,7 @@
 - Player has to tug a magnet ball and launch it past a laser, meeting another ball to create an activation which disables the laser and allows the player to proceed.
 - Player has to activate an engine which activates a gravity source which pushes a switch away from its negative end in a bouncing motion, not quite enough force to make it past the center even at the height of the gravity source activation. The player must grab onto the switch's mount point, the zone of which just barely crosses over a laser at the height of the gravity source activation.
 
-- The player passes through an area where they trigger a touch sensor which is gated, and the resulting activation causes a gate to swing shut behind them.
++ The player passes through an area where they trigger a touch sensor which is gated, and the resulting activation causes a gate to swing shut behind them.
 
 ### Activation
 - Interactable
@@ -117,9 +135,11 @@
 ### Combat
 - Weapons
   + Missile
-    + Self-propelling, slow moving, low frequency, overall hard to use, while bieng high-damage with an explosive blast radius
+    + Self-propelling, slow moving, low frequency, overall hard to use, while being high-damage with an explosive blast radius
   - Laser
     - Very fast-moving, almost hitscan, as well as being high frequency, while being low-damage
+  - Railgun
+    - Very fast-moving, almost hitscan, but very very low frequency and extremely high-damage
 - Modules
   + Slots
     + Front two
