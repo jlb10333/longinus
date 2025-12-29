@@ -76,6 +76,13 @@
             "width": 320,
             "x": 1352,
             "y": 1448
+        },
+        {
+            "fileName": "../MP2.json",
+            "height": 240,
+            "width": 240,
+            "x": 1352,
+            "y": 1208
         }
     ],
     "onlyShowAdjacentMaps": false,

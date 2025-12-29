@@ -295,6 +295,7 @@ dependencies = [
  "rpds",
  "serde",
  "serde_json",
+ "serde_literals",
 ]
 
 [[package]]
@@ -1027,6 +1028,15 @@ dependencies = [
  "serde",
  "serde_core",
  "zmij",
+]
+
+[[package]]
+name = "serde_literals"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a566f939d49d6c0bdcaba6f214b10a02accc0144c8d5ba10ea4e933b4ad78c3f"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

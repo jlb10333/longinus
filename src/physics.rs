@@ -221,12 +221,13 @@ fn load_new_map(
       handle: EntityHandle::Collider(collider_set.insert(gravity_source.collider.clone())),
       components: ComponentSet::new().insert(GravitySource {
         strength: gravity_source.strength,
+        activator_id: gravity_source.activator_id,
       }),
       label: "grav".to_string(),
     })
     .collect::<Vec<_>>();
 
-  /* MARK: Spawn ability pickups */
+  /* Spawn ability pickups */
   let ability_pickups = map
     .ability_pickups
     .iter()
@@ -751,6 +752,23 @@ impl System for PhysicsSystem {
       if let Some(gravity_source) = entity.components.get::<GravitySource>()
         && let EntityHandle::Collider(collider_handle) = handle
       {
+        let strength = if let Some(target_activator_id) = gravity_source.activator_id
+          && let Some((_, entity)) = entities.iter().find(|(_, entity)| {
+            if let Some(id) = entity.components.get::<Id>()
+              && id.id == target_activator_id
+            {
+              true
+            } else {
+              false
+            }
+          })
+          && let Some(activator) = entity.components.get::<Activator>()
+        {
+          activator.activation
+        } else {
+          1.0
+        } * gravity_source.strength;
+
         narrow_phase
           .intersection_pairs_with(*collider_handle)
           .filter_map(|(collider1, collider2, colliding)| {
@@ -768,7 +786,7 @@ impl System for PhysicsSystem {
               - collider_set[other_handle].translation();
 
             let distance_squared = distance_vec.magnitude_squared();
-            let gravity_intensity = gravity_source.strength / distance_squared;
+            let gravity_intensity = strength / distance_squared;
 
             if let Some(rigid_body_handle) = collider_set[other_handle].parent() {
               rigid_body_set[rigid_body_handle]
@@ -1953,6 +1971,7 @@ fn spawn_explosion(
       })
       .insert(GravitySource {
         strength: explosion.strength,
+        activator_id: None,
       })
       .insert(DestroyAfterFrames { frames: 5 }),
     label: "boom".to_string(),

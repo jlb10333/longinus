@@ -37,8 +37,8 @@ impl System for AbilitySystem {
       acquired_boost: ctx.input.acquired_boost,
       acquired_chain: ctx.input.acquired_chain,
       boost_force: None,
-      current_boost_cooldown: 60.0,
-      max_boost_cooldown: 60.0,
+      current_boost_cooldown: 240.0, // TODO: Load from save data
+      max_boost_cooldown: 240.0,
       chain_to_mount_point: None,
       chain_activated: false,
       kill_chain: false,

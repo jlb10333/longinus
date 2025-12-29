@@ -1,10 +1,10 @@
 {
-  "player_spawn_id": 1,
-  "map_name": "CL5-1",
-    "unequipped_modules": ["Missile", "Front2Slot", "FortyFiveSlot", "SideSlot", "DoubleFreq75Damage", "MirrorSlot"],
+  "player_spawn_id": 9,
+  "map_name": "MP1",
+  "unequipped_modules": [],
   "equipped_modules": [
     [
-      "Plasma",
+      null,
       null,
       null,
       null

@@ -1,0 +1,377 @@
+{ "compressionlevel":-1,
+ "height":30,
+ "infinite":false,
+ "layers":[
+        {
+         "data":[0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+         "height":30,
+         "id":1,
+         "name":"Colliders",
+         "opacity":1,
+         "type":"tilelayer",
+         "visible":true,
+         "width":20,
+         "x":0,
+         "y":0
+        }, 
+        {
+         "draworder":"topdown",
+         "id":2,
+         "name":"Entities",
+         "objects":[
+                {
+                 "height":8,
+                 "id":1,
+                 "name":"MP3",
+                 "properties":[
+                        {
+                         "name":"TargetPlayerSpawn",
+                         "type":"int",
+                         "value":22
+                        }],
+                 "template":"templates\/MapTransition.tx",
+                 "width":32,
+                 "x":64,
+                 "y":232
+                }, 
+                {
+                 "id":2,
+                 "template":"templates\/Player Spawn.tx",
+                 "x":80,
+                 "y":216
+                }, 
+                {
+                 "height":8,
+                 "id":3,
+                 "name":"Block",
+                 "rotation":0,
+                 "type":"Block",
+                 "visible":true,
+                 "width":32,
+                 "x":64,
+                 "y":152
+                }, 
+                {
+                 "height":0,
+                 "id":4,
+                 "name":"Locomotor",
+                 "polyline":[
+                        {
+                         "x":0,
+                         "y":0
+                        }, 
+                        {
+                         "x":32,
+                         "y":0
+                        }],
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":12
+                        }, 
+                        {
+                         "name":"ReverseDirection",
+                         "type":"bool",
+                         "value":true
+                        }],
+                 "rotation":0,
+                 "type":"Locomotor",
+                 "visible":true,
+                 "width":0,
+                 "x":48,
+                 "y":156
+                }, 
+                {
+                 "height":0,
+                 "id":5,
+                 "name":"Glue",
+                 "properties":[
+                        {
+                         "name":"Object1Id",
+                         "type":"object",
+                         "value":4
+                        }, 
+                        {
+                         "name":"Object1LocalX",
+                         "type":"float",
+                         "value":0
+                        }, 
+                        {
+                         "name":"Object1LocalY",
+                         "type":"float",
+                         "value":0
+                        }, 
+                        {
+                         "name":"Object2Id",
+                         "type":"object",
+                         "value":3
+                        }, 
+                        {
+                         "name":"Object2LocalX",
+                         "type":"float",
+                         "value":0
+                        }, 
+                        {
+                         "name":"Object2LocalY",
+                         "type":"float",
+                         "value":0
+                        }],
+                 "rotation":0,
+                 "type":"Glue",
+                 "visible":true,
+                 "width":0,
+                 "x":80,
+                 "y":136
+                }, 
+                {
+                 "height":16,
+                 "id":7,
+                 "name":"Touch Sensor",
+                 "properties":[
+                        {
+                         "name":"TargetActivation",
+                         "type":"float",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"TouchSensor",
+                 "visible":true,
+                 "width":24,
+                 "x":68,
+                 "y":164
+                }, 
+                {
+                 "height":8,
+                 "id":8,
+                 "name":"Block",
+                 "rotation":0,
+                 "type":"Block",
+                 "visible":true,
+                 "width":32,
+                 "x":64,
+                 "y":80
+                }, 
+                {
+                 "height":0,
+                 "id":9,
+                 "name":"Locomotor",
+                 "polyline":[
+                        {
+                         "x":0,
+                         "y":0
+                        }, 
+                        {
+                         "x":32,
+                         "y":0
+                        }],
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":13
+                        }, 
+                        {
+                         "name":"ReverseDirection",
+                         "type":"bool",
+                         "value":true
+                        }],
+                 "rotation":0,
+                 "type":"Locomotor",
+                 "visible":true,
+                 "width":0,
+                 "x":48,
+                 "y":84
+                }, 
+                {
+                 "height":0,
+                 "id":10,
+                 "name":"Glue",
+                 "properties":[
+                        {
+                         "name":"Object1Id",
+                         "type":"object",
+                         "value":9
+                        }, 
+                        {
+                         "name":"Object1LocalX",
+                         "type":"float",
+                         "value":0
+                        }, 
+                        {
+                         "name":"Object1LocalY",
+                         "type":"float",
+                         "value":0
+                        }, 
+                        {
+                         "name":"Object2Id",
+                         "type":"object",
+                         "value":8
+                        }, 
+                        {
+                         "name":"Object2LocalX",
+                         "type":"float",
+                         "value":0
+                        }, 
+                        {
+                         "name":"Object2LocalY",
+                         "type":"float",
+                         "value":0
+                        }],
+                 "rotation":0,
+                 "type":"Glue",
+                 "visible":true,
+                 "width":0,
+                 "x":80,
+                 "y":64
+                }, 
+                {
+                 "height":23,
+                 "id":11,
+                 "name":"Touch Sensor",
+                 "properties":[
+                        {
+                         "name":"TargetActivation",
+                         "type":"float",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"TouchSensor",
+                 "visible":true,
+                 "width":32,
+                 "x":64,
+                 "y":136
+                }, 
+                {
+                 "height":0,
+                 "id":12,
+                 "name":"Or",
+                 "properties":[
+                        {
+                         "name":"Activator1Id",
+                         "type":"object",
+                         "value":11
+                        }, 
+                        {
+                         "name":"Activator2Id",
+                         "type":"object",
+                         "value":7
+                        }],
+                 "rotation":0,
+                 "type":"Or",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
+                 "y":136
+                }, 
+                {
+                 "height":0,
+                 "id":13,
+                 "name":"Or",
+                 "properties":[
+                        {
+                         "name":"Activator1Id",
+                         "type":"object",
+                         "value":15
+                        }, 
+                        {
+                         "name":"Activator2Id",
+                         "type":"object",
+                         "value":7
+                        }],
+                 "rotation":0,
+                 "type":"Or",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
+                 "y":104
+                }, 
+                {
+                 "height":23,
+                 "id":15,
+                 "name":"Touch Sensor",
+                 "properties":[
+                        {
+                         "name":"TargetActivation",
+                         "type":"float",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"TouchSensor",
+                 "visible":true,
+                 "width":32,
+                 "x":64,
+                 "y":64
+                }, 
+                {
+                 "height":8,
+                 "id":16,
+                 "name":"MP7",
+                 "properties":[
+                        {
+                         "name":"TargetPlayerSpawn",
+                         "type":"int",
+                         "value":30
+                        }],
+                 "template":"templates\/MapTransition.tx",
+                 "width":32,
+                 "x":48,
+                 "y":0
+                }, 
+                {
+                 "id":17,
+                 "template":"templates\/Player Spawn.tx",
+                 "x":64,
+                 "y":24
+                }],
+         "opacity":1,
+         "type":"objectgroup",
+         "visible":true,
+         "x":0,
+         "y":0
+        }],
+ "nextlayerid":3,
+ "nextobjectid":18,
+ "orientation":"orthogonal",
+ "renderorder":"right-down",
+ "tiledversion":"1.11.2",
+ "tileheight":8,
+ "tilesets":[
+        {
+         "firstgid":1,
+         "source":"tilesets\/colliders.tsx"
+        }],
+ "tilewidth":8,
+ "type":"map",
+ "version":"1.10",
+ "width":20
+}

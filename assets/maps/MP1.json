@@ -25,7 +25,7 @@
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
@@ -70,24 +70,6 @@
          "objects":[
                 {
                  "height":0,
-                 "id":1,
-                 "name":"Defender",
-                 "rotation":0,
-                 "type":"EnemySpawn",
-                 "visible":true,
-                 "width":0,
-                 "x":232,
-                 "y":168
-                }, 
-                {
-                 "id":3,
-                 "template":"templates\/Player Spawn.tx",
-                 "type":"PlayerSpawn",
-                 "x":160,
-                 "y":376
-                }, 
-                {
-                 "height":0,
                  "id":4,
                  "name":"Plasma",
                  "rotation":0,
@@ -113,10 +95,53 @@
                  "y":0
                 }, 
                 {
-                 "id":7,
+                 "id":8,
                  "template":"templates\/Player Spawn.tx",
                  "x":56,
                  "y":24
+                }, 
+                {
+                 "id":9,
+                 "template":"templates\/Player Spawn.tx",
+                 "x":160,
+                 "y":376
+                }, 
+                {
+                 "id":10,
+                 "name":"Defender",
+                 "template":"templates\/EnemySpawn.tx",
+                 "type":"EnemySpawn",
+                 "x":232,
+                 "y":168
+                }, 
+                {
+                 "id":11,
+                 "name":"Defender",
+                 "template":"templates\/EnemySpawn.tx",
+                 "type":"EnemySpawn",
+                 "x":96,
+                 "y":104
+                }, 
+                {
+                 "height":24,
+                 "id":12,
+                 "name":"MP3",
+                 "properties":[
+                        {
+                         "name":"TargetPlayerSpawn",
+                         "type":"int",
+                         "value":2
+                        }],
+                 "template":"templates\/MapTransition.tx",
+                 "width":8,
+                 "x":312,
+                 "y":24
+                }, 
+                {
+                 "id":13,
+                 "template":"templates\/Player Spawn.tx",
+                 "x":304,
+                 "y":40
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -125,7 +150,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":8,
+ "nextobjectid":14,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

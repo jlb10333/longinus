@@ -5,6 +5,7 @@ use rapier2d::{
   prelude::*,
 };
 use serde::Deserialize;
+use serde_literals::lit_str;
 
 use crate::{
   combat::{WeaponModuleKind, distance_projection_physics},
@@ -29,9 +30,13 @@ struct TileLayer {
   name: TileLayerName,
 }
 
+lit_str!(EnemySpawnTemplatePath, "templates/EnemySpawn.tx");
+
 #[derive(Clone, Debug, Deserialize)]
-pub enum MapEnemySpawnClass {
-  EnemySpawn,
+#[serde(untagged)]
+enum EnemySpawnTemplate {
+  #[serde(with = "EnemySpawnTemplatePath")]
+  Path,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -49,8 +54,7 @@ struct MapEnemySpawn {
   x: f32,
   y: f32,
   name: MapEnemyName,
-  #[serde(rename = "type")]
-  _class: MapEnemySpawnClass,
+  template: EnemySpawnTemplate,
 }
 
 impl MapEnemySpawn {
@@ -63,9 +67,13 @@ impl MapEnemySpawn {
   }
 }
 
+lit_str!(PlayerSpawnTemplatePath, "templates/Player Spawn.tx");
+
 #[derive(Clone, Debug, Deserialize)]
-pub enum MapPlayerSpawnClass {
-  PlayerSpawn,
+#[serde(untagged)]
+enum PlayerSpawnTemplate {
+  #[serde(with = "PlayerSpawnTemplatePath")]
+  Path,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -73,8 +81,7 @@ struct MapPlayerSpawn {
   id: i32,
   x: f32,
   y: f32,
-  #[serde(rename = "type")]
-  _class: MapPlayerSpawnClass,
+  template: PlayerSpawnTemplate,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -103,9 +110,13 @@ struct MapMapTransitionTarget {
   value: i32,
 }
 
+lit_str!(MapTransitionTemplatePath, "templates/MapTransition.tx");
+
 #[derive(Clone, Debug, Deserialize)]
-enum MapMapTransitionClass {
-  MapTransition,
+#[serde(untagged)]
+enum MapTransitionTemplate {
+  #[serde(with = "MapTransitionTemplatePath")]
+  Path,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -116,8 +127,7 @@ struct MapMapTransition {
   height: f32,
   name: String,
   properties: (MapMapTransitionTarget,),
-  #[serde(rename = "type")]
-  _class: MapMapTransitionClass,
+  template: MapTransitionTemplate,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -311,7 +321,11 @@ enum MapGravitySourceClass {
 struct MapGravitySource {
   x: f32,
   y: f32,
-  properties: (MapGravitySourceRadius, MapGravitySourceStrength),
+  properties: (
+    Option<MapActivatorId>,
+    MapGravitySourceRadius,
+    MapGravitySourceStrength,
+  ),
   #[serde(rename = "type")]
   _class: MapGravitySourceClass,
 }
@@ -333,18 +347,6 @@ struct MapAbilityPickup {
   name: MapAbilityType,
   #[serde(rename = "type")]
   _class: MapAbilityPickupClass,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-enum MapTargetActivatableIdClass {
-  TargetActivatableId,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct MapTargetActivatableId {
-  #[serde(rename = "name")]
-  _name: MapTargetActivatableIdClass,
-  value: i32,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -558,15 +560,8 @@ struct ObjectLayer {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
-enum Layer {
-  TileLayer(TileLayer),
-  ObjectLayer(ObjectLayer),
-}
-
-#[derive(Clone, Debug, Deserialize)]
 struct RawMap {
-  layers: Vec<Layer>,
+  layers: (TileLayer, ObjectLayer),
 }
 
 fn deser_map(raw: &str) -> RawMap {
@@ -715,6 +710,7 @@ pub struct TouchSensor {
 pub struct GravitySource {
   pub collider: Collider,
   pub strength: f32,
+  pub activator_id: Option<i32>,
 }
 
 #[derive(Clone)]
@@ -941,7 +937,7 @@ impl Object {
       }),
 
       Object::GravitySource(gravity_source) => MapComponent::GravitySource(GravitySource {
-        collider: ColliderBuilder::ball(gravity_source.properties.0.value)
+        collider: ColliderBuilder::ball(gravity_source.properties.1.value)
           .translation(physics_translation_from_map(
             gravity_source.x,
             gravity_source.y,
@@ -952,7 +948,12 @@ impl Object {
           .sensor(true)
           .collision_groups(GRAVITY_INTERACTION_GROUPS)
           .build(),
-        strength: gravity_source.properties.1.value,
+        strength: gravity_source.properties.2.value,
+        activator_id: gravity_source
+          .properties
+          .0
+          .as_ref()
+          .map(|activator_id| activator_id.value),
       }),
 
       Object::AbilityPickup(ability_pickup) => MapComponent::AbilityPickup(AbilityPickup {
@@ -1331,32 +1332,11 @@ pub struct Map {
 
 impl RawMap {
   pub fn into(&self) -> Map {
-    let tile_layer = self
-      .layers
-      .iter()
-      .find_map(|layer| {
-        if let Layer::TileLayer(tile_layer) = layer
-          && let TileLayerName::Colliders = tile_layer.name
-        {
-          Some(tile_layer)
-        } else {
-          None
-        }
-      })
-      .unwrap();
+    let tile_layer = &self.layers.0;
 
     let colliders = tile_layer.into();
 
-    let entities_layer = self
-      .layers
-      .iter()
-      .find_map(|layer| match layer {
-        Layer::ObjectLayer(object_layer) => match object_layer.name {
-          ObjectLayerName::Entities => Some(object_layer),
-        },
-        Layer::TileLayer(_) => None,
-      })
-      .unwrap();
+    let entities_layer = &self.layers.1;
 
     let map_height = tile_layer.height as f32 * 8.0;
 

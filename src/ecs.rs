@@ -236,6 +236,7 @@ impl Component for TouchSensor {}
 
 pub struct GravitySource {
   pub strength: f32,
+  pub activator_id: Option<i32>,
 }
 impl Component for GravitySource {}
 
