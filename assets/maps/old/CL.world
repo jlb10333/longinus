@@ -83,6 +83,48 @@
             "width": 240,
             "x": 1352,
             "y": 1208
+        },
+        {
+            "fileName": "../MP3.json",
+            "height": 240,
+            "width": 400,
+            "x": 1672,
+            "y": 1360
+        },
+        {
+            "fileName": "../MP4.json",
+            "height": 80,
+            "width": 80,
+            "x": 1720,
+            "y": 1280
+        },
+        {
+            "fileName": "../MP5.json",
+            "height": 400,
+            "width": 320,
+            "x": 1672,
+            "y": 1600
+        },
+        {
+            "fileName": "../MP6.json",
+            "height": 240,
+            "width": 160,
+            "x": 1848,
+            "y": 1120
+        },
+        {
+            "fileName": "../MP7.json",
+            "height": 480,
+            "width": 800,
+            "x": 1856,
+            "y": 640
+        },
+        {
+            "fileName": "../MP8.json",
+            "height": 400,
+            "width": 400,
+            "x": 2072,
+            "y": 1280
         }
     ],
     "onlyShowAdjacentMaps": false,

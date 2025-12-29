@@ -2,11 +2,15 @@
 ## Gameplay
 - Mechanical prototype
   - Controls
-    - Get solid controls w/ controller
     - Get solid controls w/ kbd and mouse (maybe)
-  - Map view
+  - Basic functionality
+    - Add chain ability pickup
+  - Visual explainability
+    - Make it clear where the equip grid is
+    - Make it clear where the module attach points are
+    - Show boost cooldown (maybe)
+  - Map view (maybe)
   - Story terminals
-  - Map that gradually introduces and repeats(!!) mechanics
   - Get it playtested
 - Messy experiments in variety
   - Come up with a list of places where variety(!!) emerges from
@@ -14,9 +18,23 @@
   - Playtest them
   - Come up with a strategy for how to make the rest of the game
 - Exploration game loop
+  - Mana
+    - Boost consumes mana bar
+    - Mana recharges only rechargeable bars
+    - Unrechargeable bars can be replenished with enemy drops
+    - Both rechargeable and unrechargeable bars can be found in environment
   - Combat
     - Status effects
     - Shield
+    - Increases power of weapon drastically but makes it consume mana  
+  - Non-combat modules
+    - All mana bars are rechargeable, but recharge speed is reduced
+    - Recharge speed is increased, but no mana bars are rechargeable
+    - Increase boost force
+    - Reduce boost mana usage
+    - Make chain deal damage to enemies
+    - Increase defensive power
+    - Increase damage taken but also received
   - Activation
     - Magnet balls
     - Crank

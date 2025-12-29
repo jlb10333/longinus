@@ -44,11 +44,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 2,
+            "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 107.75,
-                "y": 429.25
+                "x": 773.5,
+                "y": 396.5
             }
         },
         "maps/MP5.json": {
@@ -59,7 +59,7 @@
             "selectedLayer": 1,
             "viewCenter": {
                 "x": 445.25,
-                "y": 45.75
+                "y": -93.75
             }
         },
         "maps/MP6.json": {
