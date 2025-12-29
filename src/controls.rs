@@ -5,7 +5,7 @@ use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
   system::{ProcessContext, System},
-  units::{PhysicsVector, UnitConvert, UnitConvert2},
+  units::{PhysicsVector, UnitConvert, UnitConvert2, vec_zero},
 };
 
 const INPUT_FORCE: f32 = 0.1;
@@ -14,6 +14,12 @@ const INPUT_FORCE: f32 = 0.1;
 pub struct ControlsSystem<Input> {
   pub left_stick: PhysicsVector,
   pub right_stick: PhysicsVector,
+  pub menu_up: bool,
+  pub menu_down: bool,
+  pub menu_left: bool,
+  pub menu_right: bool,
+  pub menu_confirm: bool,
+  pub menu_cancel: bool,
   pub firing: bool,
   pub inventory: bool,
   pub pause: bool,
@@ -52,7 +58,13 @@ fn handle_stick_input(gilrs: &Gilrs, bindings: StickBindings) -> PhysicsVector {
         .map(|axis_data| axis_data.value())
         .unwrap_or(0.0);
 
-      vector![horizontal_axis_value, vertical_axis_value].normalize()
+      let base_vec = vector![horizontal_axis_value, vertical_axis_value];
+
+      if base_vec == vec_zero() {
+        base_vec
+      } else {
+        base_vec.normalize() * INPUT_FORCE
+      }
     })
     .collect::<Vec<_>>();
 
@@ -79,25 +91,19 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
     let gilrs = Gilrs::new().unwrap();
 
     Rc::new(Self {
-      left_stick: handle_stick_input(
-        &gilrs,
-        StickBindings {
-          vertical: Axis::LeftStickX,
-          horizontal: Axis::LeftStickY,
-        },
-      ),
-      right_stick: handle_stick_input(
-        &gilrs,
-        StickBindings {
-          vertical: Axis::RightStickX,
-          horizontal: Axis::RightStickY,
-        },
-      ),
-      firing: handle_button_input(&gilrs, Button::RightTrigger2),
-      inventory: handle_button_input(&gilrs, Button::Select),
-      pause: handle_button_input(&gilrs, Button::Start),
-      boost: handle_button_input(&gilrs, Button::LeftTrigger2),
-      chain: handle_button_input(&gilrs, Button::LeftTrigger),
+      left_stick: PhysicsVector::zero(),
+      right_stick: PhysicsVector::zero(),
+      boost: false,
+      chain: false,
+      firing: false,
+      inventory: false,
+      menu_down: false,
+      menu_left: false,
+      menu_right: false,
+      menu_up: false,
+      menu_confirm: false,
+      menu_cancel: false,
+      pause: false,
       gilrs: Rc::new(RefCell::new(gilrs)),
       last_frame: None,
       phantom: PhantomData,
@@ -124,11 +130,17 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
           horizontal: Axis::RightStickX,
         },
       ),
+      menu_up: handle_button_input(&gilrs, Button::DPadUp),
+      menu_down: handle_button_input(&gilrs, Button::DPadDown),
+      menu_left: handle_button_input(&gilrs, Button::DPadLeft),
+      menu_right: handle_button_input(&gilrs, Button::DPadRight),
       firing: handle_button_input(&gilrs, Button::RightTrigger2),
       inventory: handle_button_input(&gilrs, Button::Select),
-      pause: handle_button_input(&gilrs, Button::Start),
+      pause: handle_button_input(&gilrs, Button::North),
       boost: handle_button_input(&gilrs, Button::LeftTrigger2),
       chain: handle_button_input(&gilrs, Button::LeftTrigger),
+      menu_cancel: handle_button_input(&gilrs, Button::West),
+      menu_confirm: handle_button_input(&gilrs, Button::South),
       gilrs: Rc::clone(&self.gilrs),
       last_frame: Some(Rc::new(self.clone())),
       phantom: PhantomData,

@@ -1,6 +1,6 @@
 {
   "player_spawn_id": 1,
-  "map_name": "old/CL5-1",
+  "map_name": "CL5-1",
     "unequipped_modules": ["Missile", "Front2Slot", "FortyFiveSlot", "SideSlot", "DoubleFreq75Damage", "MirrorSlot"],
   "equipped_modules": [
     [

@@ -1,0 +1,96 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "",
+    "expandedProjectPaths": [
+    ],
+    "fileStates": {
+        "maps/MP1.json": {
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 0.75,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 777.9999999999998,
+                "y": -587.3333333333333
+            }
+        },
+        "maps/MP2.json": {
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 3,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 276.49999999999994,
+                "y": 246.5
+            }
+        },
+        "maps/old/CL4-1.json": {
+            "scale": 1,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 203.5,
+                "y": 1354.5
+            }
+        },
+        "maps/old/CL4-2.json": {
+            "scale": 2,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 695.75,
+                "y": 246.75
+            }
+        },
+        "maps/old/CL5-1.json": {
+            "scale": 1,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 524.5,
+                "y": 690.5
+            }
+        },
+        "maps/old/CL5-2.json": {
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 1.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 602.9999999999999,
+                "y": 1583.6666666666665
+            }
+        },
+        "maps/old/CL5-3.json": {
+            "scale": 1,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 944.5,
+                "y": -769.5
+            }
+        },
+        "maps/tilesets/colliders.tsx": {
+            "scaleInDock": 1
+        }
+    },
+    "last.objectTemplatePath": "//wsl.localhost/Ubuntu-24.04/home/jlb10333/game-rs/assets/maps/templates",
+    "last.worldFilePath": "//wsl.localhost/Ubuntu-24.04/home/jlb10333/game-rs/assets/maps/old",
+    "loadedWorlds": [
+        "//wsl.localhost/Ubuntu-24.04/home/jlb10333/game-rs/assets/maps/old/CL.world"
+    ],
+    "map.height": 30,
+    "map.lastUsedFormat": "json",
+    "map.tileHeight": 8,
+    "map.tileWidth": 8,
+    "openFiles": [
+    ],
+    "project": "project.tiled-project",
+    "recentFiles": [
+        "maps/old/CL5-3.json",
+        "maps/old/CL5-2.json",
+        "maps/old/CL5-1.json"
+    ]
+}

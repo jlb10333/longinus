@@ -117,10 +117,10 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
     let last_frame = controls_system.last_frame.clone().unwrap();
 
     let input = MenuInput {
-      up: controls_system.left_stick.y() > 0.0 && !(last_frame.left_stick.y() > 0.0),
-      down: controls_system.left_stick.y() < 0.0 && !(last_frame.left_stick.y() < 0.0),
-      right: controls_system.left_stick.x() > 0.0 && !(last_frame.left_stick.x() > 0.0),
-      left: controls_system.left_stick.x() < 0.0 && !(last_frame.left_stick.x() < 0.0),
+      up: controls_system.menu_up && !(last_frame.menu_up),
+      down: controls_system.menu_down && !(last_frame.menu_down),
+      right: controls_system.menu_right && !(last_frame.menu_right),
+      left: controls_system.menu_left && !(last_frame.menu_left),
       cancel: controls_system.inventory && !(last_frame.inventory),
       confirm: controls_system.firing && !(last_frame.firing),
       pause: controls_system.pause && !(last_frame.pause),

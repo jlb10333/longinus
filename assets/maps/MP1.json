@@ -69,11 +69,54 @@
          "name":"Entities",
          "objects":[
                 {
+                 "height":0,
+                 "id":1,
+                 "name":"Defender",
+                 "rotation":0,
+                 "type":"EnemySpawn",
+                 "visible":true,
+                 "width":0,
+                 "x":232,
+                 "y":168
+                }, 
+                {
                  "id":3,
                  "template":"templates\/Player Spawn.tx",
                  "type":"PlayerSpawn",
                  "x":160,
                  "y":376
+                }, 
+                {
+                 "height":0,
+                 "id":4,
+                 "name":"Plasma",
+                 "rotation":0,
+                 "type":"ItemPickup",
+                 "visible":true,
+                 "width":0,
+                 "x":72,
+                 "y":320
+                }, 
+                {
+                 "height":8,
+                 "id":6,
+                 "name":"MP2",
+                 "properties":[
+                        {
+                         "name":"TargetPlayerSpawn",
+                         "type":"int",
+                         "value":3
+                        }],
+                 "template":"templates\/MapTransition.tx",
+                 "width":32,
+                 "x":40,
+                 "y":0
+                }, 
+                {
+                 "id":7,
+                 "template":"templates\/Player Spawn.tx",
+                 "x":56,
+                 "y":24
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -82,7 +125,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":6,
+ "nextobjectid":8,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",
