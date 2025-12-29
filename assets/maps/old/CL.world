@@ -69,6 +69,13 @@
             "width": 400,
             "x": 1352,
             "y": 280
+        },
+        {
+            "fileName": "../MP1.json",
+            "height": 400,
+            "width": 320,
+            "x": 1352,
+            "y": 1448
         }
     ],
     "onlyShowAdjacentMaps": false,

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <template>
- <object name="map" type="MapTransition">
+ <object name="mapname" type="MapTransition" width="8" height="8">
   <properties>
    <property name="TargetPlayerSpawn" type="int" value="0"/>
   </properties>

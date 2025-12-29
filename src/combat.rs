@@ -199,6 +199,7 @@ fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projecti
   let collision_groups = InteractionGroups {
     memberships: COLLISION_GROUP_PLAYER_PROJECTILE,
     filter: COLLISION_GROUP_ENEMY.union(COLLISION_GROUP_WALL),
+    ..Default::default()
   };
 
   match projectile_type {

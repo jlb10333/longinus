@@ -1,15 +1,14 @@
-use std::{f32::consts::PI, marker::PhantomData, rc::Rc};
+use std::{cell::RefCell, f32::consts::PI, marker::PhantomData, rc::Rc};
 
 use gilrs::{Axis, Button, ConnectedGamepadsIterator, Gamepad, Gilrs};
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
   system::{ProcessContext, System},
-  units::{PhysicsVector, UnitConvert2},
+  units::{PhysicsVector, UnitConvert, UnitConvert2},
 };
 
 const INPUT_FORCE: f32 = 0.1;
-const EMPTY_VECTOR: Vector2<f32> = vector![0.0, 0.0];
 
 #[derive(Clone)]
 pub struct ControlsSystem<Input> {
@@ -21,7 +20,7 @@ pub struct ControlsSystem<Input> {
   pub boost: bool,
   pub chain: bool,
   pub last_frame: Option<Rc<ControlsSystem<Input>>>,
-  pub gilrs: Rc<Gilrs>,
+  pub gilrs: Rc<RefCell<Gilrs>>,
   phantom: PhantomData<Input>,
 }
 
@@ -40,11 +39,9 @@ struct StickBindings {
   horizontal: Axis,
 }
 
-fn handle_stick_input(
-  gamepads: ConnectedGamepadsIterator,
-  bindings: StickBindings,
-) -> PhysicsVector {
-  let input_vectors = gamepads
+fn handle_stick_input(gilrs: &Gilrs, bindings: StickBindings) -> PhysicsVector {
+  let input_vectors = gilrs
+    .gamepads()
     .map(|(_, gamepad)| {
       let horizontal_axis_value = gamepad
         .axis_data(bindings.horizontal)
@@ -59,11 +56,15 @@ fn handle_stick_input(
     })
     .collect::<Vec<_>>();
 
-  PhysicsVector::from_vec(input_vectors.iter().sum() / input_vectors.len())
+  if input_vectors.is_empty() {
+    PhysicsVector::zero()
+  } else {
+    PhysicsVector::from_vec(input_vectors.iter().sum::<Vector2<f32>>() / input_vectors.len() as f32)
+  }
 }
 
-fn handle_button_input(gamepads: ConnectedGamepadsIterator, button: Button) -> bool {
-  gamepads.any(|(_, gamepad)| {
+fn handle_button_input(gilrs: &Gilrs, button: Button) -> bool {
+  gilrs.gamepads().any(|(_, gamepad)| {
     gamepad
       .button_data(button)
       .map(|button_data| button_data.is_pressed())
@@ -75,63 +76,62 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
   type Input = Input;
 
   fn start(_: &ProcessContext<Input>) -> Rc<dyn System<Input = Self::Input>> {
-    let gilrs = Rc::new(Gilrs::new().unwrap());
+    let gilrs = Gilrs::new().unwrap();
 
     Rc::new(Self {
       left_stick: handle_stick_input(
-        gilrs.gamepads(),
+        &gilrs,
         StickBindings {
           vertical: Axis::LeftStickX,
           horizontal: Axis::LeftStickY,
         },
       ),
       right_stick: handle_stick_input(
-        gilrs.gamepads(),
+        &gilrs,
         StickBindings {
           vertical: Axis::RightStickX,
           horizontal: Axis::RightStickY,
         },
       ),
-      firing: keys.contains(&Keycode::Space),
-      inventory: keys.contains(&Keycode::E),
-      pause: keys.contains(&Keycode::Enter),
-      boost: keys.contains(&Keycode::LControl),
-      chain: keys.contains(&Keycode::C),
+      firing: handle_button_input(&gilrs, Button::RightTrigger2),
+      inventory: handle_button_input(&gilrs, Button::Select),
+      pause: handle_button_input(&gilrs, Button::Start),
+      boost: handle_button_input(&gilrs, Button::LeftTrigger2),
+      chain: handle_button_input(&gilrs, Button::LeftTrigger),
+      gilrs: Rc::new(RefCell::new(gilrs)),
       last_frame: None,
       phantom: PhantomData,
     })
   }
 
   fn run(&self, _: &ProcessContext<Input>) -> Rc<dyn System<Input = Self::Input>> {
-    let device_state = DeviceState::new();
-    let keys: Vec<Keycode> = device_state.get_keys();
+    let mut gilrs = self.gilrs.as_ref().borrow_mut();
 
-    return Rc::new(Self {
+    while gilrs.next_event().is_some() {}
+
+    Rc::new(Self {
       left_stick: handle_stick_input(
-        &keys,
-        KeyBindings {
-          up: Keycode::Up,
-          down: Keycode::Down,
-          left: Keycode::Left,
-          right: Keycode::Right,
+        &gilrs,
+        StickBindings {
+          vertical: Axis::LeftStickY,
+          horizontal: Axis::LeftStickX,
         },
       ),
       right_stick: handle_stick_input(
-        &keys,
-        KeyBindings {
-          up: Keycode::W,
-          down: Keycode::S,
-          left: Keycode::A,
-          right: Keycode::D,
+        &gilrs,
+        StickBindings {
+          vertical: Axis::RightStickY,
+          horizontal: Axis::RightStickX,
         },
       ),
-      firing: keys.contains(&Keycode::Space),
-      inventory: keys.contains(&Keycode::E),
-      pause: keys.contains(&Keycode::Enter),
-      chain: keys.contains(&Keycode::C),
-      boost: keys.contains(&Keycode::LControl),
+      firing: handle_button_input(&gilrs, Button::RightTrigger2),
+      inventory: handle_button_input(&gilrs, Button::Select),
+      pause: handle_button_input(&gilrs, Button::Start),
+      boost: handle_button_input(&gilrs, Button::LeftTrigger2),
+      chain: handle_button_input(&gilrs, Button::LeftTrigger),
+      gilrs: Rc::clone(&self.gilrs),
       last_frame: Some(Rc::new(self.clone())),
       phantom: PhantomData,
-    });
+    })
   }
 }

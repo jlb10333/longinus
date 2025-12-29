@@ -105,6 +105,7 @@ fn enemy_behavior_generator(
 const ENEMY_GROUPS: InteractionGroups = InteractionGroups {
   memberships: COLLISION_GROUP_ENEMY_PROJECTILE,
   filter: COLLISION_GROUP_PLAYER.union(COLLISION_GROUP_WALL),
+  test_mode: InteractionTestMode::And,
 };
 
 #[derive(Clone)]

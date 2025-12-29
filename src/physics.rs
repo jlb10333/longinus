@@ -96,6 +96,7 @@ fn load_new_map(
         .union(COLLISION_GROUP_ENEMY)
         .union(COLLISION_GROUP_ENEMY_PROJECTILE)
         .union(COLLISION_GROUP_PLAYER_INTERACTIBLE),
+      ..Default::default()
     })
     .build();
   let player_handle = rigid_body_set.insert(player_rigid_body);
@@ -261,6 +262,7 @@ fn load_new_map(
           .collision_groups(InteractionGroups {
             memberships: Group::all(),
             filter: Group::empty(),
+            ..Default::default()
           })
           .mass(1.0),
         target_mount_body,
@@ -308,6 +310,7 @@ fn load_new_map(
           .collision_groups(InteractionGroups {
             memberships: Group::all(),
             filter: Group::empty(),
+            ..Default::default()
           }),
         knob_handle,
         &mut rigid_body_set,
@@ -519,6 +522,7 @@ fn load_new_map(
     InteractionGroups {
       memberships: COLLISION_GROUP_WALL,
       filter: Group::all(),
+      ..Default::default()
     },
   ));
 
@@ -1074,6 +1078,7 @@ impl System for PhysicsSystem {
             .collision_groups(InteractionGroups {
               memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
               filter: COLLISION_GROUP_PLAYER,
+              ..Default::default()
             })
             .sensor(true)
             .translation(*entity.handle.translation(rigid_body_set, &collider_set))
@@ -1283,6 +1288,7 @@ impl System for PhysicsSystem {
         .collision_groups(InteractionGroups {
           memberships: COLLISION_GROUP_CHAIN,
           filter: Group::empty(),
+          ..Default::default()
         }),
         initial_chain_segment_handle,
         rigid_body_set,
@@ -1307,6 +1313,7 @@ impl System for PhysicsSystem {
               .collision_groups(InteractionGroups {
                 memberships: COLLISION_GROUP_CHAIN,
                 filter: Group::empty(),
+                ..Default::default()
               }),
             chain_segment_handle,
             rigid_body_set,

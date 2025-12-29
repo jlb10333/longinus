@@ -584,6 +584,7 @@ pub const COLLISION_GROUP_CHAIN: Group = Group::GROUP_7;
 pub const GRAVITY_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
   memberships: Group::all(),
   filter: COLLISION_GROUP_WALL.complement(),
+  test_mode: InteractionTestMode::And,
 };
 
 #[derive(Clone)]
@@ -802,6 +803,7 @@ fn collider_from_enemy_name(name: MapEnemyName) -> Collider {
     filter: COLLISION_GROUP_PLAYER
       .union(COLLISION_GROUP_PLAYER_PROJECTILE)
       .union(COLLISION_GROUP_WALL),
+    ..Default::default()
   };
 
   collider_builder.collision_groups(collision_groups).build()
@@ -860,6 +862,7 @@ impl Object {
           .collision_groups(InteractionGroups {
             memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
             filter: COLLISION_GROUP_PLAYER,
+            ..Default::default()
           })
           .build(),
       }),
@@ -878,6 +881,7 @@ impl Object {
         .collision_groups(InteractionGroups {
           memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
           filter: COLLISION_GROUP_PLAYER,
+          ..Default::default()
         })
         .build(),
       }),
@@ -893,6 +897,7 @@ impl Object {
           .collision_groups(InteractionGroups {
             memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
             filter: COLLISION_GROUP_PLAYER,
+            ..Default::default()
           })
           .build(),
       }),
@@ -911,6 +916,7 @@ impl Object {
         .collision_groups(InteractionGroups {
           memberships: COLLISION_GROUP_WALL,
           filter: !COLLISION_GROUP_WALL,
+          ..Default::default()
         })
         .build(),
       }),
@@ -927,6 +933,7 @@ impl Object {
         .collision_groups(InteractionGroups {
           memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
           filter: COLLISION_GROUP_PLAYER,
+          ..Default::default()
         })
         .build(),
         target_activation: touch_sensor.properties.0.value,
@@ -962,6 +969,7 @@ impl Object {
           .collision_groups(InteractionGroups {
             memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
             filter: COLLISION_GROUP_PLAYER,
+            ..Default::default()
           })
           .build(),
       }),
@@ -993,6 +1001,7 @@ impl Object {
             .collision_groups(InteractionGroups {
               memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
               filter: COLLISION_GROUP_PLAYER,
+              ..Default::default()
             })
             .build(),
           switch_center: RigidBodyBuilder::dynamic()
@@ -1023,12 +1032,14 @@ impl Object {
             .collision_groups(InteractionGroups {
               memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
               filter: COLLISION_GROUP_PLAYER,
+              ..Default::default()
             })
             .build(),
           knob: ColliderBuilder::ball(0.1)
             .collision_groups(InteractionGroups {
               memberships: COLLISION_GROUP_WALL,
               filter: Group::empty(),
+              ..Default::default()
             })
             .build(),
           id: mount_point.id,
@@ -1266,6 +1277,7 @@ impl TileLayer {
                   .union(COLLISION_GROUP_PLAYER_PROJECTILE)
                   .union(COLLISION_GROUP_ENEMY)
                   .union(COLLISION_GROUP_ENEMY_PROJECTILE),
+                ..Default::default()
               })
               .build();
 
