@@ -2,6 +2,7 @@
 ## Gameplay
 - Mechanical prototype
   - Controls
+    - Finish menu confirm cancel buttons
     - Get solid controls w/ kbd and mouse (maybe)
   - Basic functionality
     - Add chain ability pickup
@@ -11,6 +12,7 @@
     - Show boost cooldown (maybe)
   - Map view (maybe)
   - Story terminals
+  - Health tank pickup
   - Get it playtested
 - Messy experiments in variety
   - Come up with a list of places where variety(!!) emerges from

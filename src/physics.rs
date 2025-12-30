@@ -35,7 +35,6 @@ const PLAYER_ACCELERATION_MOD: f32 = 0.25;
 
 const CHAIN_SEGMENT_LENGTH: f32 = 0.5;
 const CHAIN_SEGMENT_HEIGHT: f32 = 0.05;
-// const CHAIN_SEGMENT_LIMITS: [f32; 2] = [-90.0, 90.0];
 pub const CHAIN_ANGULAR_DAMPING: f32 = 1.0;
 
 pub const ENGINE_MAX_SPEED: f32 = 0.005;
@@ -169,9 +168,12 @@ fn load_new_map(
     .iter()
     .map(|save_point| Entity {
       handle: EntityHandle::Collider(collider_set.insert(save_point.collider.clone())),
-      components: ComponentSet::new().insert(SaveMenuOnCollision).insert(Id {
-        id: save_point.player_spawn_id,
-      }),
+      components: ComponentSet::new()
+        .insert(SaveMenuOnCollision)
+        .insert(Id {
+          id: save_point.player_spawn_id,
+        })
+        .insert(HealOnCollision { amount: 9999.0 }),
       label: "save".to_string(),
     })
     .collect::<Vec<_>>();

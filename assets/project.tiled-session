@@ -3,8 +3,13 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "",
+    "activeFile": "maps/MP2.json",
     "expandedProjectPaths": [
+        "maps/templates",
+        "maps",
+        ".",
+        "maps/old",
+        "maps/templates/enemies"
     ],
     "fileStates": {
         "maps/MP1.json": {
@@ -25,8 +30,8 @@
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 748.5,
-                "y": -185.5
+                "x": 1140.5,
+                "y": 188.5
             }
         },
         "maps/MP3.json": {
@@ -167,7 +172,7 @@
             }
         },
         "maps/tilesets/colliders.tsx": {
-            "scaleInDock": 1
+            "scaleInDock": 4
         }
     },
     "last.objectTemplatePath": "//wsl.localhost/Ubuntu-24.04/home/jlb10333/game-rs/assets/maps/templates",
@@ -181,12 +186,35 @@
     "map.tileWidth": 8,
     "map.width": 50,
     "openFiles": [
+        "maps/MP2.json",
+        "maps/MP1.json",
+        "maps/MP3.json",
+        "maps/old/CL5-2.json",
+        "maps/old/entryway.json",
+        "maps/old/CL5-1.json",
+        "maps/MP4.json",
+        "maps/MP5.json",
+        "maps/old/CL5-3.json",
+        "maps/old/map4.json",
+        "maps/MP6.json",
+        "maps/MP7.json",
+        "maps/old/CL4-1.json",
+        "maps/MP8.json"
     ],
     "project": "project.tiled-project",
     "property.type": "object",
     "recentFiles": [
+        "maps/MP8.json",
+        "maps/old/CL4-1.json",
+        "maps/MP7.json",
+        "maps/MP6.json",
+        "maps/old/map4.json",
         "maps/old/CL5-3.json",
+        "maps/MP5.json",
+        "maps/MP4.json",
+        "maps/old/CL5-1.json",
+        "maps/old/entryway.json",
         "maps/old/CL5-2.json",
-        "maps/old/CL5-1.json"
+        "maps/MP3.json"
     ]
 }
