@@ -69,21 +69,6 @@
          "name":"Entities",
          "objects":[
                 {
-                 "height":32,
-                 "id":1,
-                 "name":"MP1",
-                 "properties":[
-                        {
-                         "name":"TargetPlayerSpawn",
-                         "type":"int",
-                         "value":13
-                        }],
-                 "template":"templates\/MapTransition.tx",
-                 "width":8,
-                 "x":0,
-                 "y":112
-                }, 
-                {
                  "id":2,
                  "template":"templates\/Player Spawn.tx",
                  "x":24,
@@ -219,6 +204,21 @@
                  "width":0,
                  "x":272,
                  "y":360
+                }, 
+                {
+                 "height":32,
+                 "id":22,
+                 "name":"MP3",
+                 "properties":[
+                        {
+                         "name":"TargetPlayerSpawn",
+                         "type":"int",
+                         "value":25
+                        }],
+                 "template":"templates\/MapTransition.tx",
+                 "width":8,
+                 "x":0,
+                 "y":112
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -227,7 +227,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":22,
+ "nextobjectid":23,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

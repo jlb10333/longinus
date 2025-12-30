@@ -93,16 +93,16 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
       return Rc::new(Self {
         active_main_menus: vec![MainMenu {
           cursor_position: vector![0, 0],
-          kind: MainMenuKind::Main(save_system.available_save_data.len() > 0),
+          kind: MainMenuKind::Main(!save_system.available_save_data.is_empty()),
         }],
         ..Default::default()
       });
     }
 
-    return Rc::new(Self {
+    Rc::new(Self {
       active_menus: vec![],
       ..Default::default()
-    });
+    })
   }
 
   fn run(
@@ -121,8 +121,10 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
       down: controls_system.menu_down && !(last_frame.menu_down),
       right: controls_system.menu_right && !(last_frame.menu_right),
       left: controls_system.menu_left && !(last_frame.menu_left),
-      cancel: controls_system.inventory && !(last_frame.inventory),
-      confirm: controls_system.firing && !(last_frame.firing),
+      cancel: controls_system.inventory && !(last_frame.inventory)
+        || (controls_system.menu_cancel && !(last_frame.menu_cancel)),
+      confirm: (controls_system.firing && !(last_frame.firing))
+        || (controls_system.menu_confirm && !(last_frame.menu_confirm)),
       pause: controls_system.pause && !(last_frame.pause),
       inventory: controls_system.inventory && !(last_frame.inventory),
     };
@@ -587,7 +589,7 @@ fn inventory_main(
   }];
 }
 
-pub const INVENTORY_WRAP_WIDTH: i32 = 7;
+pub const INVENTORY_WRAP_WIDTH: i32 = 5;
 
 fn inventory_pick_slot(
   cursor_position: Vector2<i32>,
@@ -684,7 +686,7 @@ fn inventory_pick_slot(
       )
     } else {
       let accessing_index = (cursor_position.x - EQUIP_SLOTS_WIDTH
-        + (cursor_position.y * (INVENTORY_WRAP_WIDTH + 1))) as usize;
+        + (cursor_position.y * INVENTORY_WRAP_WIDTH)) as usize;
 
       let updated_unequipped_modules =
         if accessing_index < inventory_update.unequipped_modules.len() {

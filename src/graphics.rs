@@ -7,8 +7,8 @@ use rpds::HashTrieSet;
 use crate::{
   camera::CameraSystem,
   combat::{
-    CombatSystem, EQUIP_SLOTS_WIDTH, WeaponModuleKind, distance_projection_screen, get_reticle_pos,
-    get_slot_positions,
+    CombatSystem, Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind,
+    distance_projection_screen, get_reticle_pos, get_slot_positions, weapon_module_from_kind,
   },
   ecs::{Damageable, EntityHandle},
   graphics_utils::{draw_collider, draw_label},
@@ -408,38 +408,38 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         screen_height() * 0.1,
         screen_width() * 0.8,
         screen_height() * 0.8,
-        BLUE,
+        COLOR_3,
       );
 
       draw_text(
         "inventory",
         screen_width() * 0.2,
-        screen_height() * 0.3,
-        40.0,
-        WHITE,
+        screen_height() * 0.4,
+        80.0,
+        COLOR_1,
       );
 
       draw_text(
         if menu.cursor_position == vector![0, 0] {
-          "edit-"
+          "-edit-"
         } else {
           "edit"
         },
         screen_width() * 0.2,
         screen_height() * 0.6,
         40.0,
-        WHITE,
+        COLOR_1,
       );
       draw_text(
         if menu.cursor_position == vector![1, 0] {
-          "close-"
+          "-close-"
         } else {
           "close"
         },
         screen_width() * 0.5,
         screen_height() * 0.6,
         40.0,
-        WHITE,
+        COLOR_1,
       );
     }
     /* MARK: Inventory pick slot */
@@ -464,13 +464,33 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         COLOR_1,
       );
 
+      (0..4).for_each(|x| {
+        (0..4).for_each(|y| {
+          draw_rectangle(
+            (0.5 + (x as f32 * 0.05)) * screen_width(),
+            (0.5 + (y as f32 * 0.05)) * screen_height(),
+            0.05 * screen_width(),
+            0.05 * screen_height(),
+            COLOR_3,
+          );
+
+          draw_rectangle(
+            (0.51 + (x as f32 * 0.05)) * screen_width(),
+            (0.51 + (y as f32 * 0.05)) * screen_height(),
+            0.03 * screen_width(),
+            0.03 * screen_height(),
+            COLOR_2,
+          );
+        })
+      });
+
       if menu.cursor_position.y > -1 {
-        draw_text(
-          "-",
+        draw_rectangle(
           (0.5 + (menu.cursor_position.x as f32 * 0.05)) * screen_width(),
           (0.5 + (menu.cursor_position.y as f32 * 0.05)) * screen_height(),
-          40.0,
-          COLOR_1,
+          0.05 * screen_width(),
+          0.05 * screen_height(),
+          COLOR_3,
         );
       }
 
@@ -480,13 +500,61 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         .enumerate()
         .for_each(|(index, equipped_module)| {
           if let Some(module_kind) = equipped_module {
+            let module_x = (index as i32 % EQUIP_SLOTS_WIDTH) as f32 * 0.05;
+            let module_y = (index as i32 / EQUIP_SLOTS_WIDTH) as f32 * 0.05;
+
             draw_text(
               debug_module_text(module_kind),
-              (0.5 + ((index as i32 % EQUIP_SLOTS_WIDTH) as f32 * 0.05)) * screen_width(),
-              (0.5 + ((index as i32 / EQUIP_SLOTS_WIDTH) as f32 * 0.05)) * screen_height(),
+              (0.52 + (module_x)) * screen_width(),
+              (0.535 + (module_y)) * screen_height(),
               40.0,
               COLOR_1,
             );
+
+            if let WeaponModule::Modulator(_, attachment_points) =
+              weapon_module_from_kind(module_kind)
+            {
+              attachment_points
+                .iter()
+                .for_each(|attachment_point| match attachment_point {
+                  Direction::Up => {
+                    draw_rectangle(
+                      (0.52 + module_x) * screen_width(),
+                      (0.51 + module_y) * screen_height(),
+                      0.01 * screen_width(),
+                      0.005 * screen_height(),
+                      COLOR_4,
+                    );
+                  }
+                  Direction::Down => {
+                    draw_rectangle(
+                      (0.52 + module_x) * screen_width(),
+                      (0.535 + module_y) * screen_height(),
+                      0.01 * screen_width(),
+                      0.005 * screen_height(),
+                      COLOR_4,
+                    );
+                  }
+                  Direction::Left => {
+                    draw_rectangle(
+                      (0.51 + module_x) * screen_width(),
+                      (0.52 + module_y) * screen_height(),
+                      0.005 * screen_width(),
+                      0.01 * screen_height(),
+                      COLOR_4,
+                    );
+                  }
+                  Direction::Right => {
+                    draw_rectangle(
+                      (0.535 + module_x) * screen_width(),
+                      (0.52 + module_y) * screen_height(),
+                      0.005 * screen_width(),
+                      0.01 * screen_height(),
+                      COLOR_4,
+                    );
+                  }
+                });
+            }
           };
         });
 
@@ -495,16 +563,61 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         .iter()
         .enumerate()
         .for_each(|(index, unequipped_module_kind)| {
+          let module_x = (EQUIP_SLOTS_WIDTH + (index as i32 % INVENTORY_WRAP_WIDTH)) as f32 * 0.05;
+          let module_y = (index as i32 / INVENTORY_WRAP_WIDTH) as f32 * 0.05;
+
           draw_text(
             debug_module_text(unequipped_module_kind),
-            (0.5
-              + (EQUIP_SLOTS_WIDTH as f32 * 0.05)
-              + ((index as i32 % INVENTORY_WRAP_WIDTH) as f32 * 0.05))
-              * screen_width(),
-            (0.5 + ((index as i32 / INVENTORY_WRAP_WIDTH) as f32 * 0.05)) * screen_height(),
+            (0.52 + (module_x)) * screen_width(),
+            (0.535 + (module_y)) * screen_height(),
             40.0,
             COLOR_1,
           );
+
+          if let WeaponModule::Modulator(_, attachment_points) =
+            weapon_module_from_kind(unequipped_module_kind)
+          {
+            attachment_points
+              .iter()
+              .for_each(|attachment_point| match attachment_point {
+                Direction::Up => {
+                  draw_rectangle(
+                    (0.52 + module_x) * screen_width(),
+                    (0.51 + module_y) * screen_height(),
+                    0.01 * screen_width(),
+                    0.005 * screen_height(),
+                    COLOR_4,
+                  );
+                }
+                Direction::Down => {
+                  draw_rectangle(
+                    (0.52 + module_x) * screen_width(),
+                    (0.535 + module_y) * screen_height(),
+                    0.01 * screen_width(),
+                    0.005 * screen_height(),
+                    COLOR_4,
+                  );
+                }
+                Direction::Left => {
+                  draw_rectangle(
+                    (0.51 + module_x) * screen_width(),
+                    (0.52 + module_y) * screen_height(),
+                    0.005 * screen_width(),
+                    0.01 * screen_height(),
+                    COLOR_4,
+                  );
+                }
+                Direction::Right => {
+                  draw_rectangle(
+                    (0.535 + module_x) * screen_width(),
+                    (0.52 + module_y) * screen_height(),
+                    0.005 * screen_width(),
+                    0.01 * screen_height(),
+                    COLOR_4,
+                  );
+                }
+              });
+          }
         });
     }
     /* MARK: Save Confirm */

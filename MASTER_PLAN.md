@@ -2,13 +2,10 @@
 ## Gameplay
 - Mechanical prototype
   - Controls
-    - Finish menu confirm cancel buttons
     - Get solid controls w/ kbd and mouse (maybe)
   - Basic functionality
     - Add chain ability pickup
   - Visual explainability
-    - Make it clear where the equip grid is
-    - Make it clear where the module attach points are
     - Show boost cooldown (maybe)
   - Map view (maybe)
   - Story terminals

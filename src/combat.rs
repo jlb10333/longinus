@@ -367,12 +367,12 @@ use rpds::{HashTrieSet, ht_set};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
-enum WeaponModule {
+pub enum WeaponModule {
   Generator(Generator),
   Modulator(Rc<Modulator>, HashSet<Direction>),
 }
 
-fn weapon_module_from_kind(kind: &WeaponModuleKind) -> WeaponModule {
+pub fn weapon_module_from_kind(kind: &WeaponModuleKind) -> WeaponModule {
   match *kind {
     WeaponModuleKind::Plasma => WeaponModule::Generator(plasma),
     WeaponModuleKind::Missile => WeaponModule::Generator(missile),
