@@ -410,7 +410,7 @@
                         {
                          "name":"Strength",
                          "type":"float",
-                         "value":0.08
+                         "value":0.07
                         }],
                  "rotation":0,
                  "type":"GravitySource",

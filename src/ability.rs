@@ -72,6 +72,12 @@ impl System for AbilitySystem {
         .iter()
         .any(|new_ability| matches!(new_ability, MapAbilityType::Boost));
 
+    let acquired_chain = self.acquired_chain
+      || physics_system
+        .new_abilities
+        .iter()
+        .any(|new_ability| matches!(new_ability, MapAbilityType::Chain));
+
     let kill_chain = self.chain_activated
       && controls_system.chain
       && !controls_system.last_frame.as_ref().unwrap().chain;
@@ -109,7 +115,7 @@ impl System for AbilitySystem {
 
     Rc::new(AbilitySystem {
       acquired_boost,
-      acquired_chain: self.acquired_chain,
+      acquired_chain,
       boost_force,
       current_boost_cooldown,
       max_boost_cooldown: self.max_boost_cooldown,

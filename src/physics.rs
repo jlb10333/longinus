@@ -71,6 +71,7 @@ fn load_new_map(
   player_health: f32,
   player_max_health: f32,
   boost_acquired: bool,
+  chain_acquired: bool,
 ) -> Rc<PhysicsSystem> {
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
@@ -236,6 +237,7 @@ fn load_new_map(
     .filter_map(|ability_pickup| {
       let should_spawn_entity = match ability_pickup.ability_type {
         MapAbilityType::Boost => !boost_acquired,
+        MapAbilityType::Chain => !chain_acquired,
       };
 
       if should_spawn_entity {
@@ -664,6 +666,7 @@ impl System for PhysicsSystem {
       ctx.input.player_health,
       ctx.input.player_max_health,
       ctx.input.acquired_boost,
+      ctx.input.acquired_chain,
     )
   }
 
@@ -692,6 +695,7 @@ impl System for PhysicsSystem {
         player_damageable.health,
         player_damageable.max_health,
         ability_system.acquired_boost,
+        ability_system.acquired_chain,
       );
     }
 

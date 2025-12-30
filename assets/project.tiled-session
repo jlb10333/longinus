@@ -38,11 +38,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 4,
+            "scale": 8,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 808.375,
-                "y": -535.375
+                "x": 354.1875,
+                "y": 270.4375
             }
         },
         "maps/MP4.json": {
@@ -60,11 +60,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 2,
+            "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 160.25,
-                "y": 199.75
+                "x": 278.5,
+                "y": -333.5
             }
         },
         "maps/MP6.json": {
@@ -82,11 +82,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 1,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 1198.5,
-                "y": 902.5
+                "x": 897,
+                "y": 775.6666666666666
             }
         },
         "maps/MP8.json": {
@@ -104,11 +104,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 1,
+            "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 279.5,
-                "y": 279.5
+                "x": 548.8333333333333,
+                "y": 744.8333333333333
             }
         },
         "maps/old/CL4-2.json": {

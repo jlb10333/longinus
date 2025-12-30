@@ -338,6 +338,7 @@ enum MapAbilityPickupClass {
 #[derive(Clone, Copy, Debug, Deserialize)]
 pub enum MapAbilityType {
   Boost,
+  Chain,
 }
 
 #[derive(Clone, Debug, Deserialize)]

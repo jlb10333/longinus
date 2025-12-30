@@ -3,9 +3,8 @@
 - Mechanical prototype
   - Controls
     - Get solid controls w/ kbd and mouse (maybe)
-  - Basic functionality
-    - Add chain ability pickup
   - Visual explainability
+    - Change pause menu to fit color palette 
     - Show boost cooldown (maybe)
   - Map view (maybe)
   - Story terminals
