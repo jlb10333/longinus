@@ -42,11 +42,13 @@
     - Min
     - Max
     - Lasers
+  - Water Physics (maybe)
 ### Level design
 - Research/figure out a sustainable loop for level design
 ### Playtesting
-- Find/recruit playtesters
-- Start discord?
+- Start discord
+- Put together GitHub release
+- Add playtesting instructions
 ## Writing
 - Basic outline for each cyst layer expedition
 ## Art
