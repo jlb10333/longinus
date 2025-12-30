@@ -1,15 +1,15 @@
 # Longinus Master Plan
 ## Gameplay
 - Mechanical prototype
+  - Get it playtested
+- Mechanical prototype v2
   - Controls
     - Get solid controls w/ kbd and mouse (maybe)
   - Visual explainability
-    - Change pause menu to fit color palette 
     - Show boost cooldown (maybe)
   - Map view (maybe)
   - Story terminals
   - Health tank pickup
-  - Get it playtested
 - Messy experiments in variety
   - Come up with a list of places where variety(!!) emerges from
   - For each one, develop a small prototype

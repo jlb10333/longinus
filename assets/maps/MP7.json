@@ -91,19 +91,19 @@
                         {
                          "name":"Radius",
                          "type":"float",
-                         "value":200
+                         "value":400
                         }, 
                         {
                          "name":"Strength",
                          "type":"float",
-                         "value":2
+                         "value":4
                         }],
                  "rotation":0,
                  "type":"GravitySource",
                  "visible":true,
                  "width":0,
-                 "x":912,
-                 "y":-112
+                 "x":1400,
+                 "y":-616
                 }, 
                 {
                  "height":16,

@@ -82,22 +82,22 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 1.5,
+            "scale": 0.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 897,
-                "y": 775.6666666666666
+                "x": 1291,
+                "y": 1031
             }
         },
         "maps/MP8.json": {
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 4,
-            "selectedLayer": 1,
+            "scale": 1,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 532.375,
-                "y": -466.125
+                "x": 342.5,
+                "y": -17.5
             }
         },
         "maps/old/CL4-1.json": {

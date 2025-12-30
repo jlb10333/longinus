@@ -215,7 +215,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
         screen_width() * 0.2,
         screen_height() * 0.3,
         40.0,
-        WHITE,
+        COLOR_1,
       );
 
       draw_text(
@@ -235,7 +235,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
         screen_width() * 0.2,
         screen_height() * 0.6,
         40.0,
-        WHITE,
+        COLOR_1,
       );
       draw_text(
         &format!(
@@ -254,7 +254,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
         screen_width() * 0.45,
         screen_height() * 0.6,
         40.0,
-        WHITE,
+        COLOR_1,
       );
       if should_include_continue_option {
         draw_text(
@@ -266,7 +266,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
           screen_width() * 0.7,
           screen_height() * 0.6,
           40.0,
-          WHITE,
+          COLOR_1,
         );
       }
     }
@@ -276,7 +276,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
         screen_height() * 0.45,
         screen_width() * 0.5,
         screen_height() * 0.5,
-        LIGHTGRAY,
+        COLOR_2,
       );
       draw_text(
         if menu.cursor_position == vector![0, 0] {
@@ -287,7 +287,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
         screen_width() * 0.5,
         screen_height() * 0.5,
         40.0,
-        WHITE,
+        COLOR_1,
       );
       available_sava_data
         .iter()
@@ -306,7 +306,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
             screen_width() * 0.5,
             screen_height() * (0.55 + (index as f32 * 0.05)),
             40.0,
-            WHITE,
+            COLOR_1,
           );
         });
     }
@@ -323,41 +323,41 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         screen_height() * 0.1,
         screen_width() * 0.8,
         screen_height() * 0.8,
-        GREEN,
+        COLOR_3,
       );
 
       draw_text(
         if menu.cursor_position == vector![0, 0] {
-          "cancel-"
+          "-resume-"
         } else {
-          "cancel"
+          "resume"
         },
         screen_width() * 0.2,
         screen_height() * 0.6,
         40.0,
-        WHITE,
+        COLOR_1,
       );
       draw_text(
         if menu.cursor_position == vector![0, 1] {
-          "load game-"
+          "-load game-"
         } else {
           "load game"
         },
         screen_width() * 0.2,
         screen_height() * 0.65,
         40.0,
-        WHITE,
+        COLOR_1,
       );
       draw_text(
         if menu.cursor_position == vector![0, 2] {
-          "quit to menu-"
+          "-quit to menu-"
         } else {
           "quit to menu"
         },
         screen_width() * 0.2,
         screen_height() * 0.7,
         40.0,
-        WHITE,
+        COLOR_1,
       );
     }
     /* MARK: Pause Load Save */
@@ -367,7 +367,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         screen_height() * 0.45,
         screen_width() * 0.5,
         screen_height() * 0.5,
-        LIGHTGRAY,
+        COLOR_2,
       );
       draw_text(
         if menu.cursor_position == vector![0, 0] {
@@ -378,7 +378,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         screen_width() * 0.5,
         screen_height() * 0.5,
         40.0,
-        WHITE,
+        COLOR_1,
       );
       available_sava_data
         .iter()
@@ -397,7 +397,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
             screen_width() * 0.5,
             screen_height() * (0.55 + (index as f32 * 0.05)),
             40.0,
-            WHITE,
+            COLOR_1,
           );
         });
     }
@@ -627,7 +627,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         screen_height() * 0.45,
         screen_width() * 0.4,
         screen_height() * 0.1,
-        LIGHTGRAY,
+        COLOR_2,
       );
 
       draw_text(
@@ -635,7 +635,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         0.4 * screen_width(),
         0.5 * screen_height(),
         40.0,
-        WHITE,
+        COLOR_1,
       );
 
       draw_text(
@@ -643,7 +643,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         0.6 * screen_width(),
         0.5 * screen_height(),
         40.0,
-        WHITE,
+        COLOR_1,
       );
 
       draw_text(
@@ -651,7 +651,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         (0.4 + (menu.cursor_position.x as f32 * 0.2)) * screen_width(),
         0.53 * screen_height(),
         40.0,
-        WHITE,
+        COLOR_1,
       );
     }
   }
