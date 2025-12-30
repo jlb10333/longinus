@@ -10,6 +10,9 @@
   - Map view (maybe)
   - Story terminals
   - Health tank pickup
+  - Restrict camera to map bounds
+  - Gameover menu
+  - First boss
 - Messy experiments in variety
   - Come up with a list of places where variety(!!) emerges from
   - For each one, develop a small prototype
@@ -40,7 +43,11 @@
     - Min
     - Max
     - Lasers
+    - Saving/loading of activation levels
   - Water Physics (maybe)
+### Squash bugs
+- Culling is over-eager for cuboids in the direct corners of the screen
+- Seeker enemies will slam into the wall bc the speed cap uses absolute value
 ### Level design
 - Research/figure out a sustainable loop for level design
 ### Playtesting

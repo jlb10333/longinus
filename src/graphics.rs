@@ -259,7 +259,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
       if should_include_continue_option {
         draw_text(
           if menu.cursor_position == vector![0, 2] {
-            "load_game-"
+            "-load_game-"
           } else {
             "load_game"
           },
@@ -280,7 +280,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
       );
       draw_text(
         if menu.cursor_position == vector![0, 0] {
-          "-cancel"
+          "-cancel-"
         } else {
           "cancel"
         },
