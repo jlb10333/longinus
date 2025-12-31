@@ -1952,6 +1952,7 @@ fn map_damageable_damage_taken(
     )
   }
 }
+
 fn spawn_explosion(
   translation: Vector<f32>,
   explosion: &ExplodeOnCollision,

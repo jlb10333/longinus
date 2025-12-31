@@ -222,7 +222,7 @@ fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Option<Gam
     });
   }
 
-  return None;
+  None
 }
 
 #[derive(Default)]
@@ -292,8 +292,30 @@ fn next_menus(
   }
 
   if input.cancel {
+    if let GameMenuKind::InventoryPickSlot(currently_holding, inventory_update) = &current_menu.kind
+    {
+      return NextMenuUpdate {
+        menus: vec![],
+        inventory_update: Some(InventoryUpdateData {
+          equipped_modules: inventory_update.equipped_modules,
+          unequipped_modules: currently_holding
+            .map(|currently_holding| {
+              inventory_update
+                .unequipped_modules
+                .iter()
+                .chain([currently_holding].iter())
+                .cloned()
+                .collect()
+            })
+            .unwrap_or(inventory_update.unequipped_modules.clone()),
+        }),
+        ..Default::default()
+      };
+    }
+
     return NextMenuUpdate {
       menus: vec![],
+
       ..Default::default()
     };
   }
@@ -312,7 +334,7 @@ fn next_menus(
         pause_load_game(current_menu.cursor_position, input, available_saves);
       NextMenuUpdate {
         menus,
-        quit_decision: save_to_load.map(|save_to_load| QuitDecision::LoadSave(save_to_load)),
+        quit_decision: save_to_load.map(QuitDecision::LoadSave),
         ..Default::default()
       }
     }
@@ -351,7 +373,7 @@ fn next_menus(
 
 fn menu_main(
   cursor_position: Vector2<i32>,
-  available_saves: &Vec<String>,
+  available_saves: &[String],
   input: &MenuInput,
   should_include_continue_option: bool,
 ) -> (Vec<MainMenu>, Option<SaveToLoad>) {
@@ -433,7 +455,7 @@ pub enum QuitDecision {
 fn menu_load_game(
   cursor_position: Vector2<i32>,
   input: &MenuInput,
-  available_saves: &Vec<String>,
+  available_saves: &[String],
 ) -> (Vec<MainMenu>, Option<String>) {
   let cursor_position = handle_cursor_movement(
     cursor_position,
@@ -462,7 +484,7 @@ fn menu_load_game(
 
   let save_index_to_load = (cursor_position.y - 1) as usize;
 
-  return (vec![], Some(available_saves[save_index_to_load].clone()));
+  (vec![], Some(available_saves[save_index_to_load].clone()))
 }
 
 fn pause_main(

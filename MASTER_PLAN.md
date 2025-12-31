@@ -1,6 +1,7 @@
 # Longinus Master Plan
 ## Gameplay
 - Mechanical prototype
+  - Figure out why saving doesn't work
   - Get it playtested
 - Mechanical prototype v2
   - Controls
@@ -52,8 +53,6 @@
 - Research/figure out a sustainable loop for level design
 ### Playtesting
 - Start discord
-- Put together GitHub release
-- Add playtesting instructions
 ## Writing
 - Basic outline for each cyst layer expedition
 ## Art
