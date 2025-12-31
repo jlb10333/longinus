@@ -4,10 +4,12 @@
   - Figure out why saving doesn't work
   - Get it playtested
 - Mechanical prototype v2
+  - Add ability pickup confirm menu
   - Controls
     - Get solid controls w/ kbd and mouse (maybe)
   - Visual explainability
     - Show boost cooldown (maybe)
+    - Description/full name of each module
   - Map view (maybe)
   - Story terminals
   - Health tank pickup
@@ -28,7 +30,7 @@
   - Combat
     - Status effects
     - Shield
-    - Increases power of weapon drastically but makes it consume mana  
+    - Increases power of weapon drastically but makes it consume mana
   - Non-combat modules
     - All mana bars are rechargeable, but recharge speed is reduced
     - Recharge speed is increased, but no mana bars are rechargeable
@@ -47,6 +49,7 @@
     - Saving/loading of activation levels
   - Water Physics (maybe)
 ### Squash bugs
+- Chain can be activated outside of the mount radius
 - Culling is over-eager for cuboids in the direct corners of the screen
 - Seeker enemies will slam into the wall bc the speed cap uses absolute value
 ### Level design
