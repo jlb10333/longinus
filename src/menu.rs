@@ -7,6 +7,7 @@ use rapier2d::{na::Vector2, parry::utils::hashmap::HashMap};
 
 use crate::Start;
 use crate::combat::Direction;
+use crate::load_map::MapAbilityType;
 use crate::physics::PhysicsSystem;
 use crate::save::{SaveData, SaveSystem};
 use crate::{
@@ -31,6 +32,8 @@ pub enum GameMenuKind {
   InventoryMain,
   InventoryPickSlot(Option<WeaponModuleKind>, InventoryUpdateData),
   SaveConfirm(i32),
+  ModulePickupConfirm(WeaponModuleKind),
+  AbilityPickupConfirm(MapAbilityType),
 }
 
 #[derive(Clone)]
@@ -164,10 +167,7 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
       let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
       return Rc::new(Self {
-        active_menus: match open_menu(&input, physics_system) {
-          Some(menu) => vec![menu],
-          None => vec![],
-        },
+        active_menus: open_menu(&input, physics_system),
         ..Default::default()
       });
     }
@@ -197,31 +197,59 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
   }
 }
 
-fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Option<GameMenu> {
-  if let Some(id) = physics_system.save_point_contact
+fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Vec<GameMenu> {
+  let save_confirm = if let Some(id) = physics_system.save_point_contact
     && physics_system.save_point_contact_last_frame.is_none()
   {
-    return Some(GameMenu {
+    vec![GameMenu {
       kind: GameMenuKind::SaveConfirm(id),
       cursor_position: vector![0, 0],
-    });
-  }
+    }]
+  } else {
+    vec![]
+  };
 
-  if input.inventory {
-    return Some(GameMenu {
+  let inventory_main = if input.inventory {
+    vec![GameMenu {
       kind: GameMenuKind::InventoryMain,
       cursor_position: vector![0, 0],
-    });
-  }
+    }]
+  } else {
+    vec![]
+  };
 
-  if input.pause {
-    return Some(GameMenu {
+  let pause_main = if input.pause {
+    vec![GameMenu {
       kind: GameMenuKind::PauseMain,
       cursor_position: vector![0, 0],
-    });
-  }
+    }]
+  } else {
+    vec![]
+  };
 
-  None
+  let ability_pickup_confirm = physics_system
+    .new_abilities
+    .iter()
+    .map(|new_ability| GameMenu {
+      kind: GameMenuKind::AbilityPickupConfirm(*new_ability),
+      cursor_position: vector![0, 0],
+    });
+
+  let module_pickup_confirm = physics_system
+    .new_weapon_modules
+    .iter()
+    .map(|(_, new_module)| GameMenu {
+      kind: GameMenuKind::ModulePickupConfirm(*new_module),
+      cursor_position: vector![0, 0],
+    });
+
+  save_confirm
+    .into_iter()
+    .chain(inventory_main)
+    .chain(pause_main)
+    .chain(ability_pickup_confirm)
+    .chain(module_pickup_confirm)
+    .collect()
 }
 
 #[derive(Default)]
@@ -367,6 +395,21 @@ fn next_menus(
         ..Default::default()
       }
     }
+    GameMenuKind::ModulePickupConfirm(weapon_module_kind) => NextMenuUpdate {
+      menus: module_pickup_confirm(
+        input,
+        weapon_module_kind,
+        &InventoryUpdateData {
+          equipped_modules: *equipped_modules,
+          unequipped_modules: unequipped_modules.clone(),
+        },
+      ),
+      ..Default::default()
+    },
+    GameMenuKind::AbilityPickupConfirm(ability_type) => NextMenuUpdate {
+      menus: ability_pickup_confirm(input, ability_type),
+      ..Default::default()
+    },
   }
 }
 
@@ -813,6 +856,41 @@ fn save_confirm(
   }
 
   todo!("Unaccounted cursor position {}", cursor_position);
+}
+
+fn module_pickup_confirm(
+  input: &MenuInput,
+  weapon_module_kind: WeaponModuleKind,
+  inventory_update: &InventoryUpdateData,
+) -> Vec<GameMenu> {
+  if input.confirm {
+    vec![
+      GameMenu {
+        cursor_position: vector![0, 0],
+        kind: GameMenuKind::InventoryPickSlot(None, inventory_update.clone()),
+      },
+      GameMenu {
+        cursor_position: vector![0, 0],
+        kind: GameMenuKind::InventoryMain,
+      },
+    ]
+  } else {
+    vec![GameMenu {
+      cursor_position: vector![0, 0],
+      kind: GameMenuKind::ModulePickupConfirm(weapon_module_kind),
+    }]
+  }
+}
+
+fn ability_pickup_confirm(input: &MenuInput, ability_type: MapAbilityType) -> Vec<GameMenu> {
+  if input.confirm {
+    vec![]
+  } else {
+    vec![GameMenu {
+      cursor_position: vector![0, 0],
+      kind: GameMenuKind::AbilityPickupConfirm(ability_type),
+    }]
+  }
 }
 
 fn menu_input_to_direction(input: &MenuInput) -> HashSet<Direction> {

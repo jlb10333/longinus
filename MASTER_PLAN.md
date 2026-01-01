@@ -8,8 +8,6 @@
   - Visual explainability
     - Show boost cooldown (maybe)
     - Description/full name of each module
-    - Add ability pickup confirm menu
-    - Add inventory screen pickup confirm menu
   - Map view (maybe)
   - Story terminals
   - Health tank pickup
@@ -55,7 +53,8 @@
 ### Level design
 - Research/figure out a sustainable loop for level design
 ### Playtesting
-- Start discord
+- Collect feedback from playtesters
+- Refine feedback into actionable items
 ## Writing
 - Basic outline for each cyst layer expedition
 ## Art

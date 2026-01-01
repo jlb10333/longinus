@@ -686,7 +686,6 @@ impl System for PhysicsSystem {
         .unwrap();
       let player_damageable = player_entity.components.get::<Damageable>().unwrap();
 
-      // TODO: give the ability to specify which player spawn to start from
       return load_new_map(
         map,
         &map_system.current_map_name,
@@ -834,7 +833,7 @@ impl System for PhysicsSystem {
               .insert(Damager {
                 damage: projectile.damage,
               }),
-            label: "projectile".to_string(),
+            label: "p".to_string(),
           }),
         )
       })
@@ -885,7 +884,7 @@ impl System for PhysicsSystem {
                     .insert(Damager {
                       damage: projectile.damage,
                     }),
-                  label: "enemy projectile".to_string(),
+                  label: "ep".to_string(),
                 }),
               )
             })

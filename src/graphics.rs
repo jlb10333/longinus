@@ -507,7 +507,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         .equipped_modules
         .iter()
         .enumerate()
-        .for_each(|(index, equipped_module)| {
+        .for_each(|(index, &equipped_module)| {
           if let Some(module_kind) = equipped_module {
             let module_x = (index as i32 % EQUIP_SLOTS_WIDTH) as f32 * 0.05;
             let module_y = (index as i32 / EQUIP_SLOTS_WIDTH) as f32 * 0.05;
@@ -571,7 +571,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         .unequipped_modules
         .iter()
         .enumerate()
-        .for_each(|(index, unequipped_module_kind)| {
+        .for_each(|(index, &unequipped_module_kind)| {
           let module_x = (EQUIP_SLOTS_WIDTH + (index as i32 % INVENTORY_WRAP_WIDTH)) as f32 * 0.05;
           let module_y = (index as i32 / INVENTORY_WRAP_WIDTH) as f32 * 0.05;
 
@@ -663,10 +663,77 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         COLOR_1,
       );
     }
+    crate::menu::GameMenuKind::ModulePickupConfirm(weapon_module_kind) => {
+      draw_rectangle(
+        screen_width() * 0.3,
+        screen_height() * 0.4,
+        screen_width() * 0.4,
+        screen_height() * 0.15,
+        COLOR_2,
+      );
+
+      draw_text(
+        &format!(
+          "{} {} aquired",
+          match weapon_module_from_kind(weapon_module_kind) {
+            WeaponModule::Generator(_) => {
+              "Weapon"
+            }
+            WeaponModule::Modulator(_, _) => {
+              "Modifier"
+            }
+          },
+          debug_module_text(weapon_module_kind)
+        ),
+        0.4 * screen_width(),
+        0.45 * screen_height(),
+        40.0,
+        COLOR_1,
+      );
+
+      draw_text(
+        "-edit-",
+        0.4 * screen_width(),
+        0.5 * screen_height(),
+        40.0,
+        COLOR_1,
+      );
+    }
+    crate::menu::GameMenuKind::AbilityPickupConfirm(ability) => {
+      draw_rectangle(
+        screen_width() * 0.3,
+        screen_height() * 0.4,
+        screen_width() * 0.4,
+        screen_height() * 0.15,
+        COLOR_2,
+      );
+
+      draw_text(
+        &format!(
+          "Ability {} aquired",
+          match ability {
+            crate::load_map::MapAbilityType::Boost => "BOOST",
+            crate::load_map::MapAbilityType::Chain => "CHAIN",
+          },
+        ),
+        0.4 * screen_width(),
+        0.45 * screen_height(),
+        40.0,
+        COLOR_1,
+      );
+
+      draw_text(
+        "-close-",
+        0.4 * screen_width(),
+        0.5 * screen_height(),
+        40.0,
+        COLOR_1,
+      );
+    }
   }
 }
 
-fn debug_module_text(module_kind: &WeaponModuleKind) -> &'static str {
+fn debug_module_text(module_kind: WeaponModuleKind) -> &'static str {
   match module_kind {
     WeaponModuleKind::Plasma => "P",
     WeaponModuleKind::Missile => "M",

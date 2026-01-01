@@ -7,7 +7,6 @@ use std::{
 use crate::{
   controls::{ControlsSystem, angle_from_vec},
   ecs::{ComponentSet, ExplodeOnCollision},
-  f::Monad,
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL, MapSystem,
   },
@@ -372,8 +371,8 @@ pub enum WeaponModule {
   Modulator(Rc<Modulator>, HashSet<Direction>),
 }
 
-pub fn weapon_module_from_kind(kind: &WeaponModuleKind) -> WeaponModule {
-  match *kind {
+pub fn weapon_module_from_kind(kind: WeaponModuleKind) -> WeaponModule {
+  match kind {
     WeaponModuleKind::Plasma => WeaponModule::Generator(plasma),
     WeaponModuleKind::Missile => WeaponModule::Generator(missile),
     WeaponModuleKind::Front2Slot => {
@@ -405,7 +404,7 @@ fn build_adjacent_modules(
     None
   } else {
     equipped_modules.data.0[current_module_position.y][current_module_position.x - 1]
-      .bind(weapon_module_from_kind)
+      .map(weapon_module_from_kind)
       .and_then(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
@@ -427,8 +426,8 @@ fn build_adjacent_modules(
     None
   } else {
     equipped_modules.data.0[current_module_position.y][current_module_position.x + 1]
-      .bind(weapon_module_from_kind)
-      .map(|weapon_module| match weapon_module {
+      .map(weapon_module_from_kind)
+      .and_then(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
           if attachment_points.contains(&Left) {
@@ -443,15 +442,14 @@ fn build_adjacent_modules(
           }
         }
       })
-      .flatten()
   };
 
   let module_up = if current_module_position.y == 0 {
     None
   } else {
     equipped_modules.data.0[current_module_position.y - 1][current_module_position.x]
-      .bind(weapon_module_from_kind)
-      .map(|weapon_module| match weapon_module {
+      .map(weapon_module_from_kind)
+      .and_then(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
           if attachment_points.contains(&Down) {
@@ -466,15 +464,14 @@ fn build_adjacent_modules(
           }
         }
       })
-      .flatten()
   };
 
   let module_down = if current_module_position.y >= (EQUIP_SLOTS_HEIGHT - 1) as usize {
     None
   } else {
     equipped_modules.data.0[current_module_position.y + 1][current_module_position.x]
-      .bind(weapon_module_from_kind)
-      .map(|weapon_module| match weapon_module {
+      .map(weapon_module_from_kind)
+      .and_then(|weapon_module| match weapon_module {
         WeaponModule::Generator(_) => None,
         WeaponModule::Modulator(modulator, attachment_points) => {
           if attachment_points.contains(&Up) {
@@ -489,7 +486,6 @@ fn build_adjacent_modules(
           }
         }
       })
-      .flatten()
   };
 
   [module_left, module_right, module_up, module_down]
@@ -516,7 +512,7 @@ fn build_weapons(equipped_modules: EquippedModules) -> Vec<Weapon> {
         .iter()
         .enumerate()
         .map(|(x, value)| {
-          value.bind(
+          value.map(
             |weapon_module_kind| match weapon_module_from_kind(weapon_module_kind) {
               WeaponModule::Modulator(_, _) => None,
               WeaponModule::Generator(generator) => Some(build_adjacent_modules(
@@ -622,23 +618,6 @@ impl System for CombatSystem {
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
-
-    if !menu_system.active_menus.is_empty() {
-      if let Some(inventory_update) = &menu_system.inventory_update {
-        return Rc::new(Self {
-          unequipped_modules: inventory_update.unequipped_modules.clone(),
-          equipped_modules: inventory_update.equipped_modules,
-          current_weapons: build_weapons(inventory_update.equipped_modules),
-          new_projectiles: Vec::new(),
-          reticle_angle: self.reticle_angle,
-          acquired_items: self.acquired_items.clone(),
-        });
-      }
-
-      return Rc::new(self.clone());
-    }
-
     /* Add new unequipped modules from item pickups */
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
@@ -668,6 +647,27 @@ impl System for CombatSystem {
           .map(|(id, _)| (map_system.current_map_name.clone(), *id)),
       )
       .collect();
+
+    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+
+    if !menu_system.active_menus.is_empty() {
+      if let Some(inventory_update) = &menu_system.inventory_update {
+        return Rc::new(Self {
+          unequipped_modules: inventory_update.unequipped_modules.clone(),
+          equipped_modules: inventory_update.equipped_modules,
+          current_weapons: build_weapons(inventory_update.equipped_modules),
+          new_projectiles: Vec::new(),
+          reticle_angle: self.reticle_angle,
+          acquired_items: self.acquired_items.clone(),
+        });
+      }
+
+      return Rc::new(Self {
+        unequipped_modules,
+        acquired_items,
+        ..self.clone()
+      });
+    }
 
     /* Decrement cooldown for active weapons */
     let reduced_cooldown_weapons: Vec<Weapon> = self
@@ -706,13 +706,13 @@ impl System for CombatSystem {
       .flat_map(|(_, projectiles)| projectiles.clone())
       .collect();
 
-    return Rc::new(Self {
+    Rc::new(Self {
       unequipped_modules,
       equipped_modules: self.equipped_modules,
       current_weapons: new_weapons,
       new_projectiles,
       reticle_angle,
       acquired_items,
-    });
+    })
   }
 }
