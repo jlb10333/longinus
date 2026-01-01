@@ -1764,7 +1764,9 @@ impl System for PhysicsSystem {
     let entities = entities
       .into_iter()
       .filter_map(|(&handle, entity)| {
-        if entity.components.get::<Destroyed>().is_none() {
+        if entity.components.get::<Destroyed>().is_none()
+          || handle == EntityHandle::RigidBody(self.player_handle)
+        {
           return Some((handle, Rc::clone(entity)));
         }
 

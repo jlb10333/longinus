@@ -207,7 +207,7 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
   match menu.kind.clone() {
     /* MARK: Menu Main */
     crate::menu::MainMenuKind::Main(should_include_continue_option) => {
-      draw_rectangle(0.0, 0.0, screen_width(), screen_height(), BLACK);
+      draw_rectangle(0.0, 0.0, screen_width(), screen_height(), COLOR_4);
 
       draw_text(
         "LONGINUS",
@@ -726,6 +726,17 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         "-close-",
         0.4 * screen_width(),
         0.5 * screen_height(),
+        40.0,
+        COLOR_1,
+      );
+    }
+    crate::menu::GameMenuKind::GameOver => {
+      draw_rectangle(0.0, 0.0, screen_width(), screen_height(), COLOR_4);
+
+      draw_text(
+        "GAME OVER",
+        0.4 * screen_width(),
+        0.6 * screen_height(),
         40.0,
         COLOR_1,
       );

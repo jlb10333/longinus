@@ -12,7 +12,6 @@
   - Story terminals
   - Health tank pickup
   - Restrict camera to map bounds
-  - Gameover menu
   - First boss
 - Messy experiments in variety
   - Come up with a list of places where variety(!!) emerges from

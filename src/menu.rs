@@ -7,6 +7,7 @@ use rapier2d::{na::Vector2, parry::utils::hashmap::HashMap};
 
 use crate::Start;
 use crate::combat::Direction;
+use crate::ecs::{Destroyed, EntityHandle};
 use crate::load_map::MapAbilityType;
 use crate::physics::PhysicsSystem;
 use crate::save::{SaveData, SaveSystem};
@@ -34,6 +35,7 @@ pub enum GameMenuKind {
   SaveConfirm(i32),
   ModulePickupConfirm(WeaponModuleKind),
   AbilityPickupConfirm(MapAbilityType),
+  GameOver,
 }
 
 #[derive(Clone)]
@@ -198,6 +200,20 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
 }
 
 fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Vec<GameMenu> {
+  if physics_system
+    .entities
+    .get(&EntityHandle::RigidBody(physics_system.player_handle))
+    .unwrap()
+    .components
+    .get::<Destroyed>()
+    .is_some()
+  {
+    return vec![GameMenu {
+      kind: GameMenuKind::GameOver,
+      cursor_position: vector![0, 0],
+    }];
+  }
+
   let save_confirm = if let Some(id) = physics_system.save_point_contact
     && physics_system.save_point_contact_last_frame.is_none()
   {
@@ -410,6 +426,14 @@ fn next_menus(
       menus: ability_pickup_confirm(input, ability_type),
       ..Default::default()
     },
+    GameMenuKind::GameOver => {
+      let (quit_decision, menus) = game_over(input);
+      NextMenuUpdate {
+        menus,
+        quit_decision,
+        ..Default::default()
+      }
+    }
   }
 }
 
@@ -890,6 +914,20 @@ fn ability_pickup_confirm(input: &MenuInput, ability_type: MapAbilityType) -> Ve
       cursor_position: vector![0, 0],
       kind: GameMenuKind::AbilityPickupConfirm(ability_type),
     }]
+  }
+}
+
+fn game_over(input: &MenuInput) -> (Option<QuitDecision>, Vec<GameMenu>) {
+  if input.confirm {
+    (Some(QuitDecision::ToMainMenu), vec![])
+  } else {
+    (
+      None,
+      vec![GameMenu {
+        cursor_position: vector![0, 0],
+        kind: GameMenuKind::GameOver,
+      }],
+    )
   }
 }
 
