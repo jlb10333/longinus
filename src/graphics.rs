@@ -11,6 +11,7 @@ use crate::{
   },
   ecs::{Damageable, EntityHandle},
   graphics_utils::{draw_collider, draw_label},
+  load_map::MapSystem,
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
   save::SaveSystem,

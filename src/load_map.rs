@@ -1317,6 +1317,8 @@ impl TileLayer {
 }
 
 pub struct Map {
+  pub top_left: Vector2<f32>,
+  pub bottom_right: Vector2<f32>,
   pub colliders: Vec<MapTile>,
   pub player_spawns: Vec<PlayerSpawn>,
   pub enemy_spawns: Vec<EnemySpawn>,
@@ -1346,6 +1348,7 @@ impl RawMap {
     let entities_layer = &self.layers.1;
 
     let map_height = tile_layer.height as f32 * 8.0;
+    let map_width = tile_layer.width as f32 * 8.0;
 
     let converted_entities = entities_layer.into(map_height);
 
@@ -1546,6 +1549,8 @@ impl RawMap {
       .collect::<Vec<_>>();
 
     Map {
+      top_left: physics_translation_from_map(0.0, 0.0, 0.0, 0.0, map_height),
+      bottom_right: physics_translation_from_map(map_width, map_height, 0.0, 0.0, map_height),
       colliders,
       enemy_spawns,
       player_spawns,

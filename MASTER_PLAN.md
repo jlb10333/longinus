@@ -11,7 +11,6 @@
   - Map view (maybe)
   - Story terminals
   - Health tank pickup
-  - Restrict camera to map bounds
   - First boss
 - Messy experiments in variety
   - Come up with a list of places where variety(!!) emerges from
