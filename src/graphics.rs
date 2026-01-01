@@ -2,7 +2,6 @@ use std::{marker::PhantomData, rc::Rc, thread::sleep, time::Duration};
 
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
-use rpds::HashTrieSet;
 
 use crate::{
   camera::CameraSystem,
@@ -220,7 +219,12 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
 
       draw_text(
         &format!(
-          "{}{}",
+          "{}{}{}",
+          if menu.cursor_position == vector![0, 0] {
+            "-"
+          } else {
+            ""
+          },
           if should_include_continue_option {
             "continue"
           } else {
@@ -239,7 +243,12 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
       );
       draw_text(
         &format!(
-          "{}{}",
+          "{}{}{}",
+          if menu.cursor_position == vector![0, 1] {
+            "-"
+          } else {
+            ""
+          },
           if should_include_continue_option {
             "new_game"
           } else {
@@ -251,8 +260,8 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
             ""
           }
         ),
-        screen_width() * 0.45,
-        screen_height() * 0.6,
+        screen_width() * 0.2,
+        screen_height() * 0.7,
         40.0,
         COLOR_1,
       );
@@ -263,8 +272,8 @@ fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
           } else {
             "load_game"
           },
-          screen_width() * 0.7,
-          screen_height() * 0.6,
+          screen_width() * 0.2,
+          screen_height() * 0.8,
           40.0,
           COLOR_1,
         );

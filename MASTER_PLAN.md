@@ -1,7 +1,6 @@
 # Longinus Master Plan
 ## Gameplay
 - Mechanical prototype
-  - Change main menu screen to have cursor movement align with controls
   - Get it playtested
 - Mechanical prototype v2
   - Add ability pickup confirm menu

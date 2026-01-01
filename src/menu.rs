@@ -16,7 +16,6 @@ use crate::{
   },
   controls::ControlsSystem,
   system::System,
-  units::UnitConvert2,
 };
 
 #[derive(Clone)]
@@ -134,7 +133,7 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
     if let Some(ctx) = ctx.downcast::<SaveData>() {
       let combat_system = ctx.get::<CombatSystem>().unwrap();
 
-      if self.active_menus.iter().count() > 0 {
+      if !self.active_menus.is_empty() {
         let NextMenuUpdate {
           menus: next_menus,
           inventory_update,
@@ -234,7 +233,7 @@ struct NextMainMenuUpdate {
 fn next_main_menus(
   current_menu: &MainMenu,
   input: &MenuInput,
-  available_saves: &Vec<String>,
+  available_saves: &[String],
 ) -> NextMainMenuUpdate {
   if !(input.up || input.down || input.left || input.right || input.confirm || input.cancel) {
     return NextMainMenuUpdate {
@@ -411,7 +410,6 @@ fn menu_main(
   };
 
   if continue_game {
-    available_saves.iter().for_each(|save| println!("{}", save));
     let most_recent_save = available_saves
       .iter()
       .fold("", |init, elem| if *init > **elem { init } else { elem });
