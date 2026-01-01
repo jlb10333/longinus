@@ -502,6 +502,34 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
           0.05 * screen_height(),
           COLOR_3,
         );
+
+        let hovering_module = if menu.cursor_position.x < EQUIP_SLOTS_WIDTH {
+          inventory_update.equipped_modules
+            [(menu.cursor_position.x + (menu.cursor_position.y * EQUIP_SLOTS_WIDTH)) as usize]
+        } else {
+          inventory_update
+            .unequipped_modules
+            .get(
+              (menu.cursor_position.x - EQUIP_SLOTS_WIDTH
+                + (menu.cursor_position.y * INVENTORY_WRAP_WIDTH)) as usize,
+            )
+            .copied()
+        };
+
+        if let Some(hovering_module) = hovering_module {
+          debug_module_text(hovering_module)
+            .iter()
+            .enumerate()
+            .for_each(|(index, text)| {
+              draw_text(
+                text,
+                0.5 * screen_width(),
+                (0.8 + (index as f32 * 0.02)) * screen_height(),
+                25.0,
+                COLOR_1,
+              );
+            });
+        }
       }
 
       inventory_update
@@ -514,7 +542,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
             let module_y = (index as i32 / EQUIP_SLOTS_WIDTH) as f32 * 0.05;
 
             draw_text(
-              debug_module_text(module_kind),
+              debug_module_symbol(module_kind),
               (0.52 + (module_x)) * screen_width(),
               (0.535 + (module_y)) * screen_height(),
               40.0,
@@ -577,7 +605,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
           let module_y = (index as i32 / INVENTORY_WRAP_WIDTH) as f32 * 0.05;
 
           draw_text(
-            debug_module_text(unequipped_module_kind),
+            debug_module_symbol(unequipped_module_kind),
             (0.52 + (module_x)) * screen_width(),
             (0.535 + (module_y)) * screen_height(),
             40.0,
@@ -684,7 +712,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
               "Modifier"
             }
           },
-          debug_module_text(weapon_module_kind)
+          debug_module_symbol(weapon_module_kind)
         ),
         0.4 * screen_width(),
         0.45 * screen_height(),
@@ -745,7 +773,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
   }
 }
 
-fn debug_module_text(module_kind: WeaponModuleKind) -> &'static str {
+fn debug_module_symbol(module_kind: WeaponModuleKind) -> &'static str {
   match module_kind {
     WeaponModuleKind::Plasma => "P",
     WeaponModuleKind::Missile => "M",
@@ -755,5 +783,38 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> &'static str {
     WeaponModuleKind::FortyFiveSlot => "4",
     WeaponModuleKind::SideSlot => "S",
     WeaponModuleKind::MirrorSlot => "R",
+  }
+}
+
+fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
+  match module_kind {
+    WeaponModuleKind::Plasma => vec!["PLAS; weapon; shoots moderately fast with moderate damage"],
+    WeaponModuleKind::Missile => {
+      vec![
+        "MISL; weapon; shoots slowly and accelerates after firing, with high damage",
+        "and an explosion on impact",
+      ]
+    }
+    WeaponModuleKind::DoubleDamage75Freq => {
+      vec!["D75F; modifier; doubles damage but reduces frequency by 25%"]
+    }
+    WeaponModuleKind::DoubleFreq75Damage => {
+      vec!["F75D; modifier; doubles frequency but reduces damage by 25%"]
+    }
+    WeaponModuleKind::Front2Slot => {
+      vec!["2FSL; modifier; allows weapon to fire from the front two projectile slots"]
+    }
+    WeaponModuleKind::FortyFiveSlot => {
+      vec!["45SL; modifier; allows weapon to fire from the front diagonal projectile slots"]
+    }
+    WeaponModuleKind::SideSlot => {
+      vec!["SDSL; modifier; allows weapon to fire from the side projectile slots"]
+    }
+    WeaponModuleKind::MirrorSlot => {
+      vec![
+        "RVSL; modifier; allows weapon to fire from the reverse equivalents of any",
+        "front slots it currently fires from",
+      ]
+    }
   }
 }

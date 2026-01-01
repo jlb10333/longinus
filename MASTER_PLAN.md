@@ -5,7 +5,6 @@
     - Get solid controls w/ kbd and mouse (maybe)
   - Visual explainability
     - Show boost cooldown (maybe)
-    - Description/full name of each module
   - Get it playtested
 - Mechanical prototype v2
   - Map view (maybe)
