@@ -1,4 +1,4 @@
-use std::{fs, marker::PhantomData, path::Path, rc::Rc, time};
+use std::{env::current_dir, fs, marker::PhantomData, path::Path, rc::Rc, time};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -30,7 +30,7 @@ pub struct SaveData {
 }
 
 fn initital_save_file_path() -> String {
-  Path::new(".")
+  Path::new(&current_dir().unwrap())
     .join("assets")
     .join("save_initial.json")
     .as_os_str()
@@ -40,7 +40,7 @@ fn initital_save_file_path() -> String {
 }
 
 fn save_data_path(save_filename: &str) -> String {
-  Path::new(".")
+  Path::new(&current_dir().unwrap())
     .join("storage")
     .join(save_filename)
     .as_os_str()
@@ -50,7 +50,7 @@ fn save_data_path(save_filename: &str) -> String {
 }
 
 fn save_dir_path() -> String {
-  Path::new(".")
+  Path::new(&current_dir().unwrap())
     .join("storage")
     .as_os_str()
     .to_str()

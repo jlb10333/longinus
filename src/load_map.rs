@@ -1,4 +1,10 @@
-use std::{f32::consts::PI, fs, rc::Rc};
+use std::{
+  env::{current_dir, current_exe},
+  f32::consts::PI,
+  fs,
+  path::Path,
+  rc::Rc,
+};
 
 use rapier2d::{
   na::{Unit, Vector2},
@@ -1576,7 +1582,11 @@ pub struct MapSystem {
 }
 
 fn map_read_path(map_name: &String) -> String {
-  format!("./assets/maps/{map_name}.json")
+  Path::new(&current_dir().unwrap())
+    .join(format!("assets/maps/{map_name}.json"))
+    .to_str()
+    .unwrap()
+    .to_string()
 }
 
 impl System for MapSystem {
