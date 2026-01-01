@@ -47,8 +47,34 @@ echo "Copied from ./target/x86_64-pc-windows-gnu/release/game.exe to ${win_x86_d
 
 # ubuntu x86 build
 
-# ubuntu_x86_dir="${directory}/longinus-v${version}-ubuntu-x86";
+ubuntu_x86_dir="${directory}/longinus-v${version}-ubuntu-x86";
 
-# x86_64-pc-windows-gnu --release &&  cp ./target/x86_64-pc-windows-gnu/release/game.exe ./game.exe
+if [ ! -d "${ubuntu_x86_dir}" ]; then
+    mkdir ${ubuntu_x86_dir};
+    echo "Created ${ubuntu_x86_dir}";
+fi
+
+cp -r ./assets ${ubuntu_x86_dir}/assets;
+
+echo "Copied from ./assets to ${ubuntu_x86_dir}/assets}";
+
+if [ ! -d "${ubuntu_x86_dir}/storage" ]; then
+    mkdir ${ubuntu_x86_dir}/storage;
+    echo "Created ${ubuntu_x86_dir}/storage";
+fi
+
+if [ "$release" == "true" ]; then
+    cp ./README.md ${ubuntu_x86_dir}/README.md;
+    echo "Copied from ./README.md to ${ubuntu_x86_dir}/README.md";
+fi
+
+cargo build --release -q;
+
+echo "Built to ./target/release";
+
+cp ./target/release/game ${ubuntu_x86_dir}/game;
+chmod +x ${ubuntu_x86_dir}/game;
+
+echo "Copied from ./target/release/game to ${ubuntu_x86_dir}/game";
 
 echo "Build complete!"
