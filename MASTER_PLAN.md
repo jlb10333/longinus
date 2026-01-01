@@ -3,12 +3,13 @@
 - Mechanical prototype
   - Get it playtested
 - Mechanical prototype v2
-  - Add ability pickup confirm menu
   - Controls
     - Get solid controls w/ kbd and mouse (maybe)
   - Visual explainability
     - Show boost cooldown (maybe)
     - Description/full name of each module
+    - Add ability pickup confirm menu
+    - Add inventory screen pickup confirm menu
   - Map view (maybe)
   - Story terminals
   - Health tank pickup

@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use macroquad::prelude::*;
 use rapier2d::{na::Vector2, prelude::*};
 
@@ -68,7 +66,15 @@ pub fn draw_collider(
         },
       );
 
-      label.map(|label| draw_text(label.as_ref(), top_left.x(), top_left.y(), 40.0, COLOR_4));
+      if let Some(label) = label.as_ref() {
+        draw_text(
+          label.as_ref(),
+          top_left.x(),
+          top_left.y(),
+          40.0,
+          color.unwrap_or(COLOR_4).with_alpha(alpha),
+        );
+      };
     }
   }
 
@@ -77,8 +83,18 @@ pub fn draw_collider(
       translation.x(),
       translation.y(),
       *PhysicsScalar(ball.radius).convert(),
-      COLOR_2.with_alpha(alpha),
+      color.unwrap_or(COLOR_2).with_alpha(alpha),
     );
+
+    if let Some(label) = label.as_ref() {
+      draw_text(
+        label.as_ref(),
+        translation.x(),
+        translation.y(),
+        40.0,
+        color.unwrap_or(COLOR_4).with_alpha(alpha),
+      );
+    };
   }
 
   if let Some(compound) = collider.shape().as_compound() {
