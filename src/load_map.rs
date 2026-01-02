@@ -534,6 +534,48 @@ struct MapEngine {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapContentClass {
+  Content,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapContent {
+  #[serde(rename = "name")]
+  _name: MapContentClass,
+  value: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapCreatedAtClass {
+  CreatedAt,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapCreatedAt {
+  #[serde(rename = "name")]
+  _name: MapCreatedAtClass,
+  value: String,
+}
+
+lit_str!(TerminalTemplatePath, "templates/Terminal.tx");
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum TerminalTemplate {
+  #[serde(with = "TerminalTemplatePath")]
+  Path,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapTerminal {
+  id: i32,
+  x: f32,
+  y: f32,
+  template: TerminalTemplate,
+  properties: (MapContent, MapCreatedAt),
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
@@ -553,6 +595,7 @@ enum Object {
   Locomotor(MapLocomotor),
   Glue(MapGlue),
   Engine(MapEngine),
+  Terminal(MapTerminal),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -586,6 +629,12 @@ pub const COLLISION_GROUP_CHAIN: Group = Group::GROUP_7;
 pub const GRAVITY_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
   memberships: Group::all(),
   filter: COLLISION_GROUP_WALL.complement(),
+  test_mode: InteractionTestMode::And,
+};
+
+pub const PLAYER_INTERACTIBLE_GROUPS: InteractionGroups = InteractionGroups {
+  memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+  filter: COLLISION_GROUP_PLAYER,
   test_mode: InteractionTestMode::And,
 };
 
@@ -787,6 +836,14 @@ pub struct Engine {
 }
 
 #[derive(Clone)]
+pub struct Terminal {
+  pub id: i32,
+  pub collider: Collider,
+  pub content: String,
+  pub created_at: String,
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -831,6 +888,7 @@ pub enum MapComponent {
   Locomotor(Locomotor),
   Glue(Glue),
   Engine(Engine),
+  Terminal(Terminal),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -1194,6 +1252,18 @@ impl Object {
           ))
           .build(),
       }),
+      Object::Terminal(terminal) => MapComponent::Terminal(Terminal {
+        id: terminal.id,
+        collider: ColliderBuilder::ball(0.5)
+          .sensor(true)
+          .collision_groups(PLAYER_INTERACTIBLE_GROUPS)
+          .translation(physics_translation_from_map(
+            terminal.x, terminal.y, 0.0, 0.0, map_height,
+          ))
+          .build(),
+        content: terminal.properties.0.value.clone(),
+        created_at: terminal.properties.1.value.clone(),
+      }),
     }
   }
 }
@@ -1337,6 +1407,7 @@ pub struct Map {
   pub locomotors: Vec<Locomotor>,
   pub glues: Vec<Glue>,
   pub engines: Vec<Engine>,
+  pub terminals: Vec<Terminal>,
 }
 
 impl RawMap {
@@ -1548,6 +1619,18 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let terminals = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Terminal(terminal) = object {
+          Some(terminal)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     Map {
       top_left: physics_translation_from_map(0.0, 0.0, 0.0, 0.0, map_height),
       bottom_right: physics_translation_from_map(map_width, map_height, 0.0, 0.0, map_height),
@@ -1569,6 +1652,7 @@ impl RawMap {
       locomotors,
       glues,
       engines,
+      terminals,
     }
   }
 }

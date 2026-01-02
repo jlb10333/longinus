@@ -7,7 +7,7 @@ use rapier2d::{na::Vector2, parry::utils::hashmap::HashMap};
 
 use crate::Start;
 use crate::combat::Direction;
-use crate::ecs::{Destroyed, EntityHandle};
+use crate::ecs::{Destroyed, EntityHandle, Terminal};
 use crate::load_map::MapAbilityType;
 use crate::physics::PhysicsSystem;
 use crate::save::{SaveData, SaveSystem};
@@ -36,6 +36,7 @@ pub enum GameMenuKind {
   ModulePickupConfirm(WeaponModuleKind),
   AbilityPickupConfirm(MapAbilityType),
   GameOver,
+  TerminalShow(Rc<Terminal>),
 }
 
 #[derive(Clone)]
@@ -225,6 +226,17 @@ fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Vec<GameMe
     vec![]
   };
 
+  let terminal_show = if let Some(terminal) = physics_system.terminal_contact.as_ref()
+    && physics_system.terminal_contact_last_frame.is_none()
+  {
+    vec![GameMenu {
+      kind: GameMenuKind::TerminalShow(terminal.clone()),
+      cursor_position: vector![0, 0],
+    }]
+  } else {
+    vec![]
+  };
+
   let inventory_main = if input.inventory {
     vec![GameMenu {
       kind: GameMenuKind::InventoryMain,
@@ -261,6 +273,7 @@ fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Vec<GameMe
 
   save_confirm
     .into_iter()
+    .chain(terminal_show)
     .chain(inventory_main)
     .chain(pause_main)
     .chain(ability_pickup_confirm)
@@ -434,6 +447,10 @@ fn next_menus(
         ..Default::default()
       }
     }
+    GameMenuKind::TerminalShow(terminal) => NextMenuUpdate {
+      menus: terminal_show(current_menu.cursor_position, input, &terminal),
+      ..Default::default()
+    },
   }
 }
 
@@ -928,6 +945,29 @@ fn game_over(input: &MenuInput) -> (Option<QuitDecision>, Vec<GameMenu>) {
         kind: GameMenuKind::GameOver,
       }],
     )
+  }
+}
+
+pub const TERMINAL_DISPLAY_LINES_BEFORE_SCROLL: i32 = 20;
+
+fn terminal_show(
+  cursor_position: Vector2<i32>,
+  input: &MenuInput,
+  terminal: &Rc<Terminal>,
+) -> Vec<GameMenu> {
+  if input.confirm {
+    vec![]
+  } else {
+    let num_lines = terminal.content.split('\n').count();
+    let scrollable_lines = (num_lines as i32 - TERMINAL_DISPLAY_LINES_BEFORE_SCROLL).max(0);
+
+    let cursor_position =
+      handle_cursor_movement(cursor_position, 0, 0, scrollable_lines, input, None);
+
+    vec![GameMenu {
+      cursor_position,
+      kind: GameMenuKind::TerminalShow(terminal.clone()),
+    }]
   }
 }
 

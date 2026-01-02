@@ -142,6 +142,23 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":304,
                  "y":40
+                }, 
+                {
+                 "id":14,
+                 "properties":[
+                        {
+                         "name":"Content",
+                         "type":"string",
+                         "value":"This is a test\n\n Test test test \n Test"
+                        }, 
+                        {
+                         "name":"CreatedAt",
+                         "type":"string",
+                         "value":"10\/10\/10"
+                        }],
+                 "template":"templates\/Terminal.tx",
+                 "x":152,
+                 "y":320
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -150,7 +167,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":14,
+ "nextobjectid":16,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

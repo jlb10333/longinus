@@ -770,6 +770,37 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         COLOR_1,
       );
     }
+    crate::menu::GameMenuKind::TerminalShow(terminal) => {
+      draw_rectangle(
+        0.3 * screen_width(),
+        0.2 * screen_height(),
+        0.4 * screen_width(),
+        0.6 * screen_height(),
+        COLOR_4,
+      );
+
+      draw_text(
+        &terminal.created_at,
+        0.35 * screen_width(),
+        0.25 * screen_height(),
+        20.0,
+        COLOR_1,
+      );
+
+      terminal
+        .content
+        .split('\n')
+        .enumerate()
+        .for_each(|(index, line)| {
+          draw_text(
+            line,
+            0.35 * screen_width(),
+            (0.35 + (0.05 * index as f32)) * screen_height(),
+            25.0,
+            COLOR_1,
+          );
+        });
+    }
   }
 }
 

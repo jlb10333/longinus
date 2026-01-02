@@ -313,6 +313,12 @@ pub struct Engine {
 }
 impl Component for Engine {}
 
+pub struct Terminal {
+  pub content: String,
+  pub created_at: String,
+}
+impl Component for Terminal {}
+
 pub struct Id {
   pub id: i32,
 }

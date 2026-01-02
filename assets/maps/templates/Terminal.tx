@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<template>
+ <object name="Terminal" type="Terminal">
+  <properties>
+   <property name="Content" value=""/>
+   <property name="CreatedAt" value=""/>
+  </properties>
+ </object>
+</template>

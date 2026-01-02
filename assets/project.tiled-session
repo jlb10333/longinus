@@ -19,8 +19,8 @@
             "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 554.875,
-                "y": 304.625
+                "x": 160.125,
+                "y": 200.125
             }
         },
         "maps/MP2.json": {
@@ -31,7 +31,7 @@
             "selectedLayer": 1,
             "viewCenter": {
                 "x": 393.5,
-                "y": 517.5
+                "y": 331.5
             }
         },
         "maps/MP3.json": {
@@ -41,8 +41,8 @@
             "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 73.49999999999994,
-                "y": 86.5
+                "x": 200.16666666666666,
+                "y": 119.83333333333334
             }
         },
         "maps/MP4.json": {
@@ -52,8 +52,8 @@
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 605.5,
-                "y": 148.5
+                "x": 39.5,
+                "y": 39.5
             }
         },
         "maps/MP5.json": {
@@ -63,8 +63,8 @@
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 657.5,
-                "y": -500.5
+                "x": 159.5,
+                "y": 199.5
             }
         },
         "maps/MP6.json": {
@@ -85,8 +85,8 @@
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 473.5,
-                "y": 738.5
+                "x": 400.5,
+                "y": 239.5
             }
         },
         "maps/MP8.json": {
@@ -202,7 +202,7 @@
         "maps/MP8.json"
     ],
     "project": "project.tiled-project",
-    "property.type": "object",
+    "property.type": "string",
     "recentFiles": [
         "maps/MP8.json",
         "maps/old/CL4-1.json",

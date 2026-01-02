@@ -16,7 +16,7 @@ use crate::{
     DestroyAfterFrames, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Engine, Entity,
     EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision, GivesItemOnCollision,
     GravitySource, HealOnCollision, Id, Locomotor, MapTransitionOnCollision, Or,
-    SaveMenuOnCollision, SimpleActivatable, Switch, TouchSensor,
+    SaveMenuOnCollision, SimpleActivatable, Switch, Terminal, TouchSensor,
   },
   enemy::EnemySystem,
   load_map::{
@@ -58,6 +58,8 @@ pub struct PhysicsSystem {
   pub load_new_map: Option<(String, i32)>,
   pub save_point_contact: Option<i32>,
   pub save_point_contact_last_frame: Option<i32>,
+  pub terminal_contact: Option<Rc<Terminal>>,
+  pub terminal_contact_last_frame: Option<Rc<Terminal>>,
   pub mount_points_in_range: List<RigidBodyHandle>,
 }
 
@@ -459,6 +461,24 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
+  /* MARK: Spawn terminals. */
+  let terminals = map
+    .terminals
+    .iter()
+    .map(|terminal| {
+      let collider_handle = collider_set.insert(terminal.collider.clone());
+
+      Entity {
+        handle: EntityHandle::Collider(collider_handle),
+        components: ComponentSet::new().insert(Terminal {
+          content: terminal.content.clone(),
+          created_at: terminal.created_at.clone(),
+        }),
+        label: "terminal".to_string(),
+      }
+    })
+    .collect::<Vec<_>>();
+
   /* MARK: Create the map colliders. */
   let map_tiles = map
     .colliders
@@ -563,6 +583,7 @@ fn load_new_map(
     .chain(ors)
     .chain(gates)
     .chain(engines)
+    .chain(terminals)
     .map(|entity| (entity.handle, Rc::new(entity)))
     .collect::<HashTrieMap<_, _>>();
 
@@ -643,6 +664,8 @@ fn load_new_map(
     load_new_map: None,
     save_point_contact: None,
     save_point_contact_last_frame: None,
+    terminal_contact: None,
+    terminal_contact_last_frame: None,
     mount_points_in_range: list![],
   })
 }
@@ -733,6 +756,8 @@ impl System for PhysicsSystem {
         load_new_map: None,
         save_point_contact: self.save_point_contact,
         save_point_contact_last_frame: self.save_point_contact_last_frame,
+        terminal_contact: self.terminal_contact.clone(),
+        terminal_contact_last_frame: self.terminal_contact_last_frame.clone(),
         mount_points_in_range: list![],
       });
     }
@@ -1216,6 +1241,19 @@ impl System for PhysicsSystem {
         && let Some(id) = entity.components.get::<Id>()
       {
         Some(id.id)
+      } else {
+        None
+      }
+    });
+
+    /* MARK: Terminal interaction */
+    let terminal_contact = entities.iter().find_map(|(handle, entity)| {
+      if let Some(terminal) = entity.components.get::<Terminal>()
+        && !handle
+          .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+          .is_empty()
+      {
+        Some(terminal)
       } else {
         None
       }
@@ -1845,6 +1883,8 @@ impl System for PhysicsSystem {
       load_new_map,
       save_point_contact,
       save_point_contact_last_frame: self.save_point_contact,
+      terminal_contact,
+      terminal_contact_last_frame: self.terminal_contact.clone(),
       mount_points_in_range,
     })
   }
