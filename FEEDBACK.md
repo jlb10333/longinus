@@ -18,3 +18,8 @@
   - Feedback
     - Vary elasticity of walls based on unique qualities of the area
     - Couldn't feel the effect of variable acceleration, in other words making it so the further you push the stick in a direction the faster the ship goes
+    - Issues with wired switch pro controller
+    
+- River
+  - Feedback
+    - Issues with wired switch branded controller
