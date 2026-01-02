@@ -54,6 +54,8 @@
 - Collect feedback from playtesters
 - Refine feedback into actionable items
 ## Writing
+- Why does the Spirit know about the erasure from history?
+- What's the story behind the player character?
 - Basic outline for each cyst layer expedition
 ## Art
 ## Sound
