@@ -1,8 +1,6 @@
 # Longinus Master Plan
 ## Gameplay
 - Mechanical prototype
-  - Controls
-    - Get solid controls w/ kbd and mouse (maybe)
   - Visual explainability
     - Show boost cooldown (maybe)
   - Get it playtested
