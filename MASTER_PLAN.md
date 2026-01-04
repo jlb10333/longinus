@@ -6,7 +6,6 @@
   - Get it playtested
 - Mechanical prototype v2
   - Map view (maybe)
-  - Story terminals
   - Health tank pickup
   - First boss
 - Messy experiments in variety
