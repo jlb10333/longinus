@@ -212,6 +212,7 @@ impl System for AbilitySystem {
     } else {
       mana_tanks
     };
+    let mana_tanks = mana_tanks.recharge();
 
     Rc::new(AbilitySystem {
       acquired_boost,
