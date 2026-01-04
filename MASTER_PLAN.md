@@ -5,20 +5,29 @@
     - Show boost cooldown (maybe)
   - Get it playtested
 - Mechanical prototype v2
+  - Visual explainability
+    - Show all health tank and mana tanks in inventory
+    - Show mana levels better
   - Map view (maybe)
   - Health tank pickup
   - First boss
+  - Mana
+    - Unrechargeable bars can be replenished with enemy drops
+    - Both rechargeable and unrechargeable bars can be found in environment
+  - Activation
+    - Magnet balls
+    - Crank
+    - Not
+    - Min
+    - Max
+    - Lasers
+    - Saving/loading of activation levels
 - Messy experiments in variety
   - Come up with a list of places where variety(!!) emerges from
   - For each one, develop a small prototype
   - Playtest them
   - Come up with a strategy for how to make the rest of the game
 - Exploration game loop
-  - Mana
-    - Boost consumes mana bar
-    - Mana recharges only rechargeable bars
-    - Unrechargeable bars can be replenished with enemy drops
-    - Both rechargeable and unrechargeable bars can be found in environment
   - Combat
     - Status effects
     - Shield
@@ -31,14 +40,6 @@
     - Make chain deal damage to enemies
     - Increase defensive power
     - Increase damage taken but also received
-  - Activation
-    - Magnet balls
-    - Crank
-    - Not
-    - Min
-    - Max
-    - Lasers
-    - Saving/loading of activation levels
   - Water Physics (maybe)
 ### Squash bugs
 - Chain can be activated outside of the mount radius

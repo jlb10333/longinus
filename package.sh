@@ -23,7 +23,7 @@ if [ ! -d "${win_x86_dir}" ]; then
     echo "Created ${win_x86_dir}";
 fi
 
-cp -r ./assets ${win_x86_dir}/assets;
+cp -r ./assets/* ${win_x86_dir}/assets/;
 
 echo "Copied from ./assets to ${win_x86_dir}/assets}";
 
@@ -54,9 +54,9 @@ if [ ! -d "${ubuntu_x86_dir}" ]; then
     echo "Created ${ubuntu_x86_dir}";
 fi
 
-cp -r ./assets ${ubuntu_x86_dir}/assets;
+cp -r ./assets/* ${ubuntu_x86_dir}/assets/;
 
-echo "Copied from ./assets to ${ubuntu_x86_dir}/assets}";
+echo "Copied from ./assets to ${ubuntu_x86_dir}/assets";
 
 if [ ! -d "${ubuntu_x86_dir}/storage" ]; then
     mkdir ${ubuntu_x86_dir}/storage;

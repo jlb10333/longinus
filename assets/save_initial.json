@@ -31,6 +31,10 @@
   "acquired_items": [],
   "player_health": 100.0,
   "player_max_health": 100.0,
-  "acquired_boost": false,
-  "acquired_chain": false
+  "acquired_boost": true,
+  "acquired_chain": false,
+  "mana_tanks_capacity": {
+    "auto_recharge_mana_tanks": 2,
+    "non_recharge_mana_tanks": 2
+  }
 }

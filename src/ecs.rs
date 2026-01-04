@@ -7,7 +7,7 @@ use rapier2d::{
     RigidBodyHandle, RigidBodySet,
   },
 };
-use rpds::{HashTrieSet, List};
+use rpds::List;
 
 use crate::{
   combat::WeaponModuleKind,

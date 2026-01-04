@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  ability::AbilitySystem,
+  ability::{AbilitySystem, ManaTanksCapacityInfo},
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, UnequippedModules, WeaponModuleKind,
   },
@@ -27,6 +27,7 @@ pub struct SaveData {
   pub player_max_health: f32,
   pub acquired_boost: bool,
   pub acquired_chain: bool,
+  pub mana_tanks_capacity: ManaTanksCapacityInfo,
 }
 
 fn initital_save_file_path() -> String {
@@ -125,6 +126,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
           player_max_health: player_damageable.max_health,
           acquired_boost: ability_system.acquired_boost,
           acquired_chain: ability_system.acquired_chain,
+          mana_tanks_capacity: ability_system.mana_tanks.capacity,
         };
 
         let sys_time: DateTime<Utc> = time::SystemTime::now().into();

@@ -4,6 +4,7 @@ use macroquad::prelude::*;
 use rapier2d::prelude::*;
 
 use crate::{
+  ability::AbilitySystem,
   camera::CameraSystem,
   combat::{
     CombatSystem, Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind,
@@ -166,8 +167,40 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       draw_text(
         &format!(
-          "{}/{}",
+          "HP {}/{}",
           player_damageable.health, player_damageable.max_health
+        ),
+        screen_width() * 0.01,
+        screen_height() * 0.8,
+        40.0,
+        COLOR_4,
+      );
+
+      let ability_system = ctx.get::<AbilitySystem>().unwrap();
+
+      draw_text(
+        &format!(
+          "MANA {}/{}",
+          ability_system.mana_tanks.rechargeable_mana_level as i32,
+          ability_system
+            .mana_tanks
+            .capacity
+            .max_rechargeable_mana_level() as i32
+        ),
+        screen_width() * 0.01,
+        screen_height() * 0.85,
+        40.0,
+        COLOR_4,
+      );
+
+      draw_text(
+        &format!(
+          "MANA Backup {}/{}",
+          ability_system.mana_tanks.non_rechargeable_mana_level as i32,
+          ability_system
+            .mana_tanks
+            .capacity
+            .max_non_rechargeable_mana_level() as i32
         ),
         screen_width() * 0.01,
         screen_height() * 0.9,

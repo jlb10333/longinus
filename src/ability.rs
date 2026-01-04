@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use rapier2d::{na::Vector2, prelude::RigidBodyHandle};
+use serde::{Deserialize, Serialize};
 
 use crate::{
   controls::ControlsSystem,
@@ -11,7 +12,63 @@ use crate::{
   units::{PhysicsVector, UnitConvert, UnitConvert2},
 };
 
+const MANA_TANK_CAPACITY: f32 = 3.0;
+const MANA_TANK_RECHARGE_RATE: f32 = 1.0 / 60.0;
 const BOOST_MOD: f32 = 5.5;
+const BOOST_MANA_USE: f32 = 3.0;
+const BOOST_MAX_COOLDOWN: f32 = 10.0;
+
+#[derive(Serialize, Deserialize, Clone, Copy, Default)]
+pub struct ManaTanksCapacityInfo {
+  pub auto_recharge_mana_tanks: i32,
+  pub non_recharge_mana_tanks: i32,
+}
+
+impl ManaTanksCapacityInfo {
+  pub fn max_non_rechargeable_mana_level(&self) -> f32 {
+    self.non_recharge_mana_tanks as f32 * MANA_TANK_CAPACITY
+  }
+
+  pub fn max_rechargeable_mana_level(&self) -> f32 {
+    self.auto_recharge_mana_tanks as f32 * MANA_TANK_CAPACITY
+  }
+}
+
+#[derive(Clone, Copy)]
+pub struct ManaTanksActiveInfo {
+  pub rechargeable_mana_level: f32,
+  pub non_rechargeable_mana_level: f32,
+  pub capacity: ManaTanksCapacityInfo,
+}
+
+impl ManaTanksActiveInfo {
+  pub fn recharge(&self) -> Self {
+    Self {
+      rechargeable_mana_level: (self.rechargeable_mana_level + MANA_TANK_RECHARGE_RATE)
+        .min(self.capacity.max_non_rechargeable_mana_level()),
+      ..*self
+    }
+  }
+
+  pub fn total_mana_level(&self) -> f32 {
+    self.non_rechargeable_mana_level + self.rechargeable_mana_level
+  }
+
+  pub fn without(&self, amount: f32) -> Option<Self> {
+    if amount > self.total_mana_level() {
+      None
+    } else {
+      let attempted_rechargeable_level = (self.rechargeable_mana_level - amount);
+      let non_rechargeable_difference = attempted_rechargeable_level.min(0.0);
+
+      Some(Self {
+        rechargeable_mana_level: attempted_rechargeable_level.max(0.0),
+        non_rechargeable_mana_level: self.non_rechargeable_mana_level + non_rechargeable_difference,
+        ..*self
+      })
+    }
+  }
+}
 
 pub struct AbilitySystem {
   pub acquired_boost: bool,
@@ -22,6 +79,7 @@ pub struct AbilitySystem {
   pub chain_to_mount_point: Option<RigidBodyHandle>,
   pub chain_activated: bool,
   pub kill_chain: bool,
+  pub mana_tanks: ManaTanksActiveInfo,
 }
 
 impl System for AbilitySystem {
@@ -37,11 +95,19 @@ impl System for AbilitySystem {
       acquired_boost: ctx.input.acquired_boost,
       acquired_chain: ctx.input.acquired_chain,
       boost_force: None,
-      current_boost_cooldown: 240.0, // TODO: Load from save data
-      max_boost_cooldown: 240.0,
+      current_boost_cooldown: BOOST_MAX_COOLDOWN,
+      max_boost_cooldown: BOOST_MAX_COOLDOWN,
       chain_to_mount_point: None,
       chain_activated: false,
       kill_chain: false,
+      mana_tanks: ManaTanksActiveInfo {
+        rechargeable_mana_level: ctx.input.mana_tanks_capacity.max_rechargeable_mana_level(),
+        non_rechargeable_mana_level: ctx
+          .input
+          .mana_tanks_capacity
+          .max_non_rechargeable_mana_level(),
+        capacity: ctx.input.mana_tanks_capacity,
+      },
     })
   }
 
@@ -51,17 +117,28 @@ impl System for AbilitySystem {
   ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
-    let (boost_force, current_boost_cooldown) = if controls_system.boost
+    let (boost_force, current_boost_cooldown, mana_tanks) = if controls_system.boost
+      && !controls_system
+        .last_frame
+        .as_ref()
+        .map(|last_frame| last_frame.boost)
+        .unwrap_or(false)
       && controls_system.left_stick != PhysicsVector::zero()
       && self.acquired_boost
       && self.current_boost_cooldown == 0.0
+      && let Some(mana_tanks) = self.mana_tanks.without(BOOST_MANA_USE)
     {
       (
         Some(controls_system.left_stick.into_vec().normalize() * BOOST_MOD),
         self.max_boost_cooldown,
+        mana_tanks,
       )
     } else {
-      (None, (self.current_boost_cooldown - 1.0).max(0.0))
+      (
+        None,
+        (self.current_boost_cooldown - 1.0).max(0.0),
+        self.mana_tanks,
+      )
     };
 
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
@@ -113,6 +190,8 @@ impl System for AbilitySystem {
 
     let chain_activated = (self.chain_activated || chain_to_mount_point.is_some()) && !kill_chain;
 
+    let mana_tanks = mana_tanks.recharge();
+
     Rc::new(AbilitySystem {
       acquired_boost,
       acquired_chain,
@@ -122,6 +201,7 @@ impl System for AbilitySystem {
       chain_to_mount_point,
       chain_activated,
       kill_chain,
+      mana_tanks,
     })
   }
 }
