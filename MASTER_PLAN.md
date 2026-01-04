@@ -1,8 +1,6 @@
 # Longinus Master Plan
 ## Gameplay
 - Mechanical prototype
-  - Controls
-    - Get solid controls w/ kbd and mouse (maybe)
   - Visual explainability
     - Show boost cooldown (maybe)
   - Get it playtested
@@ -53,6 +51,8 @@
 - Collect feedback from playtesters
 - Refine feedback into actionable items
 ## Writing
+- Why does the Spirit know about the erasure from history?
+- What's the story behind the player character?
 - Basic outline for each cyst layer expedition
 ## Art
 ## Sound
