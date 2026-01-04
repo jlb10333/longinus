@@ -22,9 +22,21 @@
     - Unrechargeable bars can be replenished with enemy drops
     - Both rechargeable and unrechargeable bars can be found in environment
   - Combat
-    - Status effects
-    - Shield
-    - Increases power of weapon drastically but makes it consume mana
+    - Modules
+      - LASE Laser
+      - Status effects
+        - 3XPL ExplosionStatus
+        - BL3D BleedStatus
+        - P4RA ParalyzeStatus
+        - VLNR VulnerableStatus
+        - W3KR WeakerStatus
+      - STPT StatusPotency (Increases the amount by which statuses are applied)
+      - STDR StatusDuration (Increases duration of applied statuses)
+      - B1GR Bigger (Increases size of projectiles)
+      - M4NC ManaCost (Increases damage of weapon drastically but makes it consume mana)
+      - M4NF ManaFree (Makes weapon no longer consume mana, but also deal no damage)
+      - G4TL Gatling (Increases power of weapon drastically but makes it less accurate)
+    - Shield 
   - Non-combat modules
     - All mana bars are rechargeable, but recharge speed is reduced
     - Recharge speed is increased, but no mana bars are rechargeable
@@ -49,6 +61,7 @@
 - Seeker enemies will slam into the wall bc the speed cap uses absolute value
 ### Level design
 - Research/figure out a sustainable loop for level design
+- Figure out what level designs allow for modules to feel beneficial
 ### Playtesting
 - Collect feedback from playtesters
 - Refine feedback into actionable items
