@@ -13,8 +13,8 @@ use crate::{
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
     Activator, And, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
-    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropHealthOnDestroy, Engine, Entity,
-    EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision, GivesItemOnCollision,
+    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Engine, Entity, EntityHandle,
+    ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision, GivesItemOnCollision,
     GravitySource, HealOnCollision, Id, Locomotor, MapTransitionOnCollision, Or,
     SaveMenuOnCollision, SimpleActivatable, Switch, Terminal, TouchSensor,
   },
@@ -61,6 +61,7 @@ pub struct PhysicsSystem {
   pub terminal_contact: Option<Rc<Terminal>>,
   pub terminal_contact_last_frame: Option<Rc<Terminal>>,
   pub mount_points_in_range: List<RigidBodyHandle>,
+  pub incoming_mana: f32,
 }
 
 const PLAYER_MAX_HITSTUN: f32 = 100.0;
@@ -176,7 +177,8 @@ fn load_new_map(
         .insert(Id {
           id: save_point.player_spawn_id,
         })
-        .insert(HealOnCollision { amount: 9999.0 }),
+        .insert(HealOnCollision { amount: 10000.0 })
+        .insert(GiveManaOnCollision { amount: 10000.0 }),
       label: "save".to_string(),
     })
     .collect::<Vec<_>>();
@@ -667,6 +669,7 @@ fn load_new_map(
     terminal_contact: None,
     terminal_contact_last_frame: None,
     mount_points_in_range: list![],
+    incoming_mana: 0.0,
   })
 }
 
@@ -759,6 +762,7 @@ impl System for PhysicsSystem {
         terminal_contact: self.terminal_contact.clone(),
         terminal_contact_last_frame: self.terminal_contact_last_frame.clone(),
         mount_points_in_range: list![],
+        incoming_mana: 0.0,
       });
     }
 
@@ -1108,14 +1112,14 @@ impl System for PhysicsSystem {
       .into_iter()
       .flat_map(|(handle, entity)| {
         if entity.components.get::<Destroyed>().is_none()
-          || entity.components.get::<DropHealthOnDestroy>().is_none()
+          || entity.components.get::<DropOnDestroy>().is_none()
         {
           return vec![(handle, entity)];
         };
-        let drop_health = entity.components.get::<DropHealthOnDestroy>().unwrap();
+        let drop_health = entity.components.get::<DropOnDestroy>().unwrap();
 
         let random = rng.gen_range(0.0, 1.0);
-        let should_drop_health = random < drop_health.chance;
+        let should_drop_health = random < drop_health.chance_health;
 
         if !should_drop_health {
           return vec![(handle, entity)];
@@ -1317,6 +1321,24 @@ impl System for PhysicsSystem {
         )
       })
       .collect::<HashTrieMap<_, _>>();
+
+    /* Give mana on collision from entities marked as such */
+    let incoming_mana = entities.iter().fold(0.0, |acc, (handle, entity)| {
+      entity
+        .components
+        .get::<GiveManaOnCollision>()
+        .map(|give_mana_on_collision| {
+          if !handle
+            .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+            .is_empty()
+          {
+            acc + give_mana_on_collision.amount
+          } else {
+            acc
+          }
+        })
+        .unwrap_or(acc)
+    });
 
     /* MARK: Initiate chain on selected mount point */
     let chain_entities = ability_system.chain_to_mount_point.map(|mount_point| {
@@ -1886,6 +1908,7 @@ impl System for PhysicsSystem {
       terminal_contact,
       terminal_contact_last_frame: self.terminal_contact.clone(),
       mount_points_in_range,
+      incoming_mana,
     })
   }
 }

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
   controls::ControlsSystem,
   load_map::MapAbilityType,
+  menu::MenuSystem,
   physics::PhysicsSystem,
   save::SaveData,
   system::System,
@@ -50,6 +51,20 @@ impl ManaTanksActiveInfo {
     }
   }
 
+  pub fn with(&self, amount: f32) -> Self {
+    let attempted_non_recharge_level = self.non_rechargeable_mana_level + amount;
+    let rechargeable_difference =
+      (attempted_non_recharge_level - self.capacity.max_non_rechargeable_mana_level()).max(0.0);
+
+    Self {
+      non_rechargeable_mana_level: attempted_non_recharge_level
+        .min(self.capacity.max_non_rechargeable_mana_level()),
+      rechargeable_mana_level: (self.rechargeable_mana_level + rechargeable_difference)
+        .min(self.capacity.max_rechargeable_mana_level()),
+      ..*self
+    }
+  }
+
   pub fn total_mana_level(&self) -> f32 {
     self.non_rechargeable_mana_level + self.rechargeable_mana_level
   }
@@ -58,7 +73,7 @@ impl ManaTanksActiveInfo {
     if amount > self.total_mana_level() {
       None
     } else {
-      let attempted_rechargeable_level = (self.rechargeable_mana_level - amount);
+      let attempted_rechargeable_level = self.rechargeable_mana_level - amount;
       let non_rechargeable_difference = attempted_rechargeable_level.min(0.0);
 
       Some(Self {
@@ -190,7 +205,14 @@ impl System for AbilitySystem {
 
     let chain_activated = (self.chain_activated || chain_to_mount_point.is_some()) && !kill_chain;
 
-    let mana_tanks = mana_tanks.recharge();
+    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+    let mana_tanks = if menu_system.active_menus.is_empty() {
+      let mana_tanks = mana_tanks.recharge();
+      let mana_tanks = mana_tanks.with(physics_system.incoming_mana);
+      mana_tanks
+    } else {
+      mana_tanks
+    };
 
     Rc::new(AbilitySystem {
       acquired_boost,

@@ -218,16 +218,22 @@ impl Component for MapTransitionOnCollision {}
 pub struct SaveMenuOnCollision;
 impl Component for SaveMenuOnCollision {}
 
-pub struct DropHealthOnDestroy {
+pub struct DropOnDestroy {
   pub amount: f32,
-  pub chance: f32,
+  pub chance_health: f32,
+  pub chance_mana: f32,
 }
-impl Component for DropHealthOnDestroy {}
+impl Component for DropOnDestroy {}
 
 pub struct HealOnCollision {
   pub amount: f32,
 }
 impl Component for HealOnCollision {}
+
+pub struct GiveManaOnCollision {
+  pub amount: f32,
+}
+impl Component for GiveManaOnCollision {}
 
 pub struct TouchSensor {
   pub target_activation: f32,

@@ -15,7 +15,7 @@ use serde_literals::lit_str;
 
 use crate::{
   combat::{WeaponModuleKind, distance_projection_physics},
-  ecs::{ComponentSet, Damageable, Damager, DropHealthOnDestroy, Enemy},
+  ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Enemy},
   f::MonadTranslate,
   physics::PhysicsSystem,
   save::SaveData,
@@ -674,9 +674,10 @@ impl EnemySpawn {
           max_hitstun: 0.0,
         })
         .insert(Damager { damage: 10.0 })
-        .insert(DropHealthOnDestroy {
+        .insert(DropOnDestroy {
           amount: 15.0,
-          chance: 0.5,
+          chance_health: 0.5,
+          chance_mana: 0.0,
         }),
       Enemy::Defender(_) => ComponentSet::new()
         .insert(Damageable {
@@ -687,9 +688,10 @@ impl EnemySpawn {
           max_hitstun: 0.0,
         })
         .insert(Damager { damage: 10.0 })
-        .insert(DropHealthOnDestroy {
+        .insert(DropOnDestroy {
           amount: 20.0,
-          chance: 0.4,
+          chance_health: 0.4,
+          chance_mana: 0.0,
         }),
       Enemy::Seeker(_) => ComponentSet::new()
         .insert(Damageable {
@@ -700,9 +702,10 @@ impl EnemySpawn {
           max_hitstun: 0.0,
         })
         .insert(Damager { damage: 25.0 })
-        .insert(DropHealthOnDestroy {
+        .insert(DropOnDestroy {
           amount: 10.0,
-          chance: 0.5,
+          chance_health: 0.5,
+          chance_mana: 0.0,
         }),
       Enemy::SeekerGenerator(_) => ComponentSet::new()
         .insert(Damageable {
@@ -713,9 +716,10 @@ impl EnemySpawn {
           max_hitstun: 0.0,
         })
         .insert(Damager { damage: 10.0 })
-        .insert(DropHealthOnDestroy {
+        .insert(DropOnDestroy {
           amount: 35.0,
-          chance: 0.7,
+          chance_health: 0.7,
+          chance_mana: 0.0,
         }),
     }
     .insert(self.name.clone())
