@@ -1,8 +1,6 @@
 # Longinus Master Plan
 ## Gameplay
 - Mechanical prototype
-  - Visual explainability
-    - Show boost cooldown (maybe)
   - Get it playtested
 - Mechanical prototype v2
   - Map view (maybe)
