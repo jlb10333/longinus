@@ -208,8 +208,7 @@ impl System for AbilitySystem {
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
     let mana_tanks = if menu_system.active_menus.is_empty() {
       let mana_tanks = mana_tanks.recharge();
-      let mana_tanks = mana_tanks.with(physics_system.incoming_mana);
-      mana_tanks
+      mana_tanks.with(physics_system.incoming_mana)
     } else {
       mana_tanks
     };
