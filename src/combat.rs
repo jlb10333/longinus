@@ -157,8 +157,16 @@ impl Weapon {
       return (self.clone(), Vec::new());
     }
 
-    let slot_positions = if self.slot_positions.size() == 0 {
-      &ht_set![SlotPosition::FrontAhead]
+    let slot_positions = if self
+      .slot_positions
+      .get(&SlotPosition::FrontDoubleLeft)
+      .is_none()
+      && self
+        .slot_positions
+        .get(&SlotPosition::FrontDoubleRight)
+        .is_none()
+    {
+      &self.slot_positions.insert(SlotPosition::FrontAhead)
     } else {
       &self.slot_positions
     };
