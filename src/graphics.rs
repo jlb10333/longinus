@@ -576,9 +576,9 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
 
             draw_text(
               debug_module_symbol(module_kind),
-              (0.52 + (module_x)) * screen_width(),
+              (0.5113 + (module_x)) * screen_width(),
               (0.535 + (module_y)) * screen_height(),
-              40.0,
+              30.0,
               COLOR_1,
             );
 
@@ -639,9 +639,9 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
 
           draw_text(
             debug_module_symbol(unequipped_module_kind),
-            (0.52 + (module_x)) * screen_width(),
+            (0.5113 + (module_x)) * screen_width(),
             (0.535 + (module_y)) * screen_height(),
-            40.0,
+            30.0,
             COLOR_1,
           );
 
@@ -839,44 +839,44 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
 
 fn debug_module_symbol(module_kind: WeaponModuleKind) -> &'static str {
   match module_kind {
-    WeaponModuleKind::Plasma => "P",
-    WeaponModuleKind::Missile => "M",
-    WeaponModuleKind::DoubleDamage75Freq => "D",
-    WeaponModuleKind::DoubleFreq75Damage => "F",
-    WeaponModuleKind::Front2Slot => "2",
-    WeaponModuleKind::FortyFiveSlot => "4",
-    WeaponModuleKind::SideSlot => "S",
-    WeaponModuleKind::MirrorSlot => "R",
+    WeaponModuleKind::Plasma => "PLAS",
+    WeaponModuleKind::Missile => "MISL",
+    WeaponModuleKind::DoubleDamage75Freq => "D75F",
+    WeaponModuleKind::DoubleFreq75Damage => "F75D",
+    WeaponModuleKind::Front2Slot => "2FSL",
+    WeaponModuleKind::FortyFiveSlot => "45SL",
+    WeaponModuleKind::SideSlot => "SDSL",
+    WeaponModuleKind::MirrorSlot => "RVSL",
   }
 }
 
 fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
   match module_kind {
-    WeaponModuleKind::Plasma => vec!["PLAS; weapon; shoots moderately fast with moderate damage"],
+    WeaponModuleKind::Plasma => vec!["weapon; shoots moderately fast with moderate damage"],
     WeaponModuleKind::Missile => {
       vec![
-        "MISL; weapon; shoots slowly and accelerates after firing, with high damage",
+        "weapon; shoots slowly and accelerates after firing, with high damage",
         "and an explosion on impact",
       ]
     }
     WeaponModuleKind::DoubleDamage75Freq => {
-      vec!["D75F; modifier; doubles damage but reduces frequency by 25%"]
+      vec!["modifier; doubles damage but reduces frequency by 25%"]
     }
     WeaponModuleKind::DoubleFreq75Damage => {
-      vec!["F75D; modifier; doubles frequency but reduces damage by 25%"]
+      vec!["modifier; doubles frequency but reduces damage by 25%"]
     }
     WeaponModuleKind::Front2Slot => {
-      vec!["2FSL; modifier; allows weapon to fire from the front two projectile slots"]
+      vec!["modifier; allows weapon to fire from the front two projectile slots"]
     }
     WeaponModuleKind::FortyFiveSlot => {
-      vec!["45SL; modifier; allows weapon to fire from the front diagonal projectile slots"]
+      vec!["modifier; allows weapon to fire from the front diagonal projectile slots"]
     }
     WeaponModuleKind::SideSlot => {
-      vec!["SDSL; modifier; allows weapon to fire from the side projectile slots"]
+      vec!["modifier; allows weapon to fire from the side projectile slots"]
     }
     WeaponModuleKind::MirrorSlot => {
       vec![
-        "RVSL; modifier; allows weapon to fire from the reverse equivalents of any",
+        "modifier; allows weapon to fire from the reverse equivalents of any",
         "front slots it currently fires from",
       ]
     }
