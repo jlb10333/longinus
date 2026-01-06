@@ -7,7 +7,6 @@
     - Show all health tank and mana tanks in inventory
     - Show mana levels better
   - Map view (maybe)
-  - Health tank pickup
   - First boss
   - Mana
     - Unrechargeable bars can be replenished with enemy drops
@@ -40,7 +39,7 @@
       - B1GR Bigger (Increases size of projectiles)
       - M4NC ManaCost (Increases damage of weapon drastically but makes it consume mana)
       - M4NF ManaFree (Makes weapon no longer consume mana, but also deal no damage)
-      - G4TL Gatling (Increases power of weapon drastically but makes it less accurate)
+      - G4TL Gatling (Increases frequency of weapon drastically but makes it less accurate)
     - Shield 
   - Non-combat modules
     - All mana bars are rechargeable, but recharge speed is reduced

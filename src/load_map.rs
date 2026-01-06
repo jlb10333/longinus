@@ -105,6 +105,37 @@ struct MapItemPickup {
   _class: MapItemPickupClass,
 }
 
+lit_str!(MapHealthTankTemplatePath, "templates/Health Tank.tx");
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum MapHealthTankTemplate {
+  #[serde(with = "MapHealthTankTemplatePath")]
+  Path,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapHealthTankCapacityClass {
+  Capacity,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapHealthTankCapacity {
+  #[serde(rename = "name")]
+  _name: MapHealthTankCapacityClass,
+  value: f32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapHealthTank {
+  #[serde(rename = "template")]
+  _template: MapHealthTankTemplate,
+  properties: (MapHealthTankCapacity,),
+  id: i32,
+  x: f32,
+  y: f32,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 enum MapMapTransitionTargetClass {
   TargetPlayerSpawn,
@@ -596,6 +627,7 @@ enum Object {
   Glue(MapGlue),
   Engine(MapEngine),
   Terminal(MapTerminal),
+  HealthTank(MapHealthTank),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -848,6 +880,13 @@ pub struct Terminal {
 }
 
 #[derive(Clone)]
+pub struct HealthTank {
+  pub id: i32,
+  pub collider: Collider,
+  pub capacity: f32,
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -893,6 +932,7 @@ pub enum MapComponent {
   Glue(Glue),
   Engine(Engine),
   Terminal(Terminal),
+  HealthTank(HealthTank),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -1268,6 +1308,21 @@ impl Object {
         content: terminal.properties.0.value.clone(),
         created_at: terminal.properties.1.value.clone(),
       }),
+      Object::HealthTank(health_tank) => MapComponent::HealthTank(HealthTank {
+        id: health_tank.id,
+        collider: ColliderBuilder::ball(1.0)
+          .sensor(true)
+          .collision_groups(PLAYER_INTERACTIBLE_GROUPS)
+          .translation(physics_translation_from_map(
+            health_tank.x,
+            health_tank.y,
+            0.0,
+            0.0,
+            map_height,
+          ))
+          .build(),
+        capacity: health_tank.properties.0.value,
+      }),
     }
   }
 }
@@ -1412,6 +1467,7 @@ pub struct Map {
   pub glues: Vec<Glue>,
   pub engines: Vec<Engine>,
   pub terminals: Vec<Terminal>,
+  pub health_tanks: Vec<HealthTank>,
 }
 
 impl RawMap {
@@ -1635,6 +1691,18 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let health_tanks = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::HealthTank(health_tank) = object {
+          Some(health_tank)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     Map {
       top_left: physics_translation_from_map(0.0, 0.0, 0.0, 0.0, map_height),
       bottom_right: physics_translation_from_map(map_width, map_height, 0.0, 0.0, map_height),
@@ -1657,6 +1725,7 @@ impl RawMap {
       glues,
       engines,
       terminals,
+      health_tanks,
     }
   }
 }

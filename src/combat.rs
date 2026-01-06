@@ -654,6 +654,12 @@ impl System for CombatSystem {
           .iter()
           .map(|(id, _)| (map_system.current_map_name.clone(), *id)),
       )
+      .chain(
+        physics_system
+          .acquired_health_tanks
+          .iter()
+          .map(|id| (map_system.current_map_name.clone(), *id)),
+      )
       .collect();
 
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();

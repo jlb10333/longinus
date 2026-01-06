@@ -4,7 +4,7 @@ use rapier2d::{
   na::{Isometry2, OPoint},
   prelude::*,
 };
-use rpds::{HashTrieMap, List, list};
+use rpds::{HashTrieMap, List, ht_map, list};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
@@ -15,8 +15,9 @@ use crate::{
     Activator, And, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
     DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Engine, Entity, EntityHandle,
     ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision, GivesItemOnCollision,
-    GravitySource, HealOnCollision, Id, Locomotor, MapTransitionOnCollision, Or,
-    SaveMenuOnCollision, SimpleActivatable, Switch, Terminal, TouchSensor,
+    GravitySource, HealOnCollision, Id, IncreaseMaxHealthOnCollision, Locomotor,
+    MapTransitionOnCollision, Or, SaveMenuOnCollision, SimpleActivatable, Switch, Terminal,
+    TouchSensor,
   },
   enemy::EnemySystem,
   load_map::{
@@ -54,6 +55,7 @@ pub struct PhysicsSystem {
   pub entities: HashTrieMap<EntityHandle, Rc<Entity>>,
   pub new_weapon_modules: List<(i32, WeaponModuleKind)>,
   pub new_abilities: List<MapAbilityType>,
+  pub acquired_health_tanks: List<i32>,
   pub frame_count: i64,
   pub load_new_map: Option<(String, i32)>,
   pub save_point_contact: Option<i32>,
@@ -69,7 +71,7 @@ const PLAYER_MAX_HITSTUN: f32 = 100.0;
 fn load_new_map(
   map: &Map,
   map_name: &str,
-  acquired_modules: &[(String, i32)],
+  acquired_items: &[(String, i32)],
   target_player_spawn_id: i32,
   player_health: f32,
   player_max_health: f32,
@@ -136,7 +138,7 @@ fn load_new_map(
   let item_pickups = map
     .item_pickups
     .iter()
-    .filter(|item_pickup| !acquired_modules.contains(&(map_name.to_string(), item_pickup.id)))
+    .filter(|item_pickup| !acquired_items.contains(&(map_name.to_string(), item_pickup.id)))
     .map(|item_pickup| {
       let handle = collider_set.insert(item_pickup.collider.clone());
       Entity {
@@ -148,6 +150,25 @@ fn load_new_map(
           .insert(Id { id: item_pickup.id })
           .insert(DestroyOnCollision),
         label: "item".to_string(),
+      }
+    })
+    .collect::<Vec<_>>();
+
+  let health_tanks = map
+    .health_tanks
+    .iter()
+    .filter(|health_tank| !acquired_items.contains(&(map_name.to_string(), health_tank.id)))
+    .map(|health_tank| {
+      let handle = collider_set.insert(health_tank.collider.clone());
+      Entity {
+        handle: EntityHandle::Collider(handle),
+        components: ComponentSet::new()
+          .insert(IncreaseMaxHealthOnCollision {
+            amount: health_tank.capacity,
+          })
+          .insert(Id { id: health_tank.id })
+          .insert(DestroyOnCollision),
+        label: "health_tank".to_string(),
       }
     })
     .collect::<Vec<_>>();
@@ -573,6 +594,7 @@ fn load_new_map(
     .chain(interactive_walls)
     .chain(blocks)
     .chain(item_pickups)
+    .chain(health_tanks)
     .chain(ability_pickups)
     .chain(map_transitions)
     .chain(save_points)
@@ -670,6 +692,7 @@ fn load_new_map(
     terminal_contact_last_frame: None,
     mount_points_in_range: list![],
     incoming_mana: 0.0,
+    acquired_health_tanks: list![],
   })
 }
 
@@ -763,6 +786,7 @@ impl System for PhysicsSystem {
         terminal_contact_last_frame: self.terminal_contact_last_frame.clone(),
         mount_points_in_range: list![],
         incoming_mana: 0.0,
+        acquired_health_tanks: list![],
       });
     }
 
@@ -1154,6 +1178,60 @@ impl System for PhysicsSystem {
         ]
       })
       .collect::<HashTrieMap<_, _>>();
+
+    /* MARK: Increase max health on collision */
+    let (entities, acquired_health_tanks) = entities.iter().fold(
+      (ht_map![], list![]),
+      |(folded_entities, acquired_health_tanks): (HashTrieMap<_, _>, List<i32>),
+       (&handle, entity)| {
+        if let Some(damageable) = entity.components.get::<Damageable>() {
+          let (incoming_max_health_increase, acquired_ids) = handle
+            .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+            .iter()
+            .fold(
+              (0.0, list![]),
+              |(incoming_max_health, acquired_ids), collider_handle| {
+                if let Some(entity) = entities.get(&EntityHandle::Collider(*collider_handle))
+                  && let Some(increase_max_health_on_collision) =
+                    entity.components.get::<IncreaseMaxHealthOnCollision>()
+                  && let Some(id) = entity.components.get::<Id>()
+                {
+                  (
+                    incoming_max_health + increase_max_health_on_collision.amount,
+                    acquired_ids.push_front(id.id),
+                  )
+                } else {
+                  (incoming_max_health, acquired_ids)
+                }
+              },
+            );
+
+          (
+            folded_entities.insert(
+              handle,
+              Rc::new(Entity {
+                handle,
+                label: entity.label.clone(),
+                components: entity.components.with(Damageable {
+                  max_health: damageable.max_health + incoming_max_health_increase,
+                  ..(*damageable)
+                }),
+              }),
+            ),
+            acquired_health_tanks
+              .iter()
+              .chain(acquired_ids.iter())
+              .copied()
+              .collect::<List<_>>(),
+          )
+        } else {
+          (
+            folded_entities.insert(handle, Rc::clone(entity)),
+            acquired_health_tanks,
+          )
+        }
+      },
+    );
 
     /* MARK: Give items on collision */
     let new_weapon_modules = entities.iter().fold(list![], |acc, (handle, entity)| {
@@ -1909,6 +1987,7 @@ impl System for PhysicsSystem {
       terminal_contact_last_frame: self.terminal_contact.clone(),
       mount_points_in_range,
       incoming_mana,
+      acquired_health_tanks,
     })
   }
 }

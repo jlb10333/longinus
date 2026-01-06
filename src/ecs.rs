@@ -209,6 +209,11 @@ pub struct GivesItemOnCollision {
 }
 impl Component for GivesItemOnCollision {}
 
+pub struct IncreaseMaxHealthOnCollision {
+  pub amount: f32,
+}
+impl Component for IncreaseMaxHealthOnCollision {}
+
 pub struct MapTransitionOnCollision {
   pub map_name: String,
   pub target_player_spawn_id: i32,
