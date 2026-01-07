@@ -13,102 +13,75 @@
     ],
     "fileStates": {
         "maps/MP1.json": {
-            "expandedObjectLayers": [
-                2
-            ],
-            "scale": 4,
+            "scale": 2,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 554.875,
-                "y": 304.625
+                "x": 160.25,
+                "y": 200.25
             }
         },
         "maps/MP2.json": {
-            "expandedObjectLayers": [
-                2
-            ],
-            "scale": 3,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 393.5,
-                "y": 517.5
+                "x": 120.125,
+                "y": 120.125
             }
         },
         "maps/MP3.json": {
-            "expandedObjectLayers": [
-                2
-            ],
             "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 73.49999999999994,
-                "y": 86.5
+                "x": 199.83333333333331,
+                "y": 120
             }
         },
         "maps/MP4.json": {
-            "expandedObjectLayers": [
-                2
-            ],
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 605.5,
-                "y": 148.5
+                "x": 40.5,
+                "y": 40
             }
         },
         "maps/MP5.json": {
-            "expandedObjectLayers": [
-                2
-            ],
-            "scale": 1,
+            "scale": 0.75,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 657.5,
-                "y": -500.5
+                "x": 948.6666666666666,
+                "y": -303.33333333333326
             }
         },
         "maps/MP6.json": {
-            "expandedObjectLayers": [
-                2
-            ],
             "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 79.83333333333334,
-                "y": 119.83333333333334
+                "x": 79.83333333333333,
+                "y": 120
             }
         },
         "maps/MP7.json": {
-            "expandedObjectLayers": [
-                2
-            ],
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 473.5,
-                "y": 738.5
+                "x": 399.5,
+                "y": 240
             }
         },
         "maps/MP8.json": {
-            "expandedObjectLayers": [
-                2
-            ],
-            "scale": 1,
-            "selectedLayer": 0,
+            "scale": 5.5,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 199.5,
-                "y": 199.5
+                "x": 200.0909090909091,
+                "y": 199.90909090909093
             }
         },
         "maps/old/CL4-1.json": {
-            "expandedObjectLayers": [
-                2
-            ],
             "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 280.16666666666663,
-                "y": 280.16666666666663
+                "x": 279.8333333333333,
+                "y": 280
             }
         },
         "maps/old/CL4-2.json": {
@@ -120,55 +93,43 @@
             }
         },
         "maps/old/CL5-1.json": {
-            "expandedObjectLayers": [
-                2
-            ],
             "scale": 0.25,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 398,
-                "y": 226
+                "x": 402,
+                "y": 228
             }
         },
         "maps/old/CL5-2.json": {
-            "expandedObjectLayers": [
-                2
-            ],
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
                 "x": 279.5,
-                "y": 371.5
+                "y": 372
             }
         },
         "maps/old/CL5-3.json": {
-            "expandedObjectLayers": [
-                2
-            ],
             "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 400.16666666666663,
-                "y": 400.16666666666663
+                "x": 399.8333333333333,
+                "y": 400
             }
         },
         "maps/old/entryway.json": {
             "scale": 0.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 1001,
-                "y": 799
+                "x": 999,
+                "y": 800
             }
         },
         "maps/old/map4.json": {
-            "expandedObjectLayers": [
-                2
-            ],
             "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 39.66666666666666,
-                "y": 39.666666666666686
+                "x": 40.33333333333333,
+                "y": 40
             }
         },
         "maps/tilesets/colliders.tsx": {
@@ -204,17 +165,17 @@
     "project": "project.tiled-project",
     "property.type": "object",
     "recentFiles": [
+        "maps/MP5.json",
         "maps/MP8.json",
+        "maps/MP2.json",
+        "maps/MP1.json",
         "maps/old/CL4-1.json",
         "maps/MP7.json",
         "maps/MP6.json",
         "maps/old/map4.json",
         "maps/old/CL5-3.json",
-        "maps/MP5.json",
         "maps/MP4.json",
         "maps/old/CL5-1.json",
-        "maps/old/entryway.json",
-        "maps/old/CL5-2.json",
-        "maps/MP3.json"
+        "maps/old/entryway.json"
     ]
 }

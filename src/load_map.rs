@@ -10,6 +10,7 @@ use rapier2d::{
   na::{Unit, Vector2},
   prelude::*,
 };
+use rpds::HashTrieMap;
 use serde::Deserialize;
 use serde_literals::lit_str;
 
@@ -567,8 +568,43 @@ struct ObjectLayer {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-struct RawMap {
+pub struct RawMap {
   layers: (TileLayer, ObjectLayer),
+}
+
+#[derive(Deserialize)]
+pub struct WorldMap {
+  #[serde(rename = "fileName")]
+  file_name: String,
+  height: f32,
+  width: f32,
+  x: f32,
+  y: f32,
+}
+
+impl WorldMap {
+  pub fn with_tiles(&self, tiles: Vec<i32>) -> WorldMapWithTiles {
+    WorldMapWithTiles {
+      tiles,
+      width: self.width,
+      height: self.height,
+      x: self.x,
+      y: self.y,
+    }
+  }
+}
+
+#[derive(Deserialize)]
+pub struct World {
+  maps: Vec<WorldMap>,
+}
+
+pub struct WorldMapWithTiles {
+  pub tiles: Vec<i32>,
+  pub width: f32,
+  pub height: f32,
+  pub x: f32,
+  pub y: f32,
 }
 
 fn deser_map(raw: &str) -> RawMap {
@@ -835,6 +871,10 @@ pub enum MapComponent {
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
   PhysicsScalar(scalar * 0.125 * TILE_DIMENSION_PHYSICS)
+}
+
+pub fn physics_scalar_to_map(scalar: PhysicsScalar) -> f32 {
+  *scalar * 8.0 / TILE_DIMENSION_PHYSICS
 }
 
 impl Object {
@@ -1338,7 +1378,7 @@ pub struct Map {
 }
 
 impl RawMap {
-  pub fn into(&self) -> Map {
+  pub fn as_map(&self) -> Map {
     let tile_layer = &self.layers.0;
 
     let colliders = tile_layer.into();
@@ -1568,17 +1608,36 @@ impl RawMap {
   }
 }
 
-pub fn load(file_path: &str) -> Option<Map> {
+pub fn load_raw(file_path: &str) -> Option<RawMap> {
   fs::read_to_string(file_path)
     .translate()
     .as_ref()
-    .map(|raw_file| (&deser_map(raw_file)).into())
+    .map(|raw_file| deser_map(raw_file))
+}
+
+pub fn load(file_path: &str) -> Option<Map> {
+  load_raw(file_path).as_ref().map(RawMap::as_map)
+}
+
+pub fn load_world() -> Option<World> {
+  let world_path = Path::new(&current_dir().unwrap())
+    .join("assets/maps/CL.world")
+    .to_str()
+    .unwrap()
+    .to_string();
+
+  fs::read_to_string(world_path)
+    .ok()
+    .as_ref()
+    .map(|raw_file| serde_json::from_str(raw_file).expect("JSON was not well-formatted"))
 }
 
 pub struct MapSystem {
   pub map: Option<Map>,
+  pub world: Rc<World>,
   pub current_map_name: String,
   pub target_player_spawn_id: i32,
+  pub map_registry: Rc<HashTrieMap<String, WorldMapWithTiles>>,
 }
 
 fn map_read_path(map_name: &String) -> String {
@@ -1599,9 +1658,32 @@ impl System for MapSystem {
   {
     let save_data = &ctx.input;
 
+    let world = Rc::new(load_world().unwrap());
+
+    let map_registry = Rc::new(
+      save_data
+        .visited_maps
+        .iter()
+        .map(|map_name| {
+          let map_raw = load_raw(&map_read_path(map_name)).unwrap();
+          let tiles = map_raw.layers.0.data.clone();
+
+          let world_map = world
+            .maps
+            .iter()
+            .find(|&world_map| world_map.file_name == format!("{}.json", map_name))
+            .unwrap();
+
+          (map_name.to_string(), world_map.with_tiles(tiles))
+        })
+        .collect::<HashTrieMap<_, _>>(),
+    );
+
     let map = load(&map_read_path(&save_data.map_name));
     Rc::new(Self {
+      world,
       map,
+      map_registry,
       current_map_name: save_data.map_name.clone(),
       target_player_spawn_id: save_data.player_spawn_id,
     })
@@ -1613,20 +1695,38 @@ impl System for MapSystem {
   ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
-    let load_new_map = physics_system.load_new_map.as_ref();
+    if let Some((map_name, id)) = physics_system.load_new_map.as_ref() {
+      let map_raw = load_raw(&map_read_path(map_name)).unwrap();
+      let tiles = map_raw.layers.0.data.clone();
 
-    Rc::new(Self {
-      map: physics_system
-        .load_new_map
-        .as_ref()
-        .and_then(|(new_map_name, _)| load(&map_read_path(&new_map_name.to_string()))),
-      current_map_name: load_new_map
-        .map(|(map_name, _)| map_name)
-        .unwrap_or(&self.current_map_name)
-        .clone(),
-      target_player_spawn_id: *load_new_map
-        .map(|(_, id)| id)
-        .unwrap_or(&self.target_player_spawn_id),
-    })
+      let world_map = self
+        .world
+        .maps
+        .iter()
+        .find(|&world_map| world_map.file_name == format!("{}.json", map_name))
+        .unwrap();
+
+      let map_registry = Rc::new(
+        self
+          .map_registry
+          .insert(map_name.to_string(), world_map.with_tiles(tiles)),
+      );
+
+      Rc::new(Self {
+        map: Some(map_raw.as_map()),
+        map_registry,
+        current_map_name: map_name.clone(),
+        target_player_spawn_id: *id,
+        world: Rc::clone(&self.world),
+      })
+    } else {
+      Rc::new(Self {
+        current_map_name: self.current_map_name.clone(),
+        map: None,
+        map_registry: Rc::clone(&self.map_registry),
+        target_player_spawn_id: self.target_player_spawn_id,
+        world: Rc::clone(&self.world),
+      })
+    }
   }
 }

@@ -27,6 +27,7 @@ pub struct SaveData {
   pub player_max_health: f32,
   pub acquired_boost: bool,
   pub acquired_chain: bool,
+  pub visited_maps: Vec<String>,
 }
 
 fn initital_save_file_path() -> String {
@@ -125,6 +126,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
           player_max_health: player_damageable.max_health,
           acquired_boost: ability_system.acquired_boost,
           acquired_chain: ability_system.acquired_chain,
+          visited_maps: map_system.map_registry.keys().cloned().collect(),
         };
 
         let sys_time: DateTime<Utc> = time::SystemTime::now().into();

@@ -11,6 +11,7 @@ use crate::{
   },
   ecs::{Damageable, EntityHandle},
   graphics_utils::{draw_collider, draw_label},
+  load_map::{MapSystem, physics_scalar_to_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
   save::SaveSystem,
@@ -55,6 +56,9 @@ pub const COLOR_4: Color = Color {
 
 pub struct GraphicsSystem<Input>(PhantomData<Input>);
 
+const MINI_MAP_TILE_WIDTH: f32 = 2.0;
+const MINI_MAP_TILE_HEIGHT: f32 = 2.0;
+
 impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   type Input = Input;
 
@@ -78,6 +82,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       let camera_system = ctx.get::<CameraSystem>().unwrap();
       let combat_system = ctx.get::<CombatSystem>().unwrap();
       let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+      let map_system = ctx.get::<MapSystem>().unwrap();
 
       /* Debug */
       if SHOW_COLLIDERS {
@@ -118,10 +123,62 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       }
 
       /* Draw reticle */
-      let player_screen_pos = PhysicsVector::from_vec(
+      let player_physics_pos = PhysicsVector::from_vec(
         *physics_system.rigid_body_set[physics_system.player_handle].translation(),
-      )
-      .into_pos(camera_system.translation);
+      );
+
+      let player_screen_pos = player_physics_pos.into_pos(camera_system.translation);
+
+      map_system
+        .map_registry
+        .iter()
+        .for_each(|(map_name, world_map)| {
+          world_map
+            .tiles
+            .iter()
+            .enumerate()
+            .for_each(|(index, tile)| {
+              if *tile == 0 {
+                return;
+              }
+
+              let tile_x = index as f32 % (world_map.width / 8.0);
+              let tile_y = (index as f32 / (world_map.width / 8.0)).floor();
+
+              let x = tile_x + (world_map.x / 8.0);
+              let y = tile_y + (world_map.y / 8.0);
+
+              draw_rectangle(
+                x,
+                y,
+                MINI_MAP_TILE_WIDTH,
+                MINI_MAP_TILE_HEIGHT,
+                BLACK.with_alpha(0.2),
+              );
+            });
+
+          if *map_name == map_system.current_map_name {
+            let player_x = physics_scalar_to_map(player_physics_pos.data.0[0][0]) / 8.0;
+            let player_y =
+              (world_map.height - physics_scalar_to_map(player_physics_pos.data.0[0][1])) / 8.0;
+
+            let x = player_x + (world_map.x / 8.0);
+            let y = player_y + (world_map.y / 8.0);
+
+            draw_triangle(
+              Vec2 {
+                x: x - 2.0,
+                y: y - 1.0,
+              },
+              Vec2 {
+                x: x + 2.0,
+                y: y - 1.0,
+              },
+              Vec2 { x, y: y + 3.0 },
+              RED,
+            );
+          }
+        });
 
       let reticle_pos = get_reticle_pos(combat_system.reticle_angle);
 

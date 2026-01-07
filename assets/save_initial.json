@@ -32,5 +32,6 @@
   "player_health": 100.0,
   "player_max_health": 100.0,
   "acquired_boost": false,
-  "acquired_chain": false
+  "acquired_chain": false,
+  "visited_maps": ["MP1"]
 }
