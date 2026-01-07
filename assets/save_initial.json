@@ -37,4 +37,5 @@
     "auto_recharge_mana_tanks": 2,
     "non_recharge_mana_tanks": 2
   }
+  "visited_maps": ["MP1"]
 }
