@@ -9,8 +9,9 @@ GamePad / Keyboard
 - Shoot: Right Trigger / LMB
 - Boost: Left Trigger / CTL
 - Chain: Left Shoulder / C
-- Inventory: X / E
+- Inventory: Select / E
 - Pause: Y / ESC
+- Map: X / TAB
 - Confirm: A / LMB
 - Cancel: B / RMB
 - Menu Movement: D-Pad / WASD

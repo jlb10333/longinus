@@ -33,6 +33,7 @@ pub struct ControlsSystem<Input> {
   pub firing: bool,
   pub inventory: bool,
   pub pause: bool,
+  pub map: bool,
   pub boost: bool,
   pub chain: bool,
   pub last_frame: Option<Rc<ControlsSystem<Input>>>,
@@ -117,6 +118,7 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
       menu_confirm: false,
       menu_cancel: false,
       pause: false,
+      map: false,
       gilrs: Rc::new(RefCell::new(gilrs)),
       last_frame: None,
       control_mode: ControlMode::Keyboard,
@@ -132,6 +134,7 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
 
     let kbd_e_pressed = is_key_down(KeyCode::E);
     let kbd_esc_pressed = is_key_down(KeyCode::Escape);
+    let kbd_tab_pressed = is_key_down(KeyCode::Tab);
     let kbd_ctl_pressed = is_key_down(KeyCode::LeftControl);
     let kbd_c_pressed = is_key_down(KeyCode::C);
 
@@ -144,6 +147,7 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
       | kbd_d_pressed
       | kbd_e_pressed
       | kbd_esc_pressed
+      | kbd_tab_pressed
       | kbd_ctl_pressed
       | kbd_c_pressed
       | lmb_pressed
@@ -189,7 +193,8 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
         menu_right: handle_button_input(&gilrs, Button::DPadRight),
         firing: handle_button_input(&gilrs, Button::RightTrigger2),
         inventory: handle_button_input(&gilrs, Button::West),
-        pause: handle_button_input(&gilrs, Button::North),
+        pause: handle_button_input(&gilrs, Button::Select),
+        map: handle_button_input(&gilrs, Button::North),
         boost: handle_button_input(&gilrs, Button::LeftTrigger2),
         chain: handle_button_input(&gilrs, Button::LeftTrigger),
         menu_cancel: handle_button_input(&gilrs, Button::East),
@@ -242,6 +247,7 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
           firing: lmb_pressed,
           inventory: kbd_e_pressed,
           pause: kbd_esc_pressed,
+          map: kbd_tab_pressed,
           boost: kbd_ctl_pressed,
           chain: kbd_c_pressed,
           menu_cancel: rmb_pressed,

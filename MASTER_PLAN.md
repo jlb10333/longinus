@@ -3,7 +3,6 @@
 - Mechanical prototype
   - Get it playtested
 - Mechanical prototype v2
-  - Map view (maybe)
   - Story terminals
   - Health tank pickup
   - Restrict camera to map bounds

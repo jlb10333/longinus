@@ -9,6 +9,7 @@ use crate::{
     CombatSystem, Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind,
     distance_projection_screen, get_reticle_pos, get_slot_positions, weapon_module_from_kind,
   },
+  controls::ControlsSystem,
   ecs::{Damageable, EntityHandle},
   graphics_utils::{draw_collider, draw_label},
   load_map::{MapSystem, physics_scalar_to_map},
@@ -83,6 +84,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       let combat_system = ctx.get::<CombatSystem>().unwrap();
       let physics_system = ctx.get::<PhysicsSystem>().unwrap();
       let map_system = ctx.get::<MapSystem>().unwrap();
+      let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
       /* Debug */
       if SHOW_COLLIDERS {
@@ -122,17 +124,45 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         });
       }
 
-      /* Draw reticle */
       let player_physics_pos = PhysicsVector::from_vec(
         *physics_system.rigid_body_set[physics_system.player_handle].translation(),
       );
 
-      let player_screen_pos = player_physics_pos.into_pos(camera_system.translation);
+      /* Draw scuffed map overlay */
+      if controls_system.map {
+        let (_, current_world_map) = map_system
+          .map_registry
+          .iter()
+          .find(|(map_name, _)| **map_name == map_system.current_map_name)
+          .unwrap();
 
-      map_system
-        .map_registry
-        .iter()
-        .for_each(|(map_name, world_map)| {
+        let player_x =
+          (physics_scalar_to_map(player_physics_pos.data.0[0][0]) + current_world_map.x) / 8.0;
+        let player_y = (current_world_map.height
+          - physics_scalar_to_map(player_physics_pos.data.0[0][1])
+          + current_world_map.y)
+          / 8.0;
+
+        let center_x = screen_width() / 2.0;
+        let center_y = screen_height() / 2.0;
+
+        draw_triangle(
+          Vec2 {
+            x: center_x - 2.0,
+            y: center_y - 1.0,
+          },
+          Vec2 {
+            x: center_x + 2.0,
+            y: center_y - 1.0,
+          },
+          Vec2 {
+            x: center_x,
+            y: center_y + 3.0,
+          },
+          RED,
+        );
+
+        map_system.map_registry.iter().for_each(|(_, world_map)| {
           world_map
             .tiles
             .iter()
@@ -145,8 +175,11 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
               let tile_x = index as f32 % (world_map.width / 8.0);
               let tile_y = (index as f32 / (world_map.width / 8.0)).floor();
 
-              let x = tile_x + (world_map.x / 8.0);
-              let y = tile_y + (world_map.y / 8.0);
+              let map_x = (tile_x + (world_map.x / 8.0) - player_x) * MINI_MAP_TILE_WIDTH;
+              let map_y = (tile_y + (world_map.y / 8.0) - player_y) * MINI_MAP_TILE_HEIGHT;
+
+              let x = map_x + center_x;
+              let y = map_y + center_y;
 
               draw_rectangle(
                 x,
@@ -156,29 +189,11 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                 BLACK.with_alpha(0.2),
               );
             });
-
-          if *map_name == map_system.current_map_name {
-            let player_x = physics_scalar_to_map(player_physics_pos.data.0[0][0]) / 8.0;
-            let player_y =
-              (world_map.height - physics_scalar_to_map(player_physics_pos.data.0[0][1])) / 8.0;
-
-            let x = player_x + (world_map.x / 8.0);
-            let y = player_y + (world_map.y / 8.0);
-
-            draw_triangle(
-              Vec2 {
-                x: x - 2.0,
-                y: y - 1.0,
-              },
-              Vec2 {
-                x: x + 2.0,
-                y: y - 1.0,
-              },
-              Vec2 { x, y: y + 3.0 },
-              RED,
-            );
-          }
         });
+      }
+
+      /* Draw reticle */
+      let player_screen_pos = player_physics_pos.into_pos(camera_system.translation);
 
       let reticle_pos = get_reticle_pos(combat_system.reticle_angle);
 
