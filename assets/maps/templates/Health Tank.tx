@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<template>
+ <object name="Health Tank" type="HealthTank">
+  <properties>
+   <property name="Capacity" type="float" value="0"/>
+  </properties>
+ </object>
+</template>
