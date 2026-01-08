@@ -949,7 +949,11 @@ impl Object {
         id: block.id,
         rigid_body: RigidBodyBuilder::dynamic()
           .translation(physics_translation_from_map(
-            block.x, block.y, 0.0, 0.0, map_height,
+            block.x,
+            block.y,
+            block.width,
+            block.height,
+            map_height,
           ))
           .build(),
         collider: ColliderBuilder::cuboid(
@@ -1157,9 +1161,9 @@ impl Object {
             .contacts_enabled(false)
             .build(),
           knob: if reverse_direction {
-            knob_base.translation(top_left).build()
-          } else {
             knob_base.translation(bottom_right).build()
+          } else {
+            knob_base.translation(top_left).build()
           },
           reverse_direction,
           activator_id: locomotor.properties.0.value,

@@ -30,6 +30,11 @@ if [[ "$windows_only" == "true" || ("$windows_only" == "" && "&ubuntu_only" == "
         echo "Created ${win_x86_dir}";
     fi
 
+    if [ ! -d "${win_x86_dir}/assets" ]; then
+        mkdir ${win_x86_dir}/assets;
+        echo "Created ${win_x86_dir}/assets"
+    fi
+    
     cp -r ./assets/* ${win_x86_dir}/assets/;
 
     echo "Copied from ./assets to ${win_x86_dir}/assets}";
@@ -63,6 +68,11 @@ if [[ "$ubuntu_only" == "true" || ("$ubuntu_only" == "" && "&windows_only" == ""
         echo "Created ${ubuntu_x86_dir}";
     fi
 
+    if [ ! -d "${ubuntu_x86_dir}/assets" ]; then
+        mkdir ${ubuntu_x86_dir}/assets;
+        echo "Created ${ubuntu_x86_dir}/assets"
+    fi
+        
     cp -r ./assets/* ${ubuntu_x86_dir}/assets/;
 
     echo "Copied from ./assets to ${ubuntu_x86_dir}/assets";
