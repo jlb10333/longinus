@@ -3,37 +3,37 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "maps/MP2.json",
+    "activeFile": "maps/MP3.json",
     "expandedProjectPaths": [
-        "maps/templates",
         "maps",
-        ".",
+        "maps/templates/enemies",
         "maps/old",
-        "maps/templates/enemies"
+        ".",
+        "maps/templates"
     ],
     "fileStates": {
         "maps/MP1.json": {
-            "scale": 2,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 279.25,
-                "y": 51.25
+                "x": 324.375,
+                "y": -38.875
             }
         },
         "maps/MP2.json": {
             "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 303.375,
-                "y": 727.875
+                "x": 324.375,
+                "y": 384.125
             }
         },
         "maps/MP3.json": {
-            "scale": 3,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 199.83333333333331,
-                "y": 120
+                "x": 4.375,
+                "y": 94.875
             }
         },
         "maps/MP4.json": {
@@ -45,11 +45,11 @@
             }
         },
         "maps/MP5.json": {
-            "scale": 0.75,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 948.6666666666666,
-                "y": -303.33333333333326
+                "x": 4.375,
+                "y": -236.625
             }
         },
         "maps/MP6.json": {
@@ -139,6 +139,7 @@
     "last.objectTemplatePath": "/home/jack/longinus/assets/maps/templates",
     "last.worldFilePath": "/home/jack/longinus/assets/maps/old",
     "loadedWorlds": [
+        "/home/jack/longinus/assets/maps/CL.world",
         "/home/jack/longinus/assets/maps/old/CL.world"
     ],
     "map.height": 50,
@@ -165,6 +166,8 @@
     "project": "project.tiled-project",
     "property.type": "float",
     "recentFiles": [
+        "maps/MP2.json",
+        "maps/MP1.json",
         "maps/MP8.json",
         "maps/old/CL4-1.json",
         "maps/MP7.json",
@@ -174,8 +177,6 @@
         "maps/MP5.json",
         "maps/MP4.json",
         "maps/old/CL5-1.json",
-        "maps/old/entryway.json",
-        "maps/old/CL5-2.json",
-        "maps/MP3.json"
+        "maps/old/entryway.json"
     ]
 }

@@ -440,6 +440,23 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":376,
                  "y":192
+                }, 
+                {
+                 "id":31,
+                 "properties":[
+                        {
+                         "name":"Content",
+                         "type":"string",
+                         "value":"In evaluating my fitness for this most important task, no \nevidence requires consideration by the prospective judge\nbeyond the simple fact of the supernatural quality of both \nmy faith and my mental fortitude.\n\nHosts of men - weaker men - would be rendered invalid\nupon merely witnessing the vastness of the corruption \nthat surrounds us.\n\nNot I.\n\nAdmittedly, howver, that such an angelicly sublime creation \nas Longinus itself could be corrupted so viciously and \nthoroughly begets reasonable questions about the\nsucceptibility of our own corporeal manifestations to an\nassault of this brutal nature."
+                        }, 
+                        {
+                         "name":"CreatedAt",
+                         "type":"string",
+                         "value":"235 A.L. - 47 years ago"
+                        }],
+                 "template":"templates\/Terminal.tx",
+                 "x":112,
+                 "y":160
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -448,7 +465,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":30,
+ "nextobjectid":32,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",
