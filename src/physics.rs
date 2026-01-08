@@ -208,17 +208,17 @@ fn load_new_map(
   let blocks = map
     .blocks
     .iter()
-    .map(|gate| {
-      let rigid_body_handle = rigid_body_set.insert(RigidBodyBuilder::dynamic());
+    .map(|block| {
+      let rigid_body_handle = rigid_body_set.insert(block.rigid_body.clone());
       collider_set.insert_with_parent(
-        gate.collider.clone(),
+        block.collider.clone(),
         rigid_body_handle,
         &mut rigid_body_set,
       );
       Entity {
         handle: EntityHandle::RigidBody(rigid_body_handle),
-        components: ComponentSet::new().insert(Id { id: gate.id }),
-        label: format!("g{}", gate.id),
+        components: ComponentSet::new().insert(Id { id: block.id }),
+        label: format!("g{}", block.id),
       }
     })
     .collect::<Vec<_>>();

@@ -51,7 +51,6 @@
     - Increase damage taken but also received
   - Water Physics (maybe)
 ### Squash bugs
-- Fix loading of initial activation of switches/locomotors
 - Chain can be activated outside of the mount radius
 - Culling is over-eager for cuboids in the direct corners of the screen
 - Seeker enemies will slam into the wall bc the speed cap uses absolute value
