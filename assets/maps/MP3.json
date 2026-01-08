@@ -38,7 +38,7 @@
                  "id":2,
                  "template":"templates\/Player Spawn.tx",
                  "x":24,
-                 "y":128
+                 "y":124
                 }, 
                 {
                  "height":88,
@@ -215,8 +215,8 @@
                 {
                  "id":11,
                  "template":"templates\/Player Spawn.tx",
-                 "x":272,
-                 "y":56
+                 "x":88,
+                 "y":24
                 }, 
                 {
                  "height":8,
@@ -440,17 +440,6 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":376,
                  "y":192
-                }, 
-                {
-                 "height":88,
-                 "id":29,
-                 "name":"Block",
-                 "rotation":0,
-                 "type":"Block",
-                 "visible":true,
-                 "width":8,
-                 "x":232,
-                 "y":40
                 }],
          "opacity":1,
          "type":"objectgroup",

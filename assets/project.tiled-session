@@ -3,21 +3,21 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "maps/MP2.json",
+    "activeFile": "maps/MP3.json",
     "expandedProjectPaths": [
+        "maps/old",
+        ".",
         "maps/templates",
         "maps",
-        ".",
-        "maps/old",
         "maps/templates/enemies"
     ],
     "fileStates": {
         "maps/MP1.json": {
-            "scale": 0.75,
+            "scale": 8,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 672.6666666666667,
-                "y": -35.33333333333326
+                "x": 414.1875,
+                "y": 27.9375
             }
         },
         "maps/MP2.json": {
@@ -29,11 +29,11 @@
             }
         },
         "maps/MP3.json": {
-            "scale": 5.5,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 313.1818181818182,
-                "y": 59.18181818181818
+                "x": 213.375,
+                "y": 103.625
             }
         },
         "maps/MP4.json": {
@@ -48,8 +48,8 @@
             "scale": 0.75,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 352.66666666666674,
-                "y": -187.33333333333326
+                "x": 160.66666666666663,
+                "y": 200
             }
         },
         "maps/MP6.json": {
@@ -165,17 +165,17 @@
     "project": "project.tiled-project",
     "property.type": "object",
     "recentFiles": [
-        "maps/MP3.json",
-        "maps/MP5.json",
-        "maps/MP8.json",
         "maps/MP2.json",
         "maps/MP1.json",
+        "maps/MP8.json",
         "maps/old/CL4-1.json",
         "maps/MP7.json",
         "maps/MP6.json",
         "maps/old/map4.json",
         "maps/old/CL5-3.json",
+        "maps/MP5.json",
         "maps/MP4.json",
-        "maps/old/CL5-1.json"
+        "maps/old/CL5-1.json",
+        "maps/old/entryway.json"
     ]
 }
