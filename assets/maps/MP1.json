@@ -117,7 +117,41 @@
                         {
                          "name":"Content",
                          "type":"string",
-                         "value":"There are some who would postulate that I am incapable\nof accomplishing the mission to which I was entrusted - that\nthe burden of this historic feat is too great for my frail shoulders\nto bear.\n\nWere these subservise elements found aboard my vessel,\nthey would no sooner find their sharp tongues cut out."
+                         "value":"There are some who would postulate that I am incapable\nof accomplishing the mission to which I was entrusted - that\nthe burden of this historic feat is too great for these \nfrail shoulders to bear.\n\nWere these subservise elements found aboard this vessel,\nthey would no sooner find their sharp tongues forcibly\nremoved."
+                        }, 
+                        {
+                         "name":"CreatedAt",
+                         "type":"string",
+                         "value":"235 A.L. - 47 years ago"
+                        }],
+                 "template":"templates\/Terminal.tx",
+                 "x":184,
+                 "y":176
+                }, 
+                {
+                 "id":20,
+                 "properties":[
+                        {
+                         "name":"Content",
+                         "type":"string",
+                         "value":"After all, was it not I who boldly hypothesized the existence \nof THE SPIRIT, many cycles before it made its presence \nknown to us?\n\nWas it not I who devised an expedition to locate and contact \nthis divine manifestation when next LONGINUS deigned to visit \nits brilliance upon our meager realm?"
+                        }, 
+                        {
+                         "name":"CreatedAt",
+                         "type":"string",
+                         "value":"235 A.L. - 47 years ago"
+                        }],
+                 "template":"templates\/Terminal.tx",
+                 "x":48,
+                 "y":88
+                }, 
+                {
+                 "id":22,
+                 "properties":[
+                        {
+                         "name":"Content",
+                         "type":"string",
+                         "value":"In evaluating my fitness for this most important task, no \nevidence requires consideration by the prospective judge\nbeyond the simple fact of the supernatural quality of both \nmy faith and my mental fortitude.\n\nHosts of men - weaker men - would be rendered invalid\nupon merely witnessing the vastness of the corruption \nthat surrounds us.\n\nThat such an angelicly sublime creation as Longinus itself \ncould be corrupted so viciously and thoroughly begets\nreasonable, in my opinion, questions about the \nsucceptibility of our own corporeal manifestations."
                         }, 
                         {
                          "name":"CreatedAt",
@@ -127,40 +161,6 @@
                  "template":"templates\/Terminal.tx",
                  "x":256,
                  "y":24
-                }, 
-                {
-                 "id":18,
-                 "properties":[
-                        {
-                         "name":"Content",
-                         "type":"string",
-                         "value":"The enormity of the task ahead is not lost on me, of course \n- as a matter of fact, no one in the System is more aware of \nit.\n\nI find it impossible to fear in the face of this enormity,\nhowever; I am blessed to be capable of viewing, in my mind's \neye, the course of time stretched out as an immensely\nlarge, yet static sequence of causal relations, with no\nprecedence given to the mind's feeble distinction of \"the \npresent\" and \"the future\".\n\nI see my victory in this last great struggle to be as \nimmutable and inarguable as the walls of this chamber."
-                        }, 
-                        {
-                         "name":"CreatedAt",
-                         "type":"string",
-                         "value":"235 A.L. - 47 years ago"
-                        }],
-                 "template":"templates\/Terminal.tx",
-                 "x":288,
-                 "y":168
-                }, 
-                {
-                 "id":19,
-                 "properties":[
-                        {
-                         "name":"Content",
-                         "type":"string",
-                         "value":"George Painter: that is the name will be whispered in \nreverence and shouted in jubilation until the end of time."
-                        }, 
-                        {
-                         "name":"CreatedAt",
-                         "type":"string",
-                         "value":"235 A.L. - 47 years ago"
-                        }],
-                 "template":"templates\/Terminal.tx",
-                 "x":32,
-                 "y":72
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -169,7 +169,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":20,
+ "nextobjectid":23,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

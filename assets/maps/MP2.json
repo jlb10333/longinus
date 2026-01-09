@@ -67,6 +67,23 @@
                  "template":"templates\/Health Tank.tx",
                  "x":216,
                  "y":24
+                }, 
+                {
+                 "id":13,
+                 "properties":[
+                        {
+                         "name":"Content",
+                         "type":"string",
+                         "value":"Yet more despicable members* of our species would malign \nthe greatness of this opportunity itself, claiming that THE\nSPIRIT is a fabrication, some joker's wicked artifice.\n\nThe viciously ahistoric and cruel nature of such a sentiment\nmust belie a character whose foulness and depravity is rarely \nreached in this System; my only recourse is to pray for the \nsoul of such a creature.\n\n*supposed."
+                        }, 
+                        {
+                         "name":"CreatedAt",
+                         "type":"string",
+                         "value":"235 A.L. - 47 years ago"
+                        }],
+                 "template":"templates\/Terminal.tx",
+                 "x":16,
+                 "y":144
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -75,7 +92,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":12,
+ "nextobjectid":14,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

@@ -27,7 +27,6 @@ pub struct SaveData {
   pub player_max_health: f32,
   pub acquired_boost: bool,
   pub acquired_chain: bool,
-  pub mana_tanks_capacity: ManaTanksCapacityInfo,
   pub visited_maps: Vec<String>,
   pub mana_tanks_capacity: ManaTanksCapacityInfo,
 }
@@ -130,7 +129,6 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
           acquired_chain: ability_system.acquired_chain,
           mana_tanks_capacity: ability_system.mana_tanks.capacity,
           visited_maps: map_system.map_registry.keys().cloned().collect(),
-          mana_tanks_capacity: ability_system.mana_tanks.capacity,
         };
 
         let sys_time: DateTime<Utc> = time::SystemTime::now().into();

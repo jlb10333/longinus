@@ -16,24 +16,24 @@
             "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 297.625,
-                "y": 151.875
+                "x": 296.125,
+                "y": 128.375
             }
         },
         "maps/MP2.json": {
             "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": -747.875,
-                "y": -7.875
+                "x": 296.125,
+                "y": 368.125
             }
         },
         "maps/MP3.json": {
             "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": -22.375,
-                "y": 148.375
+                "x": -23.875,
+                "y": 79.125
             }
         },
         "maps/MP4.json": {

@@ -442,12 +442,12 @@
                  "y":192
                 }, 
                 {
-                 "id":31,
+                 "id":33,
                  "properties":[
                         {
                          "name":"Content",
                          "type":"string",
-                         "value":"In evaluating my fitness for this most important task, no \nevidence requires consideration by the prospective judge\nbeyond the simple fact of the supernatural quality of both \nmy faith and my mental fortitude.\n\nHosts of men - weaker men - would be rendered invalid\nupon merely witnessing the vastness of the corruption \nthat surrounds us.\n\nThat such an angelicly sublime creation as Longinus itself \ncould be corrupted so viciously and thoroughly begets\nreasonable, in my opinion, questions about the \nsucceptibility of our own corporeal manifestations."
+                         "value":"The enormity of the task ahead is not lost on me, of course \n- as a matter of fact, no one in the System is more aware of \nit.\n\nEven so, I find it impossible to fear in the face of this enormity.\n\nI am blessed to be capable of viewing, in my mind's eye, the \ncourse of time stretched out as an immensely large, yet \nperfectly static sequence of events, a crystaline lattice \nof causal relations with no precedence given to the mind's \nfickle distinction of \"the present\" and \"the future\".\n\nI see my victory in this last great struggle to be as \nimmutable and inarguable as the walls of this chamber."
                         }, 
                         {
                          "name":"CreatedAt",
@@ -455,16 +455,16 @@
                          "value":"235 A.L. - 47 years ago"
                         }],
                  "template":"templates\/Terminal.tx",
-                 "x":216,
-                 "y":96
+                 "x":40,
+                 "y":152
                 }, 
                 {
-                 "id":32,
+                 "id":34,
                  "properties":[
                         {
                          "name":"Content",
                          "type":"string",
-                         "value":"After all, was it not I who boldly hypothesized the existence of\nTHE SPIRIT, many cycles before it made its presence known?\n\nWas it not I who devised an expedition to locate and contact \nthis divine manifestation when next Longinus deigned to visit \nits brilliance upon our meager realm?"
+                         "value":"George Painter: that is the name will be whispered in \nreverence and shouted in jubilation until the end of time."
                         }, 
                         {
                          "name":"CreatedAt",
@@ -472,8 +472,8 @@
                          "value":"235 A.L. - 47 years ago"
                         }],
                  "template":"templates\/Terminal.tx",
-                 "x":120,
-                 "y":168
+                 "x":208,
+                 "y":112
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -482,7 +482,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":33,
+ "nextobjectid":35,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",
