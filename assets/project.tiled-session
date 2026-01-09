@@ -16,72 +16,72 @@
             "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 324.375,
-                "y": -38.875
+                "x": 297.625,
+                "y": 151.875
             }
         },
         "maps/MP2.json": {
             "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 324.375,
-                "y": 384.125
+                "x": -747.875,
+                "y": -7.875
             }
         },
         "maps/MP3.json": {
             "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 4.375,
-                "y": 94.875
+                "x": -22.375,
+                "y": 148.375
             }
         },
         "maps/MP4.json": {
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 40.5,
-                "y": 40
+                "x": -1115.5,
+                "y": -79.5
             }
         },
         "maps/MP5.json": {
-            "scale": 4,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 4.375,
-                "y": -236.625
+                "x": 68.33333333333337,
+                "y": -48.333333333333314
             }
         },
         "maps/MP6.json": {
             "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 79.83333333333333,
-                "y": 120
+                "x": -1243.8333333333333,
+                "y": 80.16666666666664
             }
         },
         "maps/MP7.json": {
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 399.5,
-                "y": 240
+                "x": -1251.5,
+                "y": 560.5
             }
         },
         "maps/MP8.json": {
             "scale": 1,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 199.5,
-                "y": 200
+                "x": -1467.5,
+                "y": -79.5
             }
         },
         "maps/old/CL4-1.json": {
             "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 279.8333333333333,
-                "y": 280
+                "x": -1147.8333333333333,
+                "y": 1167.8333333333333
             }
         },
         "maps/old/CL4-2.json": {
@@ -96,40 +96,40 @@
             "scale": 0.25,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 402,
-                "y": 228
+                "x": 54,
+                "y": 802
             }
         },
         "maps/old/CL5-2.json": {
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 279.5,
-                "y": 372
+                "x": -187.5,
+                "y": 344.5
             }
         },
         "maps/old/CL5-3.json": {
             "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 399.8333333333333,
-                "y": 400
+                "x": 52.166666666666686,
+                "y": -399.83333333333326
             }
         },
         "maps/old/entryway.json": {
             "scale": 0.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 999,
-                "y": 800
+                "x": 2053,
+                "y": 801
             }
         },
         "maps/old/map4.json": {
-            "scale": 1.5,
+            "scale": 0.33,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 40.33333333333333,
-                "y": 40
+                "x": 1280.30303030303,
+                "y": 1089.3939393939393
             }
         },
         "maps/tilesets/colliders.tsx": {
@@ -166,17 +166,17 @@
     "project": "project.tiled-project",
     "property.type": "float",
     "recentFiles": [
-        "maps/MP2.json",
-        "maps/MP1.json",
-        "maps/MP8.json",
-        "maps/old/CL4-1.json",
-        "maps/MP7.json",
-        "maps/MP6.json",
         "maps/old/map4.json",
-        "maps/old/CL5-3.json",
-        "maps/MP5.json",
-        "maps/MP4.json",
+        "maps/old/CL5-2.json",
         "maps/old/CL5-1.json",
-        "maps/old/entryway.json"
+        "maps/old/entryway.json",
+        "maps/old/CL4-1.json",
+        "maps/old/CL5-3.json",
+        "maps/MP8.json",
+        "maps/MP4.json",
+        "maps/MP6.json",
+        "maps/MP5.json",
+        "maps/MP1.json",
+        "maps/MP7.json"
     ]
 }
