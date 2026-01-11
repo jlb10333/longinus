@@ -13,11 +13,11 @@
     ],
     "fileStates": {
         "maps/MP1.json": {
-            "scale": 3,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 385.16666666666663,
-                "y": -54.833333333333314
+                "x": 345.125,
+                "y": 116.375
             }
         },
         "maps/MP2.json": {
@@ -29,11 +29,11 @@
             }
         },
         "maps/MP3.json": {
-            "scale": 3,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 65.16666666666669,
-                "y": 155.16666666666663
+                "x": 25.125,
+                "y": 204.375
             }
         },
         "maps/MP4.json": {
