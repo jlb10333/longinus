@@ -6,6 +6,16 @@
   - Visual explainability
     - Show all health tank and mana tanks in inventory
     - Show mana levels better
+  - Enemies
+    - Goblin
+      - Lunges at player if in range to aggro
+    - (Rename Goblin to Slinger)
+    - SniperGenerator
+      - Shoots out snipers in a random direction
+    - Sniper
+      - Fires shots directly at the player with decently long cooldown
+    - Aranea
+      - 'Egg' trigger at a different point; if player touches egg, aranea launches towards player and once reaching the egg, starts shooting scattershot towards player
   - First boss
   - Mana
     - Unrechargeable bars can be replenished with enemy drops
@@ -42,7 +52,9 @@
     - Shield 
   - Non-combat modules
     - All mana bars are rechargeable, but recharge speed is reduced
-    - Recharge speed is increased, but no mana bars are rechargeable
+    - Mana recharge speed is increased
+    - Gain mana passively from damaging enemies
+    - Increase mana drop rates from enemeis
     - Increase boost force
     - Reduce boost mana usage
     - Make chain deal damage to enemies

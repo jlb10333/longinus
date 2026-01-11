@@ -1,5 +1,34 @@
 ## GAME DESIGN:
 
+### MDA
+- Module pickup
+  - Dynamic: Build customization
+  - Aesthetic: Freedom in finding a build that works best for playstyle
+  
+- Map, moving between areas
+  - Dynamic: Seeking unknown areas
+  - Aesthetic: Exploration
+
+- 'Defender' enemy
+  - Dynamic: Keeping distance to fire from afar
+  - Aesthetic: Challenge of target practice while dodging reliability of methodically making slow progress
+  
+- 'SeekerGenerator'/'SniperGenerator' enemy
+  - Dynamic: Switching priorities between spawned children vs source generator
+  - Aesthetic: Challenge of crowd control, thrill of being forced to make quick decisisons
+
+- 'Goblin' enemy
+  - Dynamic: Dodging in time, utilizing cover
+  - Aesthetic: Challenge of reacting to random movements, thrill of a firefight
+
+- 'Aranea' enemy
+  - Dynamic: Avoiding eggs; baiting out enemies
+  - Aesthetic: Challenge of noticing and avoiding eggs in environment, surprise of accidentally triggering them
+
+- Boost
+  - Dynamic: Getting to cover/out of danger quickly; quickly stopping momentum towards danger
+  - Aesthetic: Freedom of movement, challenge of mastering the skill
+
 ### Tasks to Accomplish
 - Communicate that exploration is valuable/necessary
 - Communicate that backtracking is valuable/necessary

@@ -13,27 +13,27 @@
     ],
     "fileStates": {
         "maps/MP1.json": {
-            "scale": 4,
+            "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 296.125,
-                "y": 128.375
+                "x": 385.16666666666663,
+                "y": -54.833333333333314
             }
         },
         "maps/MP2.json": {
-            "scale": 4,
+            "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 296.125,
-                "y": 368.125
+                "x": 385.16666666666663,
+                "y": 307.16666666666663
             }
         },
         "maps/MP3.json": {
-            "scale": 4,
+            "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": -23.875,
-                "y": 79.125
+                "x": 65.16666666666669,
+                "y": 155.16666666666663
             }
         },
         "maps/MP4.json": {
@@ -48,8 +48,8 @@
             "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 68.33333333333337,
-                "y": -48.333333333333314
+                "x": 111.66666666666663,
+                "y": 35
             }
         },
         "maps/MP6.json": {
@@ -69,11 +69,11 @@
             }
         },
         "maps/MP8.json": {
-            "scale": 1,
-            "selectedLayer": 0,
+            "scale": 1.5,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": -1467.5,
-                "y": -79.5
+                "x": -141.66666666666663,
+                "y": 264.33333333333326
             }
         },
         "maps/old/CL4-1.json": {
