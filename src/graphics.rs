@@ -11,11 +11,11 @@ use crate::{
     distance_projection_screen, get_reticle_pos, get_slot_positions, weapon_module_from_kind,
   },
   controls::ControlsSystem,
-  ecs::{Damageable, EntityHandle},
+  ecs::{Damageable, Damager, Enemy, EntityHandle},
   graphics_utils::{draw_collider, draw_label},
   load_map::{MapSystem, physics_scalar_to_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
-  physics::PhysicsSystem,
+  physics::{PLAYER_INTERACTION_GROUPS, PhysicsSystem},
   save::SaveSystem,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
@@ -98,6 +98,18 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
         /* Draw entity labels */
         physics_system.entities.iter().for_each(|(handle, entity)| {
+          if entity.components.get::<Damager>().is_some() {
+            handle
+              .colliders(&physics_system.rigid_body_set)
+              .iter()
+              .for_each(|&&collider_handle| {
+                let collider = &physics_system.collider_set[collider_handle];
+                if collider.collision_groups().test(PLAYER_INTERACTION_GROUPS) {
+                  draw_collider(collider, camera_system.translation, None, Some(COLOR_3));
+                }
+              })
+          };
+
           if let EntityHandle::RigidBody(rigid_body_handle) = handle {
             draw_label(
               PhysicsVector::from_vec(
@@ -105,7 +117,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
               ),
               camera_system.translation,
               entity.label.clone(),
-              Some(COLOR_4),
+              Some(BLACK),
             );
           }
 
@@ -119,7 +131,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                 ),
                 camera_system.translation,
                 entity.label.clone(),
-                Some(COLOR_2),
+                Some(BLACK),
               );
             })
         });

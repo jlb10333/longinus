@@ -62,7 +62,7 @@ pub fn draw_collider(
         DrawRectangleParams {
           offset: Vec2 { x: 0.5, y: 0.5 },
           rotation: -rotation,
-          color: color.unwrap_or(COLOR_3).with_alpha(alpha),
+          color: color.unwrap_or(COLOR_2).with_alpha(alpha),
         },
       );
 
@@ -72,7 +72,7 @@ pub fn draw_collider(
           top_left.x(),
           top_left.y(),
           40.0,
-          color.unwrap_or(COLOR_4).with_alpha(alpha),
+          color.unwrap_or(BLACK).with_alpha(alpha),
         );
       };
     }
@@ -92,7 +92,7 @@ pub fn draw_collider(
         translation.x(),
         translation.y(),
         40.0,
-        color.unwrap_or(COLOR_4).with_alpha(alpha),
+        color.unwrap_or(BLACK).with_alpha(alpha),
       );
     };
   }
@@ -126,7 +126,7 @@ pub fn draw_collider(
             top_left.y,
             dimensions.x,
             dimensions.y,
-            color.unwrap_or(COLOR_3).with_alpha(alpha),
+            color.unwrap_or(COLOR_4).with_alpha(alpha),
           );
         }
       }

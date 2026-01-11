@@ -67,7 +67,14 @@ pub struct PhysicsSystem {
 }
 
 const PLAYER_MAX_HITSTUN: f32 = 100.0;
-
+pub const PLAYER_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
+  memberships: COLLISION_GROUP_PLAYER,
+  filter: COLLISION_GROUP_WALL
+    .union(COLLISION_GROUP_ENEMY)
+    .union(COLLISION_GROUP_ENEMY_PROJECTILE)
+    .union(COLLISION_GROUP_PLAYER_INTERACTIBLE),
+  test_mode: InteractionTestMode::And,
+};
 fn load_new_map(
   map: &Map,
   map_name: &str,
@@ -95,14 +102,7 @@ fn load_new_map(
     .build();
   player_rigid_body.wake_up(true);
   let player_collider = &ColliderBuilder::ball(0.25)
-    .collision_groups(InteractionGroups {
-      memberships: COLLISION_GROUP_PLAYER,
-      filter: COLLISION_GROUP_WALL
-        .union(COLLISION_GROUP_ENEMY)
-        .union(COLLISION_GROUP_ENEMY_PROJECTILE)
-        .union(COLLISION_GROUP_PLAYER_INTERACTIBLE),
-      ..Default::default()
-    })
+    .collision_groups(PLAYER_INTERACTION_GROUPS)
     .build();
   let player_handle = rigid_body_set.insert(player_rigid_body);
   collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);

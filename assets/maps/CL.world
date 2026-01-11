@@ -53,8 +53,8 @@
             "fileName": "old/CL4-1.json",
             "height": 560,
             "width": 560,
-            "x": 1752,
-            "y": 32
+            "x": 1288,
+            "y": -192
         },
         {
             "fileName": "old/CL5-3.json",
@@ -67,8 +67,8 @@
             "fileName": "old/CL4-2.json",
             "height": 400,
             "width": 400,
-            "x": 1352,
-            "y": 280
+            "x": 896,
+            "y": -8
         },
         {
             "fileName": "MP1.json",
@@ -88,45 +88,52 @@
             "fileName": "MP3.json",
             "height": 240,
             "width": 400,
-            "x": 1672,
-            "y": 1360
+            "x": 2072,
+            "y": 1016
         },
         {
             "fileName": "MP4.json",
             "height": 80,
             "width": 80,
-            "x": 1720,
-            "y": 1280
+            "x": 2120,
+            "y": 936
         },
         {
             "fileName": "MP5.json",
             "height": 400,
             "width": 320,
-            "x": 1672,
-            "y": 1600
+            "x": 2072,
+            "y": 1256
         },
         {
             "fileName": "MP6.json",
             "height": 240,
             "width": 160,
-            "x": 1848,
-            "y": 1120
+            "x": 2248,
+            "y": 776
         },
         {
             "fileName": "MP7.json",
             "height": 480,
             "width": 800,
-            "x": 1856,
-            "y": 640
+            "x": 2256,
+            "y": 296
         },
         {
             "fileName": "MP8.json",
             "height": 400,
             "width": 400,
-            "x": 2072,
-            "y": 1280
+            "x": 2472,
+            "y": 936
+        },
+        {
+            "fileName": "MP9.json",
+            "height": 400,
+            "width": 400,
+            "x": 1672,
+            "y": 1112
         }
     ],
     "onlyShowAdjacentMaps": false,
-    "type": "old/world"
+    "type": "world"
 }

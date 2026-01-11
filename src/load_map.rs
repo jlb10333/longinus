@@ -1064,7 +1064,7 @@ impl Object {
         )
         .collision_groups(InteractionGroups {
           memberships: COLLISION_GROUP_WALL,
-          filter: !COLLISION_GROUP_WALL,
+          filter: Group::ALL,
           ..Default::default()
         })
         .build(),
@@ -1454,10 +1454,7 @@ impl TileLayer {
               ))
               .collision_groups(InteractionGroups {
                 memberships: COLLISION_GROUP_WALL,
-                filter: COLLISION_GROUP_PLAYER
-                  .union(COLLISION_GROUP_PLAYER_PROJECTILE)
-                  .union(COLLISION_GROUP_ENEMY)
-                  .union(COLLISION_GROUP_ENEMY_PROJECTILE),
+                filter: Group::ALL,
                 ..Default::default()
               })
               .build();
