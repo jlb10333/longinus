@@ -151,10 +151,8 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
         let player_x =
           (physics_scalar_to_map(player_physics_pos.data.0[0][0]) + current_world_map.x) / 8.0;
-        let player_y = (current_world_map.height
-          - physics_scalar_to_map(player_physics_pos.data.0[0][1])
-          + current_world_map.y)
-          / 8.0;
+        let player_y = current_world_map.height
+          + (current_world_map.y - physics_scalar_to_map(player_physics_pos.data.0[0][1])) / 8.0;
 
         let center_x = screen_width() / 2.0;
         let center_y = screen_height() / 2.0;
@@ -185,8 +183,8 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                 return;
               }
 
-              let tile_x = index as f32 % (world_map.width / 8.0);
-              let tile_y = (index as f32 / (world_map.width / 8.0)).floor();
+              let tile_x = index as f32 % world_map.width;
+              let tile_y = (index as f32 / world_map.width).floor();
 
               let map_x = (tile_x + (world_map.x / 8.0) - player_x) * MINI_MAP_TILE_WIDTH;
               let map_y = (tile_y + (world_map.y / 8.0) - player_y) * MINI_MAP_TILE_HEIGHT;
