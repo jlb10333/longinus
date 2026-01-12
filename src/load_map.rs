@@ -91,9 +91,13 @@ struct MapPlayerSpawn {
   template: PlayerSpawnTemplate,
 }
 
+lit_str!(ItemPickupTemplatePath, "templates/ItemPickup.tx");
+
 #[derive(Clone, Debug, Deserialize)]
-pub enum MapItemPickupClass {
-  ItemPickup,
+#[serde(untagged)]
+enum MapItemPickupTemplate {
+  #[serde(with = "ItemPickupTemplatePath")]
+  Path,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -102,8 +106,7 @@ struct MapItemPickup {
   x: f32,
   y: f32,
   name: WeaponModuleKind,
-  #[serde(rename = "type")]
-  _class: MapItemPickupClass,
+  template: MapItemPickupTemplate,
 }
 
 lit_str!(MapHealthTankTemplatePath, "templates/Health Tank.tx");
@@ -1784,7 +1787,7 @@ pub fn load(file_path: &str) -> Option<Map> {
 
 pub fn load_world() -> Option<World> {
   let world_path = Path::new(&current_dir().unwrap())
-    .join("assets/maps/CL.world")
+    .join("assets/maps/generated/world.world")
     .to_str()
     .unwrap()
     .to_string();
@@ -1805,7 +1808,7 @@ pub struct MapSystem {
 
 fn map_read_path(map_name: &String) -> String {
   Path::new(&current_dir().unwrap())
-    .join(format!("assets/maps/{map_name}.json"))
+    .join(format!("assets/maps/generated/{map_name}.json"))
     .to_str()
     .unwrap()
     .to_string()

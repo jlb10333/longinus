@@ -1,6 +1,6 @@
 {
-  "player_spawn_id": 9,
-  "map_name": "MP1",
+  "player_spawn_id": 6,
+  "map_name": "start",
   "unequipped_modules": [],
   "equipped_modules": [
     [
@@ -31,7 +31,7 @@
   "acquired_items": [],
   "player_health": 100.0,
   "player_max_health": 100.0,
-  "visited_maps": ["MP1"],
+  "visited_maps": ["start"],
   "acquired_boost": true,
   "acquired_chain": false,
   "mana_tanks_capacity": {
