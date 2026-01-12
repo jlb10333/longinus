@@ -109,22 +109,19 @@ impl System for CameraSystem {
     let map_bottom_right =
       PhysicsVector::from_vec(self.map_bottom_right).into_pos(attempted_translation);
 
-    let map_bounds_offset_left = map_top_left.x().max(0.0);
-    let map_bounds_offset_right = (map_bottom_right.x() - screen_width()).min(0.0);
-    let map_bounds_offset_top = map_top_left.y().max(0.0);
-    let map_bounds_offset_bottom = (map_bottom_right.y() - screen_height()).min(0.0);
+    let width = screen_width().min(map_bottom_right.x() - map_top_left.x());
+    let x_offset = (screen_width() - width) / 2.0;
+    let height = screen_height().min(map_bottom_right.y() - map_top_left.y());
+    let y_offset = (screen_height() - height) / 2.0;
+
+    let map_bounds_offset_left = (map_top_left.x() - x_offset).max(0.0);
+    let map_bounds_offset_right = (map_bottom_right.x() - width - x_offset).min(0.0);
+    let map_bounds_offset_top = (map_top_left.y() - y_offset).max(0.0);
+    let map_bounds_offset_bottom = (map_bottom_right.y() - height - y_offset).min(0.0);
 
     let map_bounds_offset = vector![
-      if map_bottom_right.x() - map_top_left.x() < screen_width() {
-        0.0
-      } else {
-        map_bounds_offset_left + map_bounds_offset_right
-      },
-      if map_bottom_right.y() - map_top_left.y() < screen_height() {
-        0.0
-      } else {
-        map_bounds_offset_top + map_bounds_offset_bottom
-      },
+      map_bounds_offset_left + map_bounds_offset_right,
+      map_bounds_offset_top + map_bounds_offset_bottom,
     ];
 
     return Rc::new(Self {

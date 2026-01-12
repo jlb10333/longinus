@@ -1,0 +1,144 @@
+{
+  "maps": [
+    {
+      "fileName": "start.json",
+      "width": 30,
+      "height": 40,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "fileName": "MP2.json",
+      "width": 40,
+      "height": 40,
+      "x": 80,
+      "y": -320
+    },
+    {
+      "fileName": "MP3.json",
+      "width": 50,
+      "height": 50,
+      "x": -560,
+      "y": -400
+    },
+    {
+      "fileName": "MP4.json",
+      "width": 40,
+      "height": 20,
+      "x": 400,
+      "y": -320
+    },
+    {
+      "fileName": "MP5.json",
+      "width": 60,
+      "height": 20,
+      "x": 400,
+      "y": -160
+    },
+    {
+      "fileName": "MP6.json",
+      "width": 60,
+      "height": 50,
+      "x": 720,
+      "y": -560
+    },
+    {
+      "fileName": "MP7.json",
+      "width": 40,
+      "height": 50,
+      "x": 880,
+      "y": -160
+    },
+    {
+      "fileName": "boost.json",
+      "width": 80,
+      "height": 50,
+      "x": 240,
+      "y": 0
+    },
+    {
+      "fileName": "MP9.json",
+      "width": 20,
+      "height": 60,
+      "x": 560,
+      "y": -800
+    },
+    {
+      "fileName": "boss1.json",
+      "width": 40,
+      "height": 40,
+      "x": 240,
+      "y": -640
+    },
+    {
+      "fileName": "MP11.json",
+      "width": 80,
+      "height": 50,
+      "x": 80,
+      "y": -1200
+    },
+    {
+      "fileName": "MISL.json",
+      "width": 20,
+      "height": 20,
+      "x": 80,
+      "y": -640
+    },
+    {
+      "fileName": "MP14.json",
+      "width": 50,
+      "height": 50,
+      "x": 720,
+      "y": -960
+    },
+    {
+      "fileName": "MP15.json",
+      "width": 40,
+      "height": 70,
+      "x": -400,
+      "y": -960
+    },
+    {
+      "fileName": "MP17.json",
+      "width": 30,
+      "height": 50,
+      "x": -640,
+      "y": -880
+    },
+    {
+      "fileName": "MP19.json",
+      "width": 30,
+      "height": 50,
+      "x": -640,
+      "y": -1280
+    },
+    {
+      "fileName": "MP20.json",
+      "width": 50,
+      "height": 30,
+      "x": -320,
+      "y": -1200
+    },
+    {
+      "fileName": "MP21.json",
+      "width": 30,
+      "height": 20,
+      "x": -160,
+      "y": -320
+    },
+    {
+      "fileName": "MP22.json",
+      "width": 20,
+      "height": 20,
+      "x": 400,
+      "y": -1360
+    },
+    {
+      "fileName": "MP24.json",
+      "width": 52,
+      "height": 24,
+      "x": -1056,
+      "y": -1168
+    }
+  ]
+}

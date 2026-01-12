@@ -133,11 +133,11 @@
             }
         },
         "maps/generated/MP2.json": {
-            "scale": 5.5,
+            "scale": 0.75,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 496.27272727272725,
-                "y": 95
+                "x": 1270,
+                "y": 30
             }
         },
         "maps/generated/MP20.json": {
