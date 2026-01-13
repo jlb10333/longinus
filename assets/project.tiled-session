@@ -3,13 +3,16 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "maps/MP3.json",
+    "activeFile": "maps/generated/MP11.json",
     "expandedProjectPaths": [
-        "maps",
-        "maps/templates/enemies",
+        "maps/templates",
+        "maps/generated/templates",
         "maps/old",
+        "maps/templates/enemies",
+        "maps/generated",
+        "maps/tilesets",
         ".",
-        "maps/templates"
+        "maps"
     ],
     "fileStates": {
         "maps/MP1.json": {
@@ -85,43 +88,43 @@
             }
         },
         "maps/generated/MISL.json": {
-            "scale": 0.75,
-            "selectedLayer": 0,
+            "scale": 4,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": -568.6666666666667,
-                "y": -26
+                "x": 355.125,
+                "y": 128.875
             }
         },
         "maps/generated/MP11.json": {
-            "scale": 0.75,
+            "scale": 0.5,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -244.66666666666674,
-                "y": 752.6666666666665
+                "x": -467,
+                "y": 477
             }
         },
         "maps/generated/MP14.json": {
             "scale": 0.75,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -886,
-                "y": 512.6666666666665
+                "x": 768.6666666666666,
+                "y": 407.33333333333337
             }
         },
         "maps/generated/MP15.json": {
-            "scale": 0.75,
+            "scale": 1,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -88.66666666666674,
-                "y": 782
+                "x": 371.5,
+                "y": 397.5
             }
         },
         "maps/generated/MP17.json": {
-            "scale": 0.75,
+            "scale": 3,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 151.33333333333326,
-                "y": -276.66666666666663
+                "x": 539.1666666666666,
+                "y": 705.8333333333333
             }
         },
         "maps/generated/MP19.json": {
@@ -133,35 +136,35 @@
             }
         },
         "maps/generated/MP2.json": {
-            "scale": 1.5,
+            "scale": 5.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 452.9999999999999,
-                "y": 229.66666666666669
+                "x": 482.6363636363636,
+                "y": 217
             }
         },
         "maps/generated/MP20.json": {
-            "scale": 0.75,
+            "scale": 1.5,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 155.33333333333326,
-                "y": 752.6666666666665
+                "x": 99.66666666666663,
+                "y": 335.6666666666667
             }
         },
         "maps/generated/MP21.json": {
-            "scale": 1,
-            "selectedLayer": 1,
-            "viewCenter": {
-                "x": 764.5,
-                "y": 354.5
-            }
-        },
-        "maps/generated/MP22.json": {
             "scale": 0.75,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -888.6666666666667,
-                "y": 206
+                "x": -267.33333333333326,
+                "y": 86
+            }
+        },
+        "maps/generated/MP22.json": {
+            "scale": 1,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": -137.5,
+                "y": 360.5
             }
         },
         "maps/generated/MP24.json": {
@@ -173,75 +176,75 @@
             }
         },
         "maps/generated/MP3.json": {
-            "scale": 1,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 1107.5,
-                "y": -465.5
+                "x": 239.625,
+                "y": -110.625
             }
         },
         "maps/generated/MP4.json": {
-            "scale": 0.75,
-            "selectedLayer": 1,
-            "viewCenter": {
-                "x": 817.9999999999998,
-                "y": 6
-            }
-        },
-        "maps/generated/MP5.json": {
-            "scale": 5.5,
-            "selectedLayer": 1,
-            "viewCenter": {
-                "x": 517.3636363636364,
-                "y": 14.272727272727266
-            }
-        },
-        "maps/generated/MP6.json": {
-            "scale": 0.75,
-            "selectedLayer": 0,
-            "viewCenter": {
-                "x": -738,
-                "y": 535.3333333333334
-            }
-        },
-        "maps/generated/MP7.json": {
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 140.5,
-                "y": -766.5
+                "x": 809.5,
+                "y": 133.5
             }
         },
-        "maps/generated/MP9.json": {
-            "scale": 1.5,
-            "selectedLayer": 0,
-            "viewCenter": {
-                "x": 228.9999999999999,
-                "y": -111
-            }
-        },
-        "maps/generated/boost.json": {
+        "maps/generated/MP5.json": {
             "scale": 0.75,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 787.3333333333333,
-                "y": 26
+                "x": 95.33333333333326,
+                "y": -699.3333333333333
+            }
+        },
+        "maps/generated/MP6.json": {
+            "scale": 0.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 403,
+                "y": 311
+            }
+        },
+        "maps/generated/MP7.json": {
+            "scale": 3,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 179.16666666666666,
+                "y": -167.83333333333331
+            }
+        },
+        "maps/generated/MP9.json": {
+            "scale": 0.75,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 793.9999999999998,
+                "y": 636.6666666666665
+            }
+        },
+        "maps/generated/boost.json": {
+            "scale": 1.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 424.3333333333333,
+                "y": -371
             }
         },
         "maps/generated/boss1.json": {
-            "scale": 0.5,
+            "scale": 2,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 883,
-                "y": 407
+                "x": 656.75,
+                "y": 3.75
             }
         },
         "maps/generated/start.json": {
-            "scale": 1.5,
-            "selectedLayer": 0,
+            "scale": 4,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 41.66666666666663,
-                "y": -18.333333333333314
+                "x": 859.125,
+                "y": -326.625
             }
         },
         "maps/new_test/MP1.json": {
@@ -355,35 +358,23 @@
     "map.tileWidth": 8,
     "map.width": 50,
     "openFiles": [
-        "maps/MP2.json",
-        "maps/MP1.json",
-        "maps/MP3.json",
-        "maps/old/CL5-2.json",
-        "maps/old/entryway.json",
-        "maps/old/CL5-1.json",
-        "maps/MP4.json",
-        "maps/MP5.json",
-        "maps/old/CL5-3.json",
-        "maps/old/map4.json",
-        "maps/MP6.json",
-        "maps/MP7.json",
-        "maps/old/CL4-1.json",
-        "maps/MP8.json"
+        "maps/generated/MP20.json",
+        "maps/generated/MP11.json"
     ],
     "project": "project.tiled-project",
     "property.type": "object",
     "recentFiles": [
-        "maps/tilesets/colliders.tsx",
-        "maps/generated/MP21.json",
-        "maps/generated/start.json",
-        "maps/generated/MP2.json",
+        "maps/generated/MP20.json",
+        "maps/generated/MP11.json",
+        "maps/generated/MP22.json",
+        "maps/generated/MP15.json",
+        "maps/generated/MP14.json",
+        "maps/generated/MP9.json",
+        "maps/generated/boss1.json",
+        "maps/generated/MISL.json",
         "maps/generated/MP5.json",
-        "maps/generated/boost.json",
-        "maps/generated/MP4.json",
-        "maps/world_master.json",
-        "maps/generated/MP19.json",
-        "maps/old/CL5-3.json",
-        "maps/old/map1.json",
-        "maps/MP9.json"
+        "maps/generated/MP2.json",
+        "maps/generated/MP21.json",
+        "maps/generated/MP17.json"
     ]
 }
