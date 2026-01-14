@@ -27,15 +27,16 @@ pub fn draw_collider(
   camera_position: Vector2<f32>,
   label: Option<String>,
   color: Option<Color>,
+  alpha: Option<f32>,
 ) {
   let translation = PhysicsVector::from_vec(*collider.translation()).into_pos(camera_position);
   let rotation = collider.rotation().angle();
 
-  let alpha = if collider.is_enabled() && !collider.is_sensor() {
+  let alpha = alpha.unwrap_or(if collider.is_enabled() && !collider.is_sensor() {
     1.0
   } else {
     0.5
-  };
+  });
 
   if let Some(cuboid) = collider.shape().as_cuboid() {
     let half_extents = PhysicsVector::from_vec(cuboid.half_extents).convert();

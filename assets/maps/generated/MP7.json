@@ -81,6 +81,84 @@
                  "width":8,
                  "x":0,
                  "y":344
+                }, 
+                {
+                 "height":0,
+                 "id":10,
+                 "name":"Gravity Source",
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":13
+                        }, 
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":7
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":-0.3
+                        }],
+                 "rotation":0,
+                 "type":"GravitySource",
+                 "visible":true,
+                 "width":0,
+                 "x":272,
+                 "y":208
+                }, 
+                {
+                 "height":16,
+                 "id":11,
+                 "name":"Touch Sensor",
+                 "properties":[
+                        {
+                         "name":"TargetActivation",
+                         "type":"float",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"TouchSensor",
+                 "visible":true,
+                 "width":16,
+                 "x":112,
+                 "y":200
+                }, 
+                {
+                 "height":0,
+                 "id":12,
+                 "name":"Gate",
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":11
+                        }],
+                 "rotation":0,
+                 "type":"Gate",
+                 "visible":true,
+                 "width":0,
+                 "x":176,
+                 "y":184
+                }, 
+                {
+                 "height":0,
+                 "id":13,
+                 "name":"Not",
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":12
+                        }],
+                 "rotation":0,
+                 "type":"Not",
+                 "visible":true,
+                 "width":0,
+                 "x":184,
+                 "y":216
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -89,7 +167,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":9,
+ "nextobjectid":14,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

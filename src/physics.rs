@@ -16,7 +16,7 @@ use crate::{
     DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Engine, Entity, EntityHandle,
     ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision, GivesItemOnCollision,
     GravitySource, HealOnCollision, Id, IncreaseMaxHealthOnCollision, Locomotor,
-    MapTransitionOnCollision, Or, SaveMenuOnCollision, SimpleActivatable, Switch, Terminal,
+    MapTransitionOnCollision, Not, Or, SaveMenuOnCollision, SimpleActivatable, Switch, Terminal,
     TouchSensor,
   },
   enemy::EnemySystem,
@@ -463,6 +463,25 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
+  let nots = map
+    .nots
+    .iter()
+    .map(|not| {
+      let not_handle = rigid_body_set.insert(not.rigid_body.clone());
+
+      Entity {
+        handle: EntityHandle::RigidBody(not_handle),
+        components: ComponentSet::new()
+          .insert(Not {
+            activator_id: not.activator_id,
+          })
+          .insert(Activator { activation: 0.0 })
+          .insert(Id { id: not.id }),
+        label: "not".to_string(),
+      }
+    })
+    .collect::<Vec<_>>();
+
   /* MARK: Spawn engines. */
   let engines = map
     .engines
@@ -606,6 +625,7 @@ fn load_new_map(
     .chain(ands)
     .chain(ors)
     .chain(gates)
+    .chain(nots)
     .chain(engines)
     .chain(terminals)
     .map(|entity| (entity.handle, Rc::new(entity)))
@@ -1866,6 +1886,37 @@ impl System for PhysicsSystem {
                 activator_id: gate.activator_id,
                 highest_historical_activation: activation,
               }),
+            }),
+          )
+        } else {
+          (handle, Rc::clone(entity))
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
+
+    /* MARK: Calculate Not activation */
+    let entities = entities
+      .iter()
+      .map(|(&handle, entity)| {
+        if let Some(not) = entity.components.get::<Not>()
+          && let Some(incoming_activation) = entities.iter().find_map(|(_, entity)| {
+            if let Some(activator) = entity.components.get::<Activator>()
+              && let Some(id) = entity.components.get::<Id>()
+              && not.activator_id == id.id
+            {
+              Some(activator.activation)
+            } else {
+              None
+            }
+          })
+        {
+          let activation = 1.0 - incoming_activation;
+          (
+            handle,
+            Rc::new(Entity {
+              handle,
+              label: format!("not {}", activation),
+              components: entity.components.with(Activator { activation }),
             }),
           )
         } else {

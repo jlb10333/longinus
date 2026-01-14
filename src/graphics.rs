@@ -11,7 +11,7 @@ use crate::{
     distance_projection_screen, get_reticle_pos, get_slot_positions, weapon_module_from_kind,
   },
   controls::ControlsSystem,
-  ecs::{Damageable, Damager, Enemy, EntityHandle},
+  ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id},
   graphics_utils::{draw_collider, draw_label},
   load_map::{MapSystem, physics_scalar_to_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
@@ -89,27 +89,51 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       /* Debug */
       if SHOW_COLLIDERS {
-        physics_system
-          .collider_set
-          .iter()
-          .for_each(|(_, collider)| {
-            draw_collider(collider, camera_system.translation, None, None);
-          });
-
-        /* Draw entity labels */
         physics_system.entities.iter().for_each(|(handle, entity)| {
-          if entity.components.get::<Damager>().is_some() {
-            handle
-              .colliders(&physics_system.rigid_body_set)
-              .iter()
-              .for_each(|&&collider_handle| {
-                let collider = &physics_system.collider_set[collider_handle];
-                if collider.collision_groups().test(PLAYER_INTERACTION_GROUPS) {
-                  draw_collider(collider, camera_system.translation, None, Some(COLOR_3));
+          let alpha = if let Some(gravity_source) = entity.components.get::<GravitySource>()
+            && let Some(target_activator_id) = gravity_source.activator_id
+            && let Some((_, other_entity)) =
+              physics_system.entities.iter().find(|(_, other_entity)| {
+                if let Some(id) = other_entity.components.get::<Id>()
+                  && id.id == target_activator_id
+                {
+                  true
+                } else {
+                  false
                 }
               })
+            && let Some(activator) = other_entity.components.get::<Activator>()
+          {
+            Some(activator.activation / 2.0)
+          } else {
+            None
           };
 
+          if entity.components.get::<GravitySource>().is_some() {
+            println!("{:?}", alpha);
+          }
+
+          handle
+            .colliders(&physics_system.rigid_body_set)
+            .iter()
+            .for_each(|&&collider_handle| {
+              let collider = &physics_system.collider_set[collider_handle];
+              draw_collider(
+                collider,
+                camera_system.translation,
+                None,
+                if entity.components.get::<Damager>().is_some()
+                  && collider.collision_groups().test(PLAYER_INTERACTION_GROUPS)
+                {
+                  Some(COLOR_3)
+                } else {
+                  None
+                },
+                alpha,
+              );
+            });
+
+          /* Draw entity labels */
           if let EntityHandle::RigidBody(rigid_body_handle) = handle {
             draw_label(
               PhysicsVector::from_vec(
@@ -135,6 +159,25 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
               );
             })
         });
+
+        physics_system
+          .collider_set
+          .iter()
+          .filter(|(handle, _)| {
+            !physics_system
+              .entities
+              .contains_key(&EntityHandle::Collider(*handle))
+              && if let Some(parent_handle) = physics_system.collider_set[*handle].parent() {
+                !physics_system
+                  .entities
+                  .contains_key(&EntityHandle::RigidBody(parent_handle))
+              } else {
+                true
+              }
+          })
+          .for_each(|(_, collider)| {
+            draw_collider(collider, camera_system.translation, None, None, None);
+          });
       }
 
       let player_physics_pos = PhysicsVector::from_vec(

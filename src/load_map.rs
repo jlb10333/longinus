@@ -520,6 +520,21 @@ struct MapGate {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapNotClass {
+  Not,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapNot {
+  id: i32,
+  x: f32,
+  y: f32,
+  properties: (MapActivatorId,),
+  #[serde(rename = "type")]
+  _class: MapNotClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 enum MapReverseDirectionClass {
   ReverseDirection,
 }
@@ -627,6 +642,7 @@ enum Object {
   Or(MapOr),
   And(MapAnd),
   Gate(MapGate),
+  Not(MapNot),
   Locomotor(MapLocomotor),
   Glue(MapGlue),
   Engine(MapEngine),
@@ -889,6 +905,13 @@ pub struct Gate {
 }
 
 #[derive(Clone)]
+pub struct Not {
+  pub rigid_body: RigidBody,
+  pub id: i32,
+  pub activator_id: i32,
+}
+
+#[derive(Clone)]
 pub struct Locomotor {
   pub id: i32,
   pub base: RigidBody,
@@ -967,6 +990,7 @@ pub enum MapComponent {
   Or(Or),
   And(And),
   Gate(Gate),
+  Not(Not),
   Locomotor(Locomotor),
   Glue(Glue),
   Engine(Engine),
@@ -1224,6 +1248,16 @@ impl Object {
       }),
 
       Object::Gate(gate) => MapComponent::Gate(Gate {
+        id: gate.id,
+        activator_id: gate.properties.0.value,
+        rigid_body: RigidBodyBuilder::dynamic()
+          .translation(physics_translation_from_map(
+            gate.x, gate.y, 0.0, 0.0, map_height,
+          ))
+          .build(),
+      }),
+
+      Object::Not(gate) => MapComponent::Not(Not {
         id: gate.id,
         activator_id: gate.properties.0.value,
         rigid_body: RigidBodyBuilder::dynamic()
@@ -1507,6 +1541,7 @@ pub struct Map {
   pub ands: Vec<And>,
   pub ors: Vec<Or>,
   pub gates: Vec<Gate>,
+  pub nots: Vec<Not>,
   pub locomotors: Vec<Locomotor>,
   pub glues: Vec<Glue>,
   pub engines: Vec<Engine>,
@@ -1687,6 +1722,18 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let nots = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::Not(not) = object {
+          Some(not)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     let locomotors = converted_entities
       .iter()
       .flat_map(|object| {
@@ -1765,6 +1812,7 @@ impl RawMap {
       ands,
       ors,
       gates,
+      nots,
       locomotors,
       glues,
       engines,

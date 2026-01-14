@@ -318,6 +318,11 @@ pub struct Gate {
 }
 impl Component for Gate {}
 
+pub struct Not {
+  pub activator_id: i32,
+}
+impl Component for Not {}
+
 pub struct Engine {
   pub activator_id: Option<i32>,
   pub currently_increasing: bool,
