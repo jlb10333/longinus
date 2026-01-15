@@ -55,11 +55,13 @@ impl System for EnemySystem {
     let rng = rand::RandGenerator::new();
     rng.srand(physics_system.frame_count as u64);
 
-    let player_translation =
-      physics_system.rigid_body_set[physics_system.player_handle].translation();
-
-    let enemy_behavior =
-      enemy_behavior_generator(player_translation, &physics_system.rigid_body_set, &rng);
+    let enemy_behavior = enemy_behavior_generator(
+      physics_system.player_handle,
+      &physics_system.rigid_body_set,
+      &physics_system.collider_set,
+      &physics_system.narrow_phase,
+      &rng,
+    );
 
     let decisions = physics_system
       .entities
@@ -72,16 +74,27 @@ impl System for EnemySystem {
 }
 
 fn enemy_behavior_generator(
-  player_translation: &Vector2<f32>,
+  player_handle: RigidBodyHandle,
   physics_rigid_bodies: &RigidBodySet,
+  physics_colliders: &ColliderSet,
+  physics_narrow_phase: &NarrowPhase,
   rng: &RandGenerator,
 ) -> impl Fn((&EntityHandle, &Rc<Entity>)) -> Option<EnemyDecision> {
-  |(&handle, entity)| {
+  let player_translation = physics_rigid_bodies[player_handle].translation();
+
+  move |(&handle, entity)| {
     if let EntityHandle::RigidBody(rigid_body_handle) = handle {
       entity
         .components
         .get::<Enemy>()
         .map(|enemy| match enemy.as_ref() {
+          Enemy::Goblin(goblin) => goblin.behavior(
+            rigid_body_handle,
+            player_handle,
+            physics_rigid_bodies,
+            physics_colliders,
+            physics_narrow_phase,
+          ),
           Enemy::Imp(imp) => imp.behavior(
             rigid_body_handle,
             player_translation,
@@ -107,6 +120,177 @@ const ENEMY_GROUPS: InteractionGroups = InteractionGroups {
   filter: COLLISION_GROUP_PLAYER.union(COLLISION_GROUP_WALL),
   test_mode: InteractionTestMode::And,
 };
+
+#[derive(Clone, Copy)]
+pub enum EnemyGoblinState {
+  Idle,
+  Lunging(i32),
+  Slowing(i32),
+  Recovering(i32),
+}
+
+impl EnemyGoblinState {
+  pub fn initial() -> Self {
+    Self::Idle
+  }
+}
+
+#[derive(Clone, Copy)]
+pub struct EnemyGoblin {
+  pub state: EnemyGoblinState,
+}
+
+const GOBLIN_LUNGE_FORCE: f32 = 1.0;
+const GOBLIN_SLOWING_FRAMES: i32 = 15;
+const GOBLIN_SLOWING_FORCE: f32 = GOBLIN_LUNGE_FORCE / GOBLIN_SLOWING_FRAMES as f32;
+const GOBLIN_RECOVERING_FRAMES: i32 = 30;
+
+impl EnemyGoblin {
+  pub fn behavior(
+    &self,
+    handle: RigidBodyHandle,
+    player_handle: RigidBodyHandle,
+    rigid_body_set: &RigidBodySet,
+    collider_set: &ColliderSet,
+    narrow_phase: &NarrowPhase,
+  ) -> EnemyDecision {
+    // println!(
+    //   "{}",
+    //   match self.state {
+    //     EnemyGoblinState::Idle => "idle".to_string(),
+    //     EnemyGoblinState::Lunging(frames) => format!("lunging {frames}"),
+    //     EnemyGoblinState::Recovering(frames) => format!("recovering {frames}"),
+    //     EnemyGoblinState::Slowing(frames) => format!("slowing {frames}"),
+    //   }
+    // );
+
+    match self.state {
+      EnemyGoblinState::Idle => {
+        if EntityHandle::RigidBody(handle)
+          .intersecting_with_colliders(rigid_body_set, narrow_phase)
+          .iter()
+          .any(|&collider_handle| {
+            collider_set[collider_handle]
+              .parent()
+              .map(|parent_handle| parent_handle == player_handle)
+              .unwrap_or(false)
+          })
+        {
+          let player_translation = rigid_body_set[player_handle].translation();
+
+          let self_rigid_body = &rigid_body_set[handle];
+
+          let self_translation = self_rigid_body.translation();
+          let vector_to_player = player_translation - self_translation;
+
+          let movement_force = vector_to_player.normalize() * GOBLIN_LUNGE_FORCE;
+
+          let lunge_frames = (vector_to_player.magnitude()
+            / (movement_force.magnitude() / self_rigid_body.mass())
+            * 60.0) as i32;
+
+          println!(
+            "v2p {} force {} mass {} frames {lunge_frames}",
+            vector_to_player.magnitude(),
+            movement_force.magnitude(),
+            self_rigid_body.mass()
+          );
+
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Goblin(Self {
+              state: EnemyGoblinState::Lunging(lunge_frames),
+            }),
+            movement_force,
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            enemy: Enemy::Goblin(Self {
+              state: EnemyGoblinState::Idle,
+            }),
+            handle,
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemyGoblinState::Lunging(remaining_frames) => {
+        if remaining_frames > 0 {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Goblin(Self {
+              state: EnemyGoblinState::Lunging(remaining_frames - 1),
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Goblin(Self {
+              state: EnemyGoblinState::Slowing(GOBLIN_SLOWING_FRAMES),
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemyGoblinState::Slowing(remaining_frames) => {
+        let linvel = rigid_body_set[handle].linvel();
+
+        if remaining_frames > 0 && linvel.magnitude() > 0.0 {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Goblin(Self {
+              state: EnemyGoblinState::Slowing(remaining_frames - 1),
+            }),
+            movement_force: -linvel.normalize() * GOBLIN_SLOWING_FORCE,
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Goblin(Self {
+              state: EnemyGoblinState::Recovering(GOBLIN_RECOVERING_FRAMES),
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemyGoblinState::Recovering(remaining_frames) => {
+        if remaining_frames > 0 {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Goblin(Self {
+              state: EnemyGoblinState::Recovering(remaining_frames - 1),
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Goblin(Self {
+              state: EnemyGoblinState::Idle,
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+    }
+  }
+}
 
 #[derive(Clone)]
 pub enum EnemyImpState {

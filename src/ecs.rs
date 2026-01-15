@@ -11,7 +11,10 @@ use rpds::List;
 
 use crate::{
   combat::WeaponModuleKind,
-  enemy::{EnemyDefender, EnemyImp, EnemyImpState, EnemySeeker, EnemySeekerGenerator},
+  enemy::{
+    EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState, EnemySeeker,
+    EnemySeekerGenerator,
+  },
   load_map::{MapAbilityType, MapEnemyName},
 };
 
@@ -184,6 +187,7 @@ impl Component for DestroyOnCollision {}
 #[derive(Clone)]
 pub enum Enemy {
   /* Dragonspawn */
+  Goblin(EnemyGoblin),
   Imp(EnemyImp),
   /* Angelic Constructs */
   Defender(EnemyDefender),
@@ -193,6 +197,9 @@ pub enum Enemy {
 impl Enemy {
   pub fn default_from_map(map_enemy: MapEnemyName) -> Enemy {
     match map_enemy {
+      MapEnemyName::Goblin => Self::Goblin(EnemyGoblin {
+        state: EnemyGoblinState::initial(),
+      }),
       MapEnemyName::Imp => Self::Imp(EnemyImp {
         state: EnemyImpState::initial(),
       }),

@@ -125,7 +125,9 @@ fn load_new_map(
     .iter()
     .map(|enemy_spawn| {
       let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
-      collider_set.insert_with_parent(enemy_spawn.collider.clone(), handle, &mut rigid_body_set);
+      enemy_spawn.colliders.iter().for_each(|collider| {
+        collider_set.insert_with_parent(collider.clone(), handle, &mut rigid_body_set);
+      });
       Entity {
         handle: EntityHandle::RigidBody(handle),
         components: enemy_spawn.into_entity_components(),
@@ -981,11 +983,13 @@ impl System for PhysicsSystem {
             .iter()
             .map(|enemy_to_spawn| {
               let handle = rigid_body_set.insert(enemy_to_spawn.enemy_spawn.rigid_body.clone());
-              collider_set.insert_with_parent(
-                enemy_to_spawn.enemy_spawn.collider.clone(),
-                handle,
-                rigid_body_set,
-              );
+              enemy_to_spawn
+                .enemy_spawn
+                .colliders
+                .iter()
+                .for_each(|collider| {
+                  collider_set.insert_with_parent(collider.clone(), handle, rigid_body_set);
+                });
               rigid_body_set[handle].apply_impulse(enemy_to_spawn.initial_force, true);
               (
                 EntityHandle::RigidBody(handle),

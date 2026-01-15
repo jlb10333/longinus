@@ -261,11 +261,11 @@
                  "y":200
                 }, 
                 {
-                 "id":18,
+                 "id":19,
                  "name":"Goblin",
-                 "template":"..\/templates\/EnemySpawn.tx",
-                 "x":136,
-                 "y":160
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":144,
+                 "y":168
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -274,7 +274,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":19,
+ "nextobjectid":20,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",
