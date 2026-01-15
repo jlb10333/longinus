@@ -25,7 +25,7 @@
                  "name":"SavePoint",
                  "properties":[
                         {
-                         "name":"TargetPlayerSpawn",
+                         "name":"PlayerSpawnId",
                          "type":"object",
                          "value":2
                         }],
@@ -34,7 +34,7 @@
                  "visible":true,
                  "width":0,
                  "x":76,
-                 "y":56
+                 "y":32
                 }, 
                 {
                  "id":2,

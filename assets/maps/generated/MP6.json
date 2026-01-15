@@ -73,7 +73,7 @@
                         {
                          "name":"ReverseDirection",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }],
                  "rotation":0,
                  "type":"Locomotor",
@@ -257,7 +257,7 @@
                         {
                          "name":"ReverseDirection",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }],
                  "rotation":0,
                  "type":"Locomotor",
@@ -375,7 +375,7 @@
                         {
                          "name":"ReverseDirection",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }],
                  "rotation":0,
                  "type":"Locomotor",
@@ -493,7 +493,7 @@
                         {
                          "name":"ReverseDirection",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }],
                  "rotation":0,
                  "type":"Locomotor",
@@ -583,7 +583,7 @@
                         {
                          "name":"ReverseDirection",
                          "type":"bool",
-                         "value":true
+                         "value":false
                         }],
                  "rotation":0,
                  "type":"Locomotor",

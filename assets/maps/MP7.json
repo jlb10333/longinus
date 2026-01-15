@@ -211,8 +211,8 @@
                  "type":"ChainSwitch",
                  "visible":true,
                  "width":0,
-                 "x":192,
-                 "y":424
+                 "x":202.25,
+                 "y":414.75
                 }, 
                 {
                  "height":32,
@@ -774,7 +774,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":49,
+ "nextobjectid":50,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",
