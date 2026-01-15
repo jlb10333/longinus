@@ -82,7 +82,7 @@ fn enemy_behavior_generator(
         .components
         .get::<Enemy>()
         .map(|enemy| match enemy.as_ref() {
-          Enemy::Goblin(goblin) => goblin.behavior(
+          Enemy::Imp(imp) => imp.behavior(
             rigid_body_handle,
             player_translation,
             physics_rigid_bodies,
@@ -109,34 +109,34 @@ const ENEMY_GROUPS: InteractionGroups = InteractionGroups {
 };
 
 #[derive(Clone)]
-pub enum EnemyGoblinState {
+pub enum EnemyImpState {
   Shooting(i32),
   Cruising(i32),
   Accelerating(i32, Vector2<f32>),
   Decelerating(i32),
 }
 
-impl EnemyGoblinState {
+impl EnemyImpState {
   pub fn initial() -> Self {
-    Self::Shooting(GOBLIN_STATE_SHOOTING_INITIAL_FRAMES)
+    Self::Shooting(IMP_STATE_SHOOTING_INITIAL_FRAMES)
   }
 }
 
 #[derive(Clone)]
-pub struct EnemyGoblin {
-  pub state: EnemyGoblinState,
+pub struct EnemyImp {
+  pub state: EnemyImpState,
 }
 
-const GOBLIN_STATE_CRUISING_INITIAL_FRAMES: i32 = 70;
-const GOBLIN_STATE_SHOOTING_INITIAL_FRAMES: i32 = 50;
-const GOBLIN_STATE_ACCELERATING_INITIAL_FRAMES: i32 = 10;
-const GOBLIN_STATE_DECELERATING_INITIAL_FRAMES: i32 = 10;
+const IMP_STATE_CRUISING_INITIAL_FRAMES: i32 = 70;
+const IMP_STATE_SHOOTING_INITIAL_FRAMES: i32 = 50;
+const IMP_STATE_ACCELERATING_INITIAL_FRAMES: i32 = 10;
+const IMP_STATE_DECELERATING_INITIAL_FRAMES: i32 = 10;
 
-const GOBLIN_MOVE_FORCE: f32 = 0.2;
-const GOBLIN_PROJECTILE_SPEED: f32 = 1.0;
-const GOBLIN_PROJECTILE_DAMAGE: f32 = 5.0;
+const IMP_MOVE_FORCE: f32 = 0.2;
+const IMP_PROJECTILE_SPEED: f32 = 1.0;
+const IMP_PROJECTILE_DAMAGE: f32 = 5.0;
 
-impl EnemyGoblin {
+impl EnemyImp {
   pub fn behavior(
     &self,
     handle: RigidBodyHandle,
@@ -145,12 +145,12 @@ impl EnemyGoblin {
     rng: &RandGenerator,
   ) -> EnemyDecision {
     match self.state {
-      EnemyGoblinState::Shooting(frames_left) => {
+      EnemyImpState::Shooting(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
             handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Shooting(frames_left - 1),
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Shooting(frames_left - 1),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -159,9 +159,9 @@ impl EnemyGoblin {
         } else {
           EnemyDecision {
             handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Accelerating(
-                GOBLIN_STATE_ACCELERATING_INITIAL_FRAMES,
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Accelerating(
+                IMP_STATE_ACCELERATING_INITIAL_FRAMES,
                 vector![rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0)],
               ),
             }),
@@ -171,12 +171,12 @@ impl EnemyGoblin {
           }
         }
       }
-      EnemyGoblinState::Cruising(frames_left) => {
+      EnemyImpState::Cruising(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
             handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Cruising(frames_left - 1),
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Cruising(frames_left - 1),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -185,8 +185,8 @@ impl EnemyGoblin {
         } else {
           EnemyDecision {
             handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Decelerating(GOBLIN_STATE_DECELERATING_INITIAL_FRAMES),
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Decelerating(IMP_STATE_DECELERATING_INITIAL_FRAMES),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -194,22 +194,22 @@ impl EnemyGoblin {
           }
         }
       }
-      EnemyGoblinState::Accelerating(frames_left, direction) => {
+      EnemyImpState::Accelerating(frames_left, direction) => {
         if frames_left > 0 {
           EnemyDecision {
             handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Accelerating(frames_left - 1, direction),
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Accelerating(frames_left - 1, direction),
             }),
-            movement_force: direction.normalize() * GOBLIN_MOVE_FORCE,
+            movement_force: direction.normalize() * IMP_MOVE_FORCE,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
         } else {
           EnemyDecision {
             handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Cruising(GOBLIN_STATE_CRUISING_INITIAL_FRAMES),
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Cruising(IMP_STATE_CRUISING_INITIAL_FRAMES),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -217,24 +217,24 @@ impl EnemyGoblin {
           }
         }
       }
-      EnemyGoblinState::Decelerating(frames_left) => {
+      EnemyImpState::Decelerating(frames_left) => {
         let linvel = rigid_body_set[handle].linvel();
 
         if frames_left > 0 && linvel.magnitude() > 0.0 {
           EnemyDecision {
             handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Decelerating(frames_left - 1),
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Decelerating(frames_left - 1),
             }),
-            movement_force: -linvel.normalize() * GOBLIN_MOVE_FORCE,
+            movement_force: -linvel.normalize() * IMP_MOVE_FORCE,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
         } else {
           EnemyDecision {
             handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Shooting(GOBLIN_STATE_SHOOTING_INITIAL_FRAMES),
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Shooting(IMP_STATE_SHOOTING_INITIAL_FRAMES),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -242,10 +242,10 @@ impl EnemyGoblin {
               collider: ColliderBuilder::ball(0.2)
                 .collision_groups(ENEMY_GROUPS)
                 .build(),
-              damage: GOBLIN_PROJECTILE_DAMAGE,
+              damage: IMP_PROJECTILE_DAMAGE,
               initial_impulse: PhysicsVector::from_vec(
                 (player_translation - rigid_body_set[handle].translation()).normalize()
-                  * GOBLIN_PROJECTILE_SPEED,
+                  * IMP_PROJECTILE_SPEED,
               ),
               offset: PhysicsVector::zero(),
               force_mod: 0.0,
