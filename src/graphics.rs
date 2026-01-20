@@ -109,10 +109,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             None
           };
 
-          if entity.components.get::<GravitySource>().is_some() {
-            println!("{:?}", alpha);
-          }
-
           handle
             .colliders(&physics_system.rigid_body_set)
             .iter()

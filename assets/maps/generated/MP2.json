@@ -264,8 +264,8 @@
                  "id":19,
                  "name":"Goblin",
                  "template":"templates\/EnemySpawn.tx",
-                 "x":144,
-                 "y":168
+                 "x":168,
+                 "y":184
                 }],
          "opacity":1,
          "type":"objectgroup",

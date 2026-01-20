@@ -7,8 +7,8 @@ use crate::{
   combat::{Projectile, distance_projection_physics},
   ecs::{ComponentSet, Enemy, Entity, EntityHandle},
   load_map::{
-    COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL, EnemySpawn,
-    MapEnemyName,
+    COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL,
+    ENEMY_INTERACTION_GROUPS, EnemySpawn, MapEnemyName,
   },
   physics::PhysicsSystem,
   save::SaveData,
@@ -55,11 +55,18 @@ impl System for EnemySystem {
     let rng = rand::RandGenerator::new();
     rng.srand(physics_system.frame_count as u64);
 
+    let query_pipeline = physics_system.broad_phase.as_query_pipeline(
+      physics_system.narrow_phase.query_dispatcher(),
+      &physics_system.rigid_body_set,
+      &physics_system.collider_set,
+      QueryFilter::default().groups(ENEMY_INTERACTION_GROUPS),
+    );
+
     let enemy_behavior = enemy_behavior_generator(
       physics_system.player_handle,
       &physics_system.rigid_body_set,
       &physics_system.collider_set,
-      &physics_system.narrow_phase,
+      &query_pipeline,
       &rng,
     );
 
@@ -77,7 +84,7 @@ fn enemy_behavior_generator(
   player_handle: RigidBodyHandle,
   physics_rigid_bodies: &RigidBodySet,
   physics_colliders: &ColliderSet,
-  physics_narrow_phase: &NarrowPhase,
+  query_pipeline: &QueryPipeline,
   rng: &RandGenerator,
 ) -> impl Fn((&EntityHandle, &Rc<Entity>)) -> Option<EnemyDecision> {
   let player_translation = physics_rigid_bodies[player_handle].translation();
@@ -93,12 +100,14 @@ fn enemy_behavior_generator(
             player_handle,
             physics_rigid_bodies,
             physics_colliders,
-            physics_narrow_phase,
+            query_pipeline,
           ),
           Enemy::Imp(imp) => imp.behavior(
             rigid_body_handle,
-            player_translation,
+            player_handle,
             physics_rigid_bodies,
+            physics_colliders,
+            query_pipeline,
             rng,
           ),
           Enemy::Defender(defender) => defender.behavior(rigid_body_handle),
@@ -140,10 +149,11 @@ pub struct EnemyGoblin {
   pub state: EnemyGoblinState,
 }
 
-const GOBLIN_LUNGE_FORCE: f32 = 1.0;
-const GOBLIN_SLOWING_FRAMES: i32 = 15;
+const GOBLIN_AGGRO_RANGE: f32 = 20.0;
+const GOBLIN_LUNGE_FORCE: f32 = 9.0;
+const GOBLIN_SLOWING_FRAMES: i32 = 70;
 const GOBLIN_SLOWING_FORCE: f32 = GOBLIN_LUNGE_FORCE / GOBLIN_SLOWING_FRAMES as f32;
-const GOBLIN_RECOVERING_FRAMES: i32 = 30;
+const GOBLIN_RECOVERING_FRAMES: i32 = 50;
 
 impl EnemyGoblin {
   pub fn behavior(
@@ -152,34 +162,24 @@ impl EnemyGoblin {
     player_handle: RigidBodyHandle,
     rigid_body_set: &RigidBodySet,
     collider_set: &ColliderSet,
-    narrow_phase: &NarrowPhase,
+    query_pipeline: &QueryPipeline,
   ) -> EnemyDecision {
-    // println!(
-    //   "{}",
-    //   match self.state {
-    //     EnemyGoblinState::Idle => "idle".to_string(),
-    //     EnemyGoblinState::Lunging(frames) => format!("lunging {frames}"),
-    //     EnemyGoblinState::Recovering(frames) => format!("recovering {frames}"),
-    //     EnemyGoblinState::Slowing(frames) => format!("slowing {frames}"),
-    //   }
-    // );
-
     match self.state {
       EnemyGoblinState::Idle => {
-        if EntityHandle::RigidBody(handle)
-          .intersecting_with_colliders(rigid_body_set, narrow_phase)
-          .iter()
-          .any(|&collider_handle| {
-            collider_set[collider_handle]
-              .parent()
-              .map(|parent_handle| parent_handle == player_handle)
-              .unwrap_or(false)
-          })
+        let player_translation = rigid_body_set[player_handle].translation();
+        let self_rigid_body = &rigid_body_set[handle];
+
+        let self_translation = self_rigid_body.translation();
+
+        let direction_to_player = player_translation - self_translation;
+
+        if let Some((reached_handle, _)) = query_pipeline.cast_ray(
+          &Ray::new((*self_translation).into(), direction_to_player),
+          GOBLIN_AGGRO_RANGE,
+          true,
+        ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
+          && reached_parent_handle == player_handle
         {
-          let player_translation = rigid_body_set[player_handle].translation();
-
-          let self_rigid_body = &rigid_body_set[handle];
-
           let self_translation = self_rigid_body.translation();
           let vector_to_player = player_translation - self_translation;
 
@@ -188,13 +188,6 @@ impl EnemyGoblin {
           let lunge_frames = (vector_to_player.magnitude()
             / (movement_force.magnitude() / self_rigid_body.mass())
             * 60.0) as i32;
-
-          println!(
-            "v2p {} force {} mass {} frames {lunge_frames}",
-            vector_to_player.magnitude(),
-            movement_force.magnitude(),
-            self_rigid_body.mass()
-          );
 
           EnemyDecision {
             handle,
@@ -294,6 +287,7 @@ impl EnemyGoblin {
 
 #[derive(Clone)]
 pub enum EnemyImpState {
+  Idle,
   Shooting(i32),
   Cruising(i32),
   Accelerating(i32, Vector2<f32>),
@@ -302,7 +296,7 @@ pub enum EnemyImpState {
 
 impl EnemyImpState {
   pub fn initial() -> Self {
-    Self::Shooting(IMP_STATE_SHOOTING_INITIAL_FRAMES)
+    Self::Idle
   }
 }
 
@@ -311,6 +305,7 @@ pub struct EnemyImp {
   pub state: EnemyImpState,
 }
 
+const IMP_AGGRO_RANGE: f32 = 20.0;
 const IMP_STATE_CRUISING_INITIAL_FRAMES: i32 = 70;
 const IMP_STATE_SHOOTING_INITIAL_FRAMES: i32 = 50;
 const IMP_STATE_ACCELERATING_INITIAL_FRAMES: i32 = 10;
@@ -324,11 +319,49 @@ impl EnemyImp {
   pub fn behavior(
     &self,
     handle: RigidBodyHandle,
-    player_translation: &Vector2<f32>,
+    player_handle: RigidBodyHandle,
     rigid_body_set: &RigidBodySet,
+    collider_set: &ColliderSet,
+    query_pipeline: &QueryPipeline,
     rng: &RandGenerator,
   ) -> EnemyDecision {
+    let player_translation = rigid_body_set[player_handle].translation();
     match self.state {
+      EnemyImpState::Idle => {
+        let self_rigid_body = &rigid_body_set[handle];
+
+        let self_translation = self_rigid_body.translation();
+
+        let direction_to_player = player_translation - self_translation;
+
+        if let Some((reached_handle, _)) = query_pipeline.cast_ray(
+          &Ray::new((*self_translation).into(), direction_to_player),
+          IMP_AGGRO_RANGE,
+          true,
+        ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
+          && reached_parent_handle == player_handle
+        {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Shooting(IMP_STATE_SHOOTING_INITIAL_FRAMES),
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            enemy: Enemy::Imp(Self {
+              state: EnemyImpState::Idle,
+            }),
+            handle,
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
       EnemyImpState::Shooting(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
@@ -418,7 +451,7 @@ impl EnemyImp {
           EnemyDecision {
             handle,
             enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Shooting(IMP_STATE_SHOOTING_INITIAL_FRAMES),
+              state: EnemyImpState::Idle,
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -548,7 +581,7 @@ impl EnemySeekerGenerator {
         let initial_force = direction_to_player.normalize() * SEEKER_GENERATOR_INITIAL_FORCE;
         vec![EnemyDecisionEnemySpawn {
           initial_force,
-          enemy_spawn: EnemySpawn::new(&MapEnemyName::Seeker, *self_rigid_body.translation()),
+          enemy_spawn: EnemySpawn::new(MapEnemyName::Seeker, *self_rigid_body.translation()),
         }]
       } else {
         vec![]

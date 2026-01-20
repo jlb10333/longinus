@@ -167,17 +167,21 @@ impl ComponentSet {
 
 pub trait Component: Any {}
 
+#[derive(Clone)]
 pub struct Damageable {
   pub health: f32,
   pub max_health: f32,
   pub destroy_on_zero_health: bool,
   pub current_hitstun: f32,
   pub max_hitstun: f32,
+  pub hurtboxes: Vec<ColliderHandle>,
 }
 impl Component for Damageable {}
 
+#[derive(Clone)]
 pub struct Damager {
   pub damage: f32,
+  pub hitboxes: Vec<ColliderHandle>,
 }
 impl Component for Damager {}
 

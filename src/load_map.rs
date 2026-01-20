@@ -1,10 +1,4 @@
-use std::{
-  env::{current_dir, current_exe},
-  f32::consts::PI,
-  fs,
-  path::Path,
-  rc::Rc,
-};
+use std::{env::current_dir, f32::consts::PI, fs, path::Path, rc::Rc};
 
 use rapier2d::{
   na::{Unit, Vector2},
@@ -46,7 +40,7 @@ enum EnemySpawnTemplate {
   Path,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 pub enum MapEnemyName {
   /* Dragonspawn */
   Goblin,
@@ -71,7 +65,7 @@ impl MapEnemySpawn {
       self.x * 0.125 * TILE_DIMENSION_PHYSICS,
       (map_height - self.y) * 0.125 * TILE_DIMENSION_PHYSICS
     ]);
-    EnemySpawn::new(&self.name, translation.into_vec())
+    EnemySpawn::new(self.name, translation.into_vec())
   }
 }
 
@@ -726,16 +720,31 @@ pub const PLAYER_INTERACTIBLE_GROUPS: InteractionGroups = InteractionGroups {
   test_mode: InteractionTestMode::And,
 };
 
+pub const ENEMY_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
+  memberships: COLLISION_GROUP_ENEMY,
+  filter: COLLISION_GROUP_PLAYER
+    .union(COLLISION_GROUP_PLAYER_PROJECTILE)
+    .union(COLLISION_GROUP_WALL),
+  test_mode: InteractionTestMode::And,
+};
+
+pub struct EnemySpawnColliderHandles {
+  pub hitboxes: Vec<ColliderHandle>,
+  pub hurtboxes: Vec<ColliderHandle>,
+}
+
 #[derive(Clone)]
 pub struct EnemySpawn {
   pub name: Enemy,
-  pub colliders: Vec<Collider>,
+  pub hitboxes: Vec<Collider>,
+  pub hurtboxes: Vec<Collider>,
   pub rigid_body: RigidBody,
 }
 
 impl EnemySpawn {
-  pub fn new(name: &MapEnemyName, translation: Vector2<f32>) -> Self {
-    let colliders = colliders_from_enemy_name(name.clone());
+  pub fn new(name: MapEnemyName, translation: Vector2<f32>) -> Self {
+    let hitboxes = hitboxes_from_enemy_name(name);
+    let hurtboxes = hurtboxes_from_enemy_name(name);
     let rigid_body_builder = match name {
       MapEnemyName::Goblin => RigidBodyBuilder::dynamic(),
       MapEnemyName::Imp => RigidBodyBuilder::dynamic(),
@@ -747,12 +756,20 @@ impl EnemySpawn {
     rigid_body.wake_up(true);
     EnemySpawn {
       name: Enemy::default_from_map(name.clone()),
-      colliders,
+      hitboxes,
+      hurtboxes,
       rigid_body,
     }
   }
 
-  pub fn into_entity_components(&self) -> ComponentSet {
+  pub fn into_entity_components(
+    &self,
+    collider_handles: EnemySpawnColliderHandles,
+  ) -> ComponentSet {
+    let EnemySpawnColliderHandles {
+      hitboxes,
+      hurtboxes,
+    } = collider_handles;
     match self.name {
       Enemy::Goblin(_) => ComponentSet::new()
         .insert(Damageable {
@@ -761,8 +778,12 @@ impl EnemySpawn {
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
+          hurtboxes,
         })
-        .insert(Damager { damage: 15.0 })
+        .insert(Damager {
+          damage: 15.0,
+          hitboxes,
+        })
         .insert(DropOnDestroy {
           amount: 20.0,
           chance_health: 0.5,
@@ -770,13 +791,17 @@ impl EnemySpawn {
         }),
       Enemy::Imp(_) => ComponentSet::new()
         .insert(Damageable {
+          hurtboxes,
           health: 50.0,
           max_health: 50.0,
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
         })
-        .insert(Damager { damage: 10.0 })
+        .insert(Damager {
+          hitboxes,
+          damage: 10.0,
+        })
         .insert(DropOnDestroy {
           amount: 15.0,
           chance_health: 0.5,
@@ -784,13 +809,17 @@ impl EnemySpawn {
         }),
       Enemy::Defender(_) => ComponentSet::new()
         .insert(Damageable {
+          hurtboxes,
           health: 100.0,
           max_health: 100.0,
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
         })
-        .insert(Damager { damage: 10.0 })
+        .insert(Damager {
+          hitboxes,
+          damage: 10.0,
+        })
         .insert(DropOnDestroy {
           amount: 20.0,
           chance_health: 0.4,
@@ -798,13 +827,17 @@ impl EnemySpawn {
         }),
       Enemy::Seeker(_) => ComponentSet::new()
         .insert(Damageable {
+          hurtboxes,
           health: 30.0,
           max_health: 30.0,
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
         })
-        .insert(Damager { damage: 25.0 })
+        .insert(Damager {
+          hitboxes,
+          damage: 25.0,
+        })
         .insert(DropOnDestroy {
           amount: 10.0,
           chance_health: 0.5,
@@ -812,13 +845,17 @@ impl EnemySpawn {
         }),
       Enemy::SeekerGenerator(_) => ComponentSet::new()
         .insert(Damageable {
+          hurtboxes,
           health: 120.0,
           max_health: 120.0,
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
         })
-        .insert(Damager { damage: 10.0 })
+        .insert(Damager {
+          hitboxes,
+          damage: 10.0,
+        })
         .insert(DropOnDestroy {
           amount: 35.0,
           chance_health: 0.7,
@@ -971,29 +1008,41 @@ pub struct Wall {
   pub damageable: Option<f32>,
 }
 
-fn colliders_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
+fn hurtboxes_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
   let collider_builders = match name {
-    MapEnemyName::Goblin => vec![
-      ColliderBuilder::cuboid(0.4, 0.4),
-      ColliderBuilder::ball(2.0).sensor(true).mass(0.0),
-    ],
+    MapEnemyName::Goblin => vec![ColliderBuilder::cuboid(0.4, 0.4)],
     MapEnemyName::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
     MapEnemyName::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     MapEnemyName::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     MapEnemyName::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
   };
 
-  let collision_groups = InteractionGroups {
-    memberships: COLLISION_GROUP_ENEMY,
-    filter: COLLISION_GROUP_PLAYER
-      .union(COLLISION_GROUP_PLAYER_PROJECTILE)
-      .union(COLLISION_GROUP_WALL),
-    ..Default::default()
+  collider_builders
+    .into_iter()
+    .map(|collider_builder| {
+      collider_builder
+        .collision_groups(ENEMY_INTERACTION_GROUPS)
+        .build()
+    })
+    .collect()
+}
+
+fn hitboxes_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
+  let collider_builders = match name {
+    MapEnemyName::Goblin => vec![ColliderBuilder::cuboid(0.4, 0.4)],
+    MapEnemyName::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
+    MapEnemyName::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
+    MapEnemyName::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
+    MapEnemyName::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
   };
 
   collider_builders
     .into_iter()
-    .map(|collider_builder| collider_builder.collision_groups(collision_groups).build())
+    .map(|collider_builder| {
+      collider_builder
+        .collision_groups(ENEMY_INTERACTION_GROUPS)
+        .build()
+    })
     .collect()
 }
 

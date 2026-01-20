@@ -497,7 +497,6 @@ fn menu_main(
     let most_recent_save = available_saves
       .iter()
       .fold("", |init, elem| if *init > **elem { init } else { elem });
-    println!("{}", most_recent_save);
     return (
       vec![],
       Some(SaveToLoad::SaveData(most_recent_save.to_string())),

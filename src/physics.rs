@@ -22,8 +22,8 @@ use crate::{
   enemy::EnemySystem,
   load_map::{
     COLLISION_GROUP_CHAIN, COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE,
-    COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, Map,
-    MapAbilityType, MapSystem, MapTile,
+    COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL,
+    EnemySpawnColliderHandles, Map, MapAbilityType, MapSystem, MapTile,
   },
   menu::MenuSystem,
   save::SaveData,
@@ -105,7 +105,8 @@ fn load_new_map(
     .collision_groups(PLAYER_INTERACTION_GROUPS)
     .build();
   let player_handle = rigid_body_set.insert(player_rigid_body);
-  collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
+  let player_hurtbox_handle =
+    collider_set.insert_with_parent(player_collider.clone(), player_handle, &mut rigid_body_set);
 
   let player = Entity {
     handle: EntityHandle::RigidBody(player_handle),
@@ -115,6 +116,7 @@ fn load_new_map(
       destroy_on_zero_health: false,
       current_hitstun: 0.0,
       max_hitstun: PLAYER_MAX_HITSTUN,
+      hurtboxes: vec![player_hurtbox_handle],
     }),
     label: "player".to_string(),
   };
@@ -125,12 +127,27 @@ fn load_new_map(
     .iter()
     .map(|enemy_spawn| {
       let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
-      enemy_spawn.colliders.iter().for_each(|collider| {
-        collider_set.insert_with_parent(collider.clone(), handle, &mut rigid_body_set);
-      });
+      let hitboxes = enemy_spawn
+        .hitboxes
+        .iter()
+        .map(|collider| {
+          collider_set.insert_with_parent(collider.clone(), handle, &mut rigid_body_set)
+        })
+        .collect::<Vec<_>>();
+      let hurtboxes = enemy_spawn
+        .hurtboxes
+        .iter()
+        .map(|collider| {
+          collider_set.insert_with_parent(collider.clone(), handle, &mut rigid_body_set)
+        })
+        .collect::<Vec<_>>();
+
       Entity {
         handle: EntityHandle::RigidBody(handle),
-        components: enemy_spawn.into_entity_components(),
+        components: enemy_spawn.into_entity_components(EnemySpawnColliderHandles {
+          hitboxes,
+          hurtboxes,
+        }),
         label: "enemy".to_string(),
       }
     })
@@ -538,20 +555,25 @@ fn load_new_map(
             None,
           )
         } else {
-          let damager = wall.damaging.map(|damaging| Damager { damage: damaging });
+          let rigid_body_handle = rigid_body_set.insert(RigidBodyBuilder::fixed());
+          let collider_handle = collider_set.insert_with_parent(
+            wall.collider.clone(),
+            rigid_body_handle,
+            &mut rigid_body_set,
+          );
+
+          let damager = wall.damaging.map(|damaging| Damager {
+            damage: damaging,
+            hitboxes: vec![collider_handle],
+          });
           let damageable = wall.damageable.map(|damageable| Damageable {
             health: damageable,
             max_health: damageable,
             destroy_on_zero_health: true,
             current_hitstun: 0.0,
             max_hitstun: 0.0,
+            hurtboxes: vec![collider_handle],
           });
-          let rigid_body_handle = rigid_body_set.insert(RigidBodyBuilder::fixed());
-          collider_set.insert_with_parent(
-            wall.collider.clone(),
-            rigid_body_handle,
-            &mut rigid_body_set,
-          );
 
           let label = format!(
             "{}{}",
@@ -884,7 +906,8 @@ impl System for PhysicsSystem {
         let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
           *rigid_body_set[self.player_handle].translation() + projectile.offset.into_vec(),
         ));
-        collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
+        let collider_handle =
+          collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
 
         let rbs_clone = rigid_body_set.clone();
         let player_velocity = rbs_clone[self.player_handle].linvel();
@@ -907,6 +930,7 @@ impl System for PhysicsSystem {
               .insert(DestroyOnCollision)
               .insert(Damager {
                 damage: projectile.damage,
+                hitboxes: vec![collider_handle],
               }),
             label: "p".to_string(),
           }),
@@ -942,7 +966,11 @@ impl System for PhysicsSystem {
               let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
                 *rigid_body_set[rigid_body_handle].translation() + projectile.offset.into_vec(),
               ));
-              collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
+              let collider_handle = collider_set.insert_with_parent(
+                projectile.collider.clone(),
+                handle,
+                rigid_body_set,
+              );
 
               let rbs_clone = rigid_body_set.clone();
               let enemy_velocity = rbs_clone[rigid_body_handle].linvel();
@@ -958,6 +986,7 @@ impl System for PhysicsSystem {
                     .insert(DestroyOnCollision)
                     .insert(Damager {
                       damage: projectile.damage,
+                      hitboxes: vec![collider_handle],
                     }),
                   label: "ep".to_string(),
                 }),
@@ -983,19 +1012,34 @@ impl System for PhysicsSystem {
             .iter()
             .map(|enemy_to_spawn| {
               let handle = rigid_body_set.insert(enemy_to_spawn.enemy_spawn.rigid_body.clone());
-              enemy_to_spawn
+              let hitboxes = enemy_to_spawn
                 .enemy_spawn
-                .colliders
+                .hitboxes
                 .iter()
-                .for_each(|collider| {
-                  collider_set.insert_with_parent(collider.clone(), handle, rigid_body_set);
-                });
+                .map(|collider| {
+                  collider_set.insert_with_parent(collider.clone(), handle, rigid_body_set)
+                })
+                .collect::<Vec<_>>();
+              let hurtboxes = enemy_to_spawn
+                .enemy_spawn
+                .hurtboxes
+                .iter()
+                .map(|collider| {
+                  collider_set.insert_with_parent(collider.clone(), handle, rigid_body_set)
+                })
+                .collect::<Vec<_>>();
               rigid_body_set[handle].apply_impulse(enemy_to_spawn.initial_force, true);
+
               (
                 EntityHandle::RigidBody(handle),
                 Rc::new(Entity {
                   handle: EntityHandle::RigidBody(handle),
-                  components: enemy_to_spawn.enemy_spawn.into_entity_components(),
+                  components: enemy_to_spawn.enemy_spawn.into_entity_components(
+                    EnemySpawnColliderHandles {
+                      hitboxes,
+                      hurtboxes,
+                    },
+                  ),
                   label: "child enemy".to_string(),
                 }),
               )
@@ -1238,7 +1282,7 @@ impl System for PhysicsSystem {
                 label: entity.label.clone(),
                 components: entity.components.with(Damageable {
                   max_health: damageable.max_health + incoming_max_health_increase,
-                  ..(*damageable)
+                  ..(*damageable).clone()
                 }),
               }),
             ),
@@ -1415,7 +1459,7 @@ impl System for PhysicsSystem {
           Entity {
             components: entity.components.with(Damageable {
               health: (damageable.health + incoming_healing).min(damageable.max_health),
-              ..*damageable
+              ..(*damageable).clone()
             }),
             ..entity.as_ref().clone()
           }
@@ -2097,22 +2141,37 @@ fn map_damageable_damage_taken(
         Rc::new(Entity {
           components: entity.components.with(Damageable {
             current_hitstun: damageable.current_hitstun - 1.0,
-            ..*damageable
+            ..(*damageable).clone()
           }),
           ..entity.as_ref().clone()
         }),
       );
     }
 
-    let damagers = entity
-      .handle
-      .intersecting_with_colliders(rigid_body_set, narrow_phase)
-      .into_iter()
-      .flat_map(|&collider_handle| {
-        collider_set[collider_handle]
-          .parent()
-          .and_then(|rigid_body_handle| entities.get(&EntityHandle::RigidBody(rigid_body_handle)))
-          .and_then(|entity| entity.components.get::<Damager>())
+    let damagers = damageable
+      .hurtboxes
+      .iter()
+      .flat_map(|hurtbox| {
+        EntityHandle::Collider(*hurtbox)
+          .intersecting_with_colliders(rigid_body_set, narrow_phase)
+          .into_iter()
+          .flat_map(|&collider_handle| {
+            collider_set[collider_handle]
+              .parent()
+              .and_then(|rigid_body_handle| {
+                entities.get(&EntityHandle::RigidBody(rigid_body_handle))
+              })
+              .and_then(|entity| {
+                if let Some(damager) = entity.components.get::<Damager>()
+                  && damager.hitboxes.contains(&collider_handle)
+                {
+                  Some(damager)
+                } else {
+                  None
+                }
+              })
+          })
+          .collect::<Vec<_>>()
       })
       .collect::<Vec<_>>();
 
@@ -2127,7 +2186,7 @@ fn map_damageable_damage_taken(
           Rc::new(Entity {
             components: entity.components.with(Damageable {
               current_hitstun: damageable.current_hitstun - 1.0,
-              ..*damageable
+              ..(*damageable).clone()
             }),
             ..entity.as_ref().clone()
           }),
@@ -2143,7 +2202,7 @@ fn map_damageable_damage_taken(
         components: entity.components.with(Damageable {
           health: damageable.health - incoming_damage,
           current_hitstun: damageable.max_hitstun,
-          ..*damageable
+          ..(*damageable).clone()
         }),
         ..entity.as_ref().clone()
       }),
@@ -2159,7 +2218,7 @@ fn spawn_explosion(
 ) -> Entity {
   let rigid_body_handle =
     rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(translation));
-  collider_set.insert_with_parent(
+  let hitbox_handle = collider_set.insert_with_parent(
     ColliderBuilder::ball(explosion.radius)
       .collision_groups(explosion.interaction_groups)
       .enabled(true)
@@ -2173,6 +2232,7 @@ fn spawn_explosion(
     components: ComponentSet::new()
       .insert(Damager {
         damage: explosion.damage,
+        hitboxes: vec![hitbox_handle],
       })
       .insert(GravitySource {
         strength: explosion.strength,

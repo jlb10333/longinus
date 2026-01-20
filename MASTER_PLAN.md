@@ -7,9 +7,6 @@
     - Show all health tank and mana tanks in inventory
     - Show mana levels better
   - Enemies
-    - Goblin
-      - Lunges at player if in range to aggro
-    - (Rename Goblin to Slinger)
     - SniperGenerator
       - Shoots out snipers in a random direction
     - Sniper
@@ -23,7 +20,6 @@
   - Activation
     - Magnet balls
     - Crank
-    - Not
     - Min
     - Max
     - Lasers
