@@ -5,6 +5,7 @@ use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
   combat::{Projectile, distance_projection_physics},
+  controls::angle_from_vec,
   ecs::{ComponentSet, Enemy, Entity, EntityHandle},
   load_map::{
     COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL,
@@ -288,7 +289,8 @@ impl EnemyGoblin {
 #[derive(Clone)]
 pub enum EnemyImpState {
   Idle,
-  Shooting(i32),
+  Shooting,
+  ShootingCooldown(i32),
   Cruising(i32),
   Accelerating(i32, Vector2<f32>),
   Decelerating(i32),
@@ -307,12 +309,12 @@ pub struct EnemyImp {
 
 const IMP_AGGRO_RANGE: f32 = 20.0;
 const IMP_STATE_CRUISING_INITIAL_FRAMES: i32 = 70;
-const IMP_STATE_SHOOTING_INITIAL_FRAMES: i32 = 50;
+const IMP_STATE_SHOOTING_COOLDOWN_INITIAL_FRAMES: i32 = 50;
 const IMP_STATE_ACCELERATING_INITIAL_FRAMES: i32 = 10;
 const IMP_STATE_DECELERATING_INITIAL_FRAMES: i32 = 10;
 
 const IMP_MOVE_FORCE: f32 = 0.2;
-const IMP_PROJECTILE_SPEED: f32 = 1.0;
+const IMP_PROJECTILE_SPEED: f32 = 0.7;
 const IMP_PROJECTILE_DAMAGE: f32 = 5.0;
 
 impl EnemyImp {
@@ -344,7 +346,7 @@ impl EnemyImp {
           EnemyDecision {
             handle,
             enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Shooting(IMP_STATE_SHOOTING_INITIAL_FRAMES),
+              state: EnemyImpState::Shooting,
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -362,12 +364,50 @@ impl EnemyImp {
           }
         }
       }
-      EnemyImpState::Shooting(frames_left) => {
+      EnemyImpState::Shooting => EnemyDecision {
+        handle,
+        enemy: Enemy::Imp(Self {
+          state: EnemyImpState::ShootingCooldown(IMP_STATE_SHOOTING_COOLDOWN_INITIAL_FRAMES),
+        }),
+        movement_force: vec_zero(),
+        enemies_to_spawn: vec![],
+        projectiles: {
+          let base_projectile = Projectile {
+            collider: ColliderBuilder::ball(0.2)
+              .collision_groups(ENEMY_GROUPS)
+              .build(),
+            damage: IMP_PROJECTILE_DAMAGE,
+            initial_impulse: PhysicsVector::zero(),
+            offset: PhysicsVector::zero(),
+            force_mod: 0.0,
+            component_set: ComponentSet::new(),
+          };
+
+          let base_impulse_angle = angle_from_vec(PhysicsVector::from_vec(
+            player_translation - rigid_body_set[handle].translation(),
+          ));
+
+          let impulses = [
+            base_impulse_angle,
+            base_impulse_angle + PI / 6.0,
+            base_impulse_angle - PI / 6.0,
+          ];
+
+          impulses
+            .iter()
+            .map(|&angle| Projectile {
+              initial_impulse: distance_projection_physics(angle, IMP_PROJECTILE_SPEED),
+              ..base_projectile.clone()
+            })
+            .collect()
+        },
+      },
+      EnemyImpState::ShootingCooldown(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
             handle,
             enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Shooting(frames_left - 1),
+              state: EnemyImpState::ShootingCooldown(frames_left - 1),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -451,23 +491,11 @@ impl EnemyImp {
           EnemyDecision {
             handle,
             enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Idle,
+              state: EnemyImpState::Shooting,
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
-            projectiles: vec![Projectile {
-              collider: ColliderBuilder::ball(0.2)
-                .collision_groups(ENEMY_GROUPS)
-                .build(),
-              damage: IMP_PROJECTILE_DAMAGE,
-              initial_impulse: PhysicsVector::from_vec(
-                (player_translation - rigid_body_set[handle].translation()).normalize()
-                  * IMP_PROJECTILE_SPEED,
-              ),
-              offset: PhysicsVector::zero(),
-              force_mod: 0.0,
-              component_set: ComponentSet::new(),
-            }],
+            projectiles: vec![],
           }
         }
       }
