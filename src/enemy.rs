@@ -118,6 +118,14 @@ fn enemy_behavior_generator(
           Enemy::SeekerGenerator(seeker_generator) => {
             seeker_generator.behavior(rigid_body_handle, player_translation, physics_rigid_bodies)
           }
+          Enemy::Sniper(sniper) => sniper.behavior(
+            rigid_body_handle,
+            player_handle,
+            physics_colliders,
+            physics_rigid_bodies,
+            query_pipeline,
+          ),
+          Enemy::SniperGenerator(_) => todo!(),
         })
     } else {
       None
@@ -616,4 +624,163 @@ impl EnemySeekerGenerator {
       },
     }
   }
+}
+
+#[derive(Clone)]
+pub enum EnemySniperState {
+  Idle,
+  Shooting,
+  Cooldown(i32),
+}
+
+#[derive(Clone)]
+pub struct EnemySniper {
+  state: EnemySniperState,
+}
+
+const SNIPER_AGGRO_RANGE: f32 = 40.0;
+const SNIPER_COOLDOWN_INITIAL_FRAMES: i32 = 200;
+const SNIPER_PROJECTILE_DAMAGE: f32 = 15.0;
+const SNIPER_SHOOTING_FORCE: f32 = 0.2;
+
+impl EnemySniper {
+  pub fn new() -> Self {
+    Self {
+      state: EnemySniperState::Idle,
+    }
+  }
+
+  pub fn behavior(
+    &self,
+    handle: RigidBodyHandle,
+    player_handle: RigidBodyHandle,
+    collider_set: &ColliderSet,
+    rigid_body_set: &RigidBodySet,
+    query_pipeline: &QueryPipeline,
+  ) -> EnemyDecision {
+    let player_rigid_body = &rigid_body_set[player_handle];
+    let player_translation = player_rigid_body.translation();
+    let self_rigid_body = &rigid_body_set[handle];
+    let self_translation = self_rigid_body.translation();
+    let direction_to_player = player_translation - self_translation;
+
+    match self.state {
+      EnemySniperState::Idle => {
+        if let Some((reached_handle, _)) = query_pipeline.cast_ray(
+          &Ray::new((*self_translation).into(), direction_to_player),
+          SNIPER_AGGRO_RANGE,
+          true,
+        ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
+          && reached_parent_handle == player_handle
+        {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Sniper(Self {
+              state: EnemySniperState::Shooting,
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            enemy: Enemy::Sniper(Self {
+              state: EnemySniperState::Idle,
+            }),
+            handle,
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemySniperState::Shooting => EnemyDecision {
+        handle,
+        enemy: Enemy::Sniper(Self {
+          state: EnemySniperState::Cooldown(SNIPER_COOLDOWN_INITIAL_FRAMES),
+        }),
+        movement_force: vec_zero(),
+        enemies_to_spawn: vec![],
+        projectiles: {
+          let collider = ColliderBuilder::ball(0.08)
+            .collision_groups(ENEMY_GROUPS)
+            .build();
+
+          let player_relative_velocity = *player_rigid_body.linvel() - *self_rigid_body.linvel();
+
+          if let Some(lead_direction) = calculate_lead_direction(
+            direction_to_player,
+            player_relative_velocity,
+            SNIPER_SHOOTING_FORCE / collider.mass(),
+          ) {
+            vec![Projectile {
+              collider,
+              damage: SNIPER_PROJECTILE_DAMAGE,
+              initial_impulse: PhysicsVector::from_vec(lead_direction * SNIPER_SHOOTING_FORCE),
+              offset: PhysicsVector::zero(),
+              force_mod: 0.0,
+              component_set: ComponentSet::new(),
+            }]
+          } else {
+            vec![]
+          }
+        },
+      },
+      EnemySniperState::Cooldown(frames_left) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Sniper(Self {
+              state: EnemySniperState::Cooldown(frames_left - 1),
+            }),
+            enemies_to_spawn: vec![],
+            movement_force: vec_zero(),
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Sniper(Self {
+              state: EnemySniperState::Idle,
+            }),
+            enemies_to_spawn: vec![],
+            movement_force: vec_zero(),
+            projectiles: vec![],
+          }
+        }
+      }
+    }
+  }
+}
+
+#[derive(Clone)]
+pub struct EnemySniperGenerator;
+
+pub fn calculate_lead_direction(
+  target_relative_position: Vector2<f32>,
+  target_relative_velocity: Vector2<f32>,
+  bullet_speed: f32,
+) -> Option<Vector2<f32>> {
+  let a = target_relative_velocity.dot(&target_relative_velocity) - bullet_speed.powi(2);
+  let b = 2.0 * target_relative_position.dot(&target_relative_velocity);
+  let c = target_relative_position.dot(&target_relative_position);
+
+  let discriminant = b * b - 4.0 * a * c;
+
+  if discriminant < 0.0 {
+    return None;
+  }
+
+  let sqrt_disc = discriminant.sqrt();
+  let delta_times = [(-b + sqrt_disc) / (2.0 * a), (-b - sqrt_disc) / (2.0 * a)];
+
+  let delta_time = delta_times
+    .iter()
+    .filter(|&&dt| dt > 0.0)
+    .reduce(|dt1, dt2| if dt1 < dt2 { dt1 } else { dt2 });
+
+  delta_time.map(|&delta_time| {
+    (target_relative_position + (target_relative_velocity * delta_time))
+      / (bullet_speed * delta_time)
+  })
 }

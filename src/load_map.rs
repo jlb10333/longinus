@@ -49,6 +49,8 @@ pub enum MapEnemyName {
   Defender,
   Seeker,
   SeekerGenerator,
+  Sniper,
+  SniperGenerator,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -745,14 +747,7 @@ impl EnemySpawn {
   pub fn new(name: MapEnemyName, translation: Vector2<f32>) -> Self {
     let hitboxes = hitboxes_from_enemy_name(name);
     let hurtboxes = hurtboxes_from_enemy_name(name);
-    let rigid_body_builder = match name {
-      MapEnemyName::Goblin => RigidBodyBuilder::dynamic(),
-      MapEnemyName::Imp => RigidBodyBuilder::dynamic(),
-      MapEnemyName::Defender => RigidBodyBuilder::fixed(),
-      MapEnemyName::Seeker => RigidBodyBuilder::dynamic(),
-      MapEnemyName::SeekerGenerator => RigidBodyBuilder::fixed(),
-    };
-    let mut rigid_body = rigid_body_builder.translation(translation).build();
+    let mut rigid_body = RigidBodyBuilder::dynamic().translation(translation).build();
     rigid_body.wake_up(true);
     EnemySpawn {
       name: Enemy::default_from_map(name.clone()),
@@ -848,6 +843,42 @@ impl EnemySpawn {
           hurtboxes,
           health: 120.0,
           max_health: 120.0,
+          destroy_on_zero_health: true,
+          current_hitstun: 0.0,
+          max_hitstun: 0.0,
+        })
+        .insert(Damager {
+          hitboxes,
+          damage: 10.0,
+        })
+        .insert(DropOnDestroy {
+          amount: 35.0,
+          chance_health: 0.7,
+          chance_mana: 0.0,
+        }),
+      Enemy::Sniper(_) => ComponentSet::new()
+        .insert(Damageable {
+          hurtboxes,
+          health: 60.0,
+          max_health: 60.0,
+          destroy_on_zero_health: true,
+          current_hitstun: 0.0,
+          max_hitstun: 0.0,
+        })
+        .insert(Damager {
+          hitboxes,
+          damage: 10.0,
+        })
+        .insert(DropOnDestroy {
+          amount: 35.0,
+          chance_health: 0.7,
+          chance_mana: 0.0,
+        }),
+      Enemy::SniperGenerator(_) => ComponentSet::new()
+        .insert(Damageable {
+          hurtboxes,
+          health: 140.0,
+          max_health: 140.0,
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
@@ -1015,6 +1046,8 @@ fn hurtboxes_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
     MapEnemyName::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     MapEnemyName::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     MapEnemyName::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
+    MapEnemyName::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
+    MapEnemyName::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
   };
 
   collider_builders
@@ -1034,6 +1067,8 @@ fn hitboxes_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
     MapEnemyName::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     MapEnemyName::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     MapEnemyName::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
+    MapEnemyName::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
+    MapEnemyName::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
   };
 
   collider_builders

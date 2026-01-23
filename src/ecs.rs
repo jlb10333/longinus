@@ -13,7 +13,7 @@ use crate::{
   combat::WeaponModuleKind,
   enemy::{
     EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState, EnemySeeker,
-    EnemySeekerGenerator,
+    EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
   },
   load_map::{MapAbilityType, MapEnemyName},
 };
@@ -197,7 +197,10 @@ pub enum Enemy {
   Defender(EnemyDefender),
   Seeker(EnemySeeker),
   SeekerGenerator(EnemySeekerGenerator),
+  Sniper(EnemySniper),
+  SniperGenerator(EnemySniperGenerator),
 }
+
 impl Enemy {
   pub fn default_from_map(map_enemy: MapEnemyName) -> Enemy {
     match map_enemy {
@@ -210,6 +213,8 @@ impl Enemy {
       MapEnemyName::Defender => Self::Defender(EnemyDefender { cooldown: 0 }),
       MapEnemyName::Seeker => Self::Seeker(EnemySeeker),
       MapEnemyName::SeekerGenerator => Self::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 }),
+      MapEnemyName::Sniper => Self::Sniper(EnemySniper::new()),
+      MapEnemyName::SniperGenerator => Self::SniperGenerator(EnemySniperGenerator),
     }
   }
 }

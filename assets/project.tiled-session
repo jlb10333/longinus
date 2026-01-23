@@ -136,11 +136,11 @@
             }
         },
         "maps/generated/MP2.json": {
-            "scale": 3,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 273.16666666666663,
-                "y": 166.5
+                "x": 159.66666666666663,
+                "y": 212.3333333333333
             }
         },
         "maps/generated/MP20.json": {
@@ -227,8 +227,8 @@
             "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 715,
-                "y": 57
+                "x": 533.6666666666666,
+                "y": -17
             }
         },
         "maps/generated/boss1.json": {
