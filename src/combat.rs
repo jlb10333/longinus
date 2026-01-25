@@ -9,6 +9,7 @@ use crate::{
   ecs::{ComponentSet, ExplodeOnCollision},
   load_map::{
     COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL, MapSystem,
+    PLAYER_PROJECTILE_INTERACTION_GROUPS,
   },
   menu::MenuSystem,
   physics::PhysicsSystem,
@@ -203,16 +204,10 @@ impl Weapon {
 }
 
 fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projectile {
-  let collision_groups = InteractionGroups {
-    memberships: COLLISION_GROUP_PLAYER_PROJECTILE,
-    filter: COLLISION_GROUP_ENEMY.union(COLLISION_GROUP_WALL),
-    ..Default::default()
-  };
-
   match projectile_type {
     ProjectileType::Plasma => Projectile {
       collider: ColliderBuilder::ball(0.15)
-        .collision_groups(collision_groups)
+        .collision_groups(PLAYER_PROJECTILE_INTERACTION_GROUPS)
         .build(),
       damage: 10.0,
       force_mod: 0.0,
@@ -222,7 +217,7 @@ fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projecti
     },
     ProjectileType::Missile => Projectile {
       collider: ColliderBuilder::cuboid(0.3, 0.3)
-        .collision_groups(collision_groups)
+        .collision_groups(PLAYER_PROJECTILE_INTERACTION_GROUPS)
         .build(),
       damage: 20.0,
       force_mod: 2.0,
@@ -230,7 +225,7 @@ fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projecti
         radius: 1.5,
         strength: -0.5,
         damage: 5.0,
-        interaction_groups: collision_groups,
+        interaction_groups: PLAYER_PROJECTILE_INTERACTION_GROUPS,
       }),
       initial_impulse: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),

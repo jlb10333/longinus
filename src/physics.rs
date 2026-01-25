@@ -23,7 +23,7 @@ use crate::{
   load_map::{
     COLLISION_GROUP_CHAIN, COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE,
     COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL,
-    EnemySpawnColliderHandles, Map, MapAbilityType, MapSystem, MapTile,
+    EnemySpawnColliderHandles, Map, MapAbilityType, MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
   },
   menu::MenuSystem,
   save::SaveData,
@@ -67,14 +67,6 @@ pub struct PhysicsSystem {
 }
 
 const PLAYER_MAX_HITSTUN: f32 = 100.0;
-pub const PLAYER_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
-  memberships: COLLISION_GROUP_PLAYER,
-  filter: COLLISION_GROUP_WALL
-    .union(COLLISION_GROUP_ENEMY)
-    .union(COLLISION_GROUP_ENEMY_PROJECTILE)
-    .union(COLLISION_GROUP_PLAYER_INTERACTIBLE),
-  test_mode: InteractionTestMode::And,
-};
 fn load_new_map(
   map: &Map,
   map_name: &str,

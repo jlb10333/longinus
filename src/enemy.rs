@@ -9,7 +9,7 @@ use crate::{
   ecs::{ComponentSet, Enemy, Entity, EntityHandle},
   load_map::{
     COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL,
-    ENEMY_INTERACTION_GROUPS, EnemySpawn, MapEnemyName,
+    ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, MapEnemyName, RAYCAST_INTERACTION_GROUPS,
   },
   physics::PhysicsSystem,
   save::SaveData,
@@ -60,7 +60,7 @@ impl System for EnemySystem {
       physics_system.narrow_phase.query_dispatcher(),
       &physics_system.rigid_body_set,
       &physics_system.collider_set,
-      QueryFilter::default().groups(ENEMY_INTERACTION_GROUPS),
+      QueryFilter::default().groups(RAYCAST_INTERACTION_GROUPS),
     );
 
     let enemy_behavior = enemy_behavior_generator(
@@ -125,19 +125,20 @@ fn enemy_behavior_generator(
             physics_rigid_bodies,
             query_pipeline,
           ),
-          Enemy::SniperGenerator(_) => todo!(),
+          Enemy::SniperGenerator(sniper_generator) => sniper_generator.behavior(
+            rigid_body_handle,
+            player_handle,
+            physics_colliders,
+            physics_rigid_bodies,
+            query_pipeline,
+            rng,
+          ),
         })
     } else {
       None
     }
   }
 }
-
-const ENEMY_GROUPS: InteractionGroups = InteractionGroups {
-  memberships: COLLISION_GROUP_ENEMY_PROJECTILE,
-  filter: COLLISION_GROUP_PLAYER.union(COLLISION_GROUP_WALL),
-  test_mode: InteractionTestMode::And,
-};
 
 #[derive(Clone, Copy)]
 pub enum EnemyGoblinState {
@@ -382,7 +383,7 @@ impl EnemyImp {
         projectiles: {
           let base_projectile = Projectile {
             collider: ColliderBuilder::ball(0.2)
-              .collision_groups(ENEMY_GROUPS)
+              .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
               .build(),
             damage: IMP_PROJECTILE_DAMAGE,
             initial_impulse: PhysicsVector::zero(),
@@ -525,7 +526,7 @@ impl EnemyDefender {
       projectiles: if should_fire_projectiles {
         let projectile = |offset: f32| Projectile {
           collider: ColliderBuilder::ball(0.2)
-            .collision_groups(ENEMY_GROUPS)
+            .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
             .build(),
           damage: 5.0,
           initial_impulse: distance_projection_physics(offset + self.cooldown as f32 / 120.0, 0.7),
@@ -635,13 +636,13 @@ pub enum EnemySniperState {
 
 #[derive(Clone)]
 pub struct EnemySniper {
-  state: EnemySniperState,
+  pub state: EnemySniperState,
 }
 
 const SNIPER_AGGRO_RANGE: f32 = 40.0;
 const SNIPER_COOLDOWN_INITIAL_FRAMES: i32 = 200;
 const SNIPER_PROJECTILE_DAMAGE: f32 = 15.0;
-const SNIPER_SHOOTING_FORCE: f32 = 0.2;
+const SNIPER_SHOOTING_FORCE: f32 = 15.0;
 
 impl EnemySniper {
   pub fn new() -> Self {
@@ -666,6 +667,14 @@ impl EnemySniper {
 
     match self.state {
       EnemySniperState::Idle => {
+        if let Some((reached_handle, _)) = query_pipeline.cast_ray(
+          &Ray::new((*self_translation).into(), direction_to_player),
+          SNIPER_AGGRO_RANGE,
+          true,
+        ) {
+          println!("{:?} {:?}", reached_handle, player_handle);
+        }
+
         if let Some((reached_handle, _)) = query_pipeline.cast_ray(
           &Ray::new((*self_translation).into(), direction_to_player),
           SNIPER_AGGRO_RANGE,
@@ -703,7 +712,8 @@ impl EnemySniper {
         enemies_to_spawn: vec![],
         projectiles: {
           let collider = ColliderBuilder::ball(0.08)
-            .collision_groups(ENEMY_GROUPS)
+            .mass(1.0)
+            .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
             .build();
 
           let player_relative_velocity = *player_rigid_body.linvel() - *self_rigid_body.linvel();
@@ -754,7 +764,139 @@ impl EnemySniper {
 }
 
 #[derive(Clone)]
-pub struct EnemySniperGenerator;
+pub enum EnemySniperGeneratorState {
+  Idle,
+  Generating(i32),
+  Cooldown(i32),
+}
+
+#[derive(Clone)]
+pub struct EnemySniperGenerator {
+  state: EnemySniperGeneratorState,
+}
+
+const SNIPER_GENERATOR_GENERATING_INITIAL_FRAMES: i32 = 60;
+const SNIPER_GENERATOR_NUM_SNIPERS_GENERATED: i32 = 3;
+const SNIPER_GENERATOR_GENERATING_INTERVAL: i32 =
+  SNIPER_GENERATOR_GENERATING_INITIAL_FRAMES / SNIPER_GENERATOR_NUM_SNIPERS_GENERATED;
+const SNIPER_GENERATOR_COOLDOWN_INITIAL_FRAMES: i32 = 500;
+const SNIPER_GENERATOR_GENERATING_INITIAL_FORCE: f32 = 10.0;
+
+impl EnemySniperGenerator {
+  pub fn new() -> Self {
+    Self {
+      state: EnemySniperGeneratorState::Idle,
+    }
+  }
+
+  pub fn behavior(
+    &self,
+    handle: RigidBodyHandle,
+    player_handle: RigidBodyHandle,
+    collider_set: &ColliderSet,
+    rigid_body_set: &RigidBodySet,
+    query_pipeline: &QueryPipeline,
+    rng: &RandGenerator,
+  ) -> EnemyDecision {
+    let player_rigid_body = &rigid_body_set[player_handle];
+    let player_translation = player_rigid_body.translation();
+    let self_rigid_body = &rigid_body_set[handle];
+    let self_translation = self_rigid_body.translation();
+    let direction_to_player = player_translation - self_translation;
+
+    match self.state {
+      EnemySniperGeneratorState::Idle => {
+        if let Some((reached_handle, _)) = query_pipeline.cast_ray(
+          &Ray::new((*self_translation).into(), direction_to_player),
+          SNIPER_AGGRO_RANGE,
+          true,
+        ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
+          && reached_parent_handle == player_handle
+        {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::SniperGenerator(Self {
+              state: EnemySniperGeneratorState::Generating(
+                SNIPER_GENERATOR_GENERATING_INITIAL_FRAMES,
+              ),
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            enemy: Enemy::SniperGenerator(Self {
+              state: EnemySniperGeneratorState::Idle,
+            }),
+            handle,
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemySniperGeneratorState::Generating(frames_left) => {
+        if frames_left > 0 {
+          let enemies_to_spawn = if frames_left % SNIPER_GENERATOR_GENERATING_INTERVAL == 0 {
+            let rng_angle = rng.gen_range(0.0, 2.0 * PI);
+            let initial_force =
+              distance_projection_physics(rng_angle, SNIPER_GENERATOR_GENERATING_INITIAL_FORCE)
+                .into_vec();
+            vec![EnemyDecisionEnemySpawn {
+              initial_force,
+              enemy_spawn: EnemySpawn::new(MapEnemyName::Sniper, *self_translation),
+            }]
+          } else {
+            vec![]
+          };
+          EnemyDecision {
+            enemy: Enemy::SniperGenerator(Self {
+              state: EnemySniperGeneratorState::Generating(frames_left - 1),
+            }),
+            handle,
+            movement_force: vec_zero(),
+            enemies_to_spawn,
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            enemy: Enemy::SniperGenerator(Self {
+              state: EnemySniperGeneratorState::Cooldown(SNIPER_GENERATOR_COOLDOWN_INITIAL_FRAMES),
+            }),
+            handle,
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemySniperGeneratorState::Cooldown(frames_left) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            enemy: Enemy::SniperGenerator(Self {
+              state: EnemySniperGeneratorState::Cooldown(frames_left - 1),
+            }),
+            handle,
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            enemy: Enemy::SniperGenerator(Self {
+              state: EnemySniperGeneratorState::Idle,
+            }),
+            handle,
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+    }
+  }
+}
 
 pub fn calculate_lead_direction(
   target_relative_position: Vector2<f32>,

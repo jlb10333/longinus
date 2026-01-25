@@ -709,10 +709,11 @@ pub const COLLISION_GROUP_ENEMY: Group = Group::GROUP_4;
 pub const COLLISION_GROUP_ENEMY_PROJECTILE: Group = Group::GROUP_5;
 pub const COLLISION_GROUP_PLAYER_INTERACTIBLE: Group = Group::GROUP_6;
 pub const COLLISION_GROUP_CHAIN: Group = Group::GROUP_7;
+pub const COLLISION_GROUP_GRAVITY: Group = Group::GROUP_8;
 
 pub const GRAVITY_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
-  memberships: Group::all(),
-  filter: COLLISION_GROUP_WALL.complement(),
+  memberships: COLLISION_GROUP_GRAVITY,
+  filter: Group::all(),
   test_mode: InteractionTestMode::And,
 };
 
@@ -722,11 +723,44 @@ pub const PLAYER_INTERACTIBLE_GROUPS: InteractionGroups = InteractionGroups {
   test_mode: InteractionTestMode::And,
 };
 
+pub const PLAYER_PROJECTILE_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
+  memberships: COLLISION_GROUP_PLAYER_PROJECTILE,
+  filter: COLLISION_GROUP_ENEMY
+    .union(COLLISION_GROUP_WALL)
+    .union(COLLISION_GROUP_GRAVITY),
+  test_mode: InteractionTestMode::And,
+};
+
 pub const ENEMY_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
   memberships: COLLISION_GROUP_ENEMY,
   filter: COLLISION_GROUP_PLAYER
     .union(COLLISION_GROUP_PLAYER_PROJECTILE)
-    .union(COLLISION_GROUP_WALL),
+    .union(COLLISION_GROUP_WALL)
+    .union(COLLISION_GROUP_GRAVITY),
+  test_mode: InteractionTestMode::And,
+};
+
+pub const ENEMY_PROJECTILE_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
+  memberships: COLLISION_GROUP_ENEMY_PROJECTILE,
+  filter: COLLISION_GROUP_PLAYER
+    .union(COLLISION_GROUP_WALL)
+    .union(COLLISION_GROUP_GRAVITY),
+  test_mode: InteractionTestMode::And,
+};
+
+pub const RAYCAST_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
+  memberships: COLLISION_GROUP_ENEMY,
+  filter: COLLISION_GROUP_PLAYER.union(COLLISION_GROUP_WALL),
+  test_mode: InteractionTestMode::And,
+};
+
+pub const PLAYER_INTERACTION_GROUPS: InteractionGroups = InteractionGroups {
+  memberships: COLLISION_GROUP_PLAYER,
+  filter: COLLISION_GROUP_WALL
+    .union(COLLISION_GROUP_ENEMY)
+    .union(COLLISION_GROUP_ENEMY_PROJECTILE)
+    .union(COLLISION_GROUP_PLAYER_INTERACTIBLE)
+    .union(COLLISION_GROUP_GRAVITY),
   test_mode: InteractionTestMode::And,
 };
 
@@ -1047,7 +1081,7 @@ fn hurtboxes_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
     MapEnemyName::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     MapEnemyName::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
     MapEnemyName::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
-    MapEnemyName::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
+    MapEnemyName::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7).mass(50.0)],
   };
 
   collider_builders

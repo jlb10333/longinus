@@ -8,14 +8,16 @@ use crate::{
   camera::CameraSystem,
   combat::{
     CombatSystem, Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind,
-    distance_projection_screen, get_reticle_pos, get_slot_positions, weapon_module_from_kind,
+    distance_projection_physics, distance_projection_screen, get_reticle_pos, get_slot_positions,
+    weapon_module_from_kind,
   },
   controls::ControlsSystem,
   ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id},
+  enemy::{EnemySniperState, calculate_lead_direction},
   graphics_utils::{draw_collider, draw_label},
-  load_map::{MapSystem, physics_scalar_to_map},
+  load_map::{MapSystem, PLAYER_INTERACTION_GROUPS, physics_scalar_to_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
-  physics::{PLAYER_INTERACTION_GROUPS, PhysicsSystem},
+  physics::PhysicsSystem,
   save::SaveSystem,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
@@ -90,6 +92,38 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       /* Debug */
       if SHOW_COLLIDERS {
         physics_system.entities.iter().for_each(|(handle, entity)| {
+          /* Debug: draw leading lines for snipers */
+          if let Some(enemy) = entity.components.get::<Enemy>()
+            && let Enemy::Sniper(sniper) = enemy.as_ref()
+            && matches!(sniper.state, EnemySniperState::Cooldown(_))
+            && let EntityHandle::RigidBody(handle) = handle
+          {
+            let player_rigid_body = &physics_system.rigid_body_set[physics_system.player_handle];
+            let self_rigid_body = &physics_system.rigid_body_set[*handle];
+            let player_relative_velocity = *player_rigid_body.linvel() - *self_rigid_body.linvel();
+
+            let direction_to_player =
+              player_rigid_body.translation() - self_rigid_body.translation();
+
+            if let Some(lead_direction) =
+              calculate_lead_direction(direction_to_player, player_relative_velocity, 5.0)
+            {
+              let self_screen_translation = PhysicsVector::from_vec(*self_rigid_body.translation())
+                .into_pos(camera_system.translation);
+              let lead_direction_screen =
+                PhysicsVector::from_vec((lead_direction * 1000.0) + self_rigid_body.translation())
+                  .into_pos(camera_system.translation);
+              draw_line(
+                self_screen_translation.x(),
+                self_screen_translation.y(),
+                lead_direction_screen.x(),
+                lead_direction_screen.y(),
+                2.0,
+                COLOR_2,
+              );
+            }
+          }
+
           let alpha = if let Some(gravity_source) = entity.components.get::<GravitySource>()
             && let Some(target_activator_id) = gravity_source.activator_id
             && let Some((_, other_entity)) =

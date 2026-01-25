@@ -735,6 +735,27 @@
                  "width":0,
                  "x":344,
                  "y":224
+                }, 
+                {
+                 "id":37,
+                 "name":"SniperGenerator",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":232,
+                 "y":112
+                }, 
+                {
+                 "id":38,
+                 "name":"Sniper",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":424,
+                 "y":240
+                }, 
+                {
+                 "id":39,
+                 "name":"Sniper",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":448,
+                 "y":88
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -743,7 +764,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":37,
+ "nextobjectid":40,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

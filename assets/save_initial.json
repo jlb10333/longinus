@@ -1,13 +1,13 @@
 {
   "player_spawn_id": 6,
   "map_name": "start",
-  "unequipped_modules": [],
+  "unequipped_modules": ["Missile"],
   "equipped_modules": [
     [
       null,
       null,
       null,
-      "Missile"
+      "Plasma"
     ],
     [
       null,

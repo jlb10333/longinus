@@ -62,13 +62,6 @@
                  "y":64
                 }, 
                 {
-                 "id":5,
-                 "name":"Goblin",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":120,
-                 "y":80
-                }, 
-                {
                  "id":7,
                  "name":"Imp",
                  "template":"templates\/EnemySpawn.tx",

@@ -214,7 +214,7 @@ impl Enemy {
       MapEnemyName::Seeker => Self::Seeker(EnemySeeker),
       MapEnemyName::SeekerGenerator => Self::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 }),
       MapEnemyName::Sniper => Self::Sniper(EnemySniper::new()),
-      MapEnemyName::SniperGenerator => Self::SniperGenerator(EnemySniperGenerator),
+      MapEnemyName::SniperGenerator => Self::SniperGenerator(EnemySniperGenerator::new()),
     }
   }
 }

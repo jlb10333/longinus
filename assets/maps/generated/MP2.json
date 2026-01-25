@@ -266,6 +266,40 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":168,
                  "y":184
+                }, 
+                {
+                 "id":20,
+                 "name":"Sniper",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":123.5,
+                 "y":122
+                }, 
+                {
+                 "height":0,
+                 "id":21,
+                 "name":"Gravity Source",
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":0
+                        }, 
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":3
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":-0.075
+                        }],
+                 "rotation":0,
+                 "type":"GravitySource",
+                 "visible":true,
+                 "width":0,
+                 "x":112,
+                 "y":168
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -274,7 +308,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":20,
+ "nextobjectid":22,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",
