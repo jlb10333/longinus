@@ -10,7 +10,7 @@ use serde_literals::lit_str;
 
 use crate::{
   combat::{WeaponModuleKind, distance_projection_physics},
-  ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Enemy},
+  ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Id},
   f::MonadTranslate,
   physics::PhysicsSystem,
   save::SaveData,
@@ -45,6 +45,7 @@ pub enum MapEnemyName {
   /* Dragonspawn */
   Goblin,
   Imp,
+  Aranea,
   /* Angelic Constructs */
   Defender,
   Seeker,
@@ -54,11 +55,24 @@ pub enum MapEnemyName {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapEnemySpawnAraneaEggIdClass {
+  EggId,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapEnemySpawnAraneaEggId {
+  #[serde(rename = "name")]
+  _name: MapEnemySpawnAraneaEggIdClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 struct MapEnemySpawn {
   x: f32,
   y: f32,
   name: MapEnemyName,
   template: EnemySpawnTemplate,
+  properties: Option<(MapEnemySpawnAraneaEggId,)>,
 }
 
 impl MapEnemySpawn {
@@ -67,8 +81,39 @@ impl MapEnemySpawn {
       self.x * 0.125 * TILE_DIMENSION_PHYSICS,
       (map_height - self.y) * 0.125 * TILE_DIMENSION_PHYSICS
     ]);
-    EnemySpawn::new(self.name, translation.into_vec())
+    EnemySpawn::new(
+      match self.name {
+        MapEnemyName::Goblin => EnemySpawnEnemy::Goblin,
+        MapEnemyName::Imp => EnemySpawnEnemy::Imp,
+        MapEnemyName::Aranea => EnemySpawnEnemy::Aranea(Id {
+          id: self.properties.as_ref().unwrap().0.value,
+        }),
+        MapEnemyName::Defender => EnemySpawnEnemy::Defender,
+        MapEnemyName::Seeker => EnemySpawnEnemy::Seeker,
+        MapEnemyName::SeekerGenerator => EnemySpawnEnemy::SeekerGenerator,
+        MapEnemyName::Sniper => EnemySpawnEnemy::Sniper,
+        MapEnemyName::SniperGenerator => EnemySpawnEnemy::SniperGenerator,
+      },
+      translation.into_vec(),
+    )
   }
+}
+
+lit_str!(MapAraneaEggTemplatePath, "templates/Aranea Egg.tx");
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum MapAraneaEggTemplate {
+  #[serde(with = "MapAraneaEggTemplatePath")]
+  Path,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapAraneaEgg {
+  id: i32,
+  x: f32,
+  y: f32,
+  template: MapAraneaEggTemplate,
 }
 
 lit_str!(PlayerSpawnTemplatePath, "templates/Player Spawn.tx");
@@ -626,6 +671,7 @@ struct MapTerminal {
 #[serde(untagged)]
 enum Object {
   EnemySpawn(MapEnemySpawn),
+  AraneaEgg(MapAraneaEgg),
   PlayerSpawn(MapPlayerSpawn),
   ItemPickup(MapItemPickup),
   MapTransition(MapMapTransition),
@@ -770,21 +816,35 @@ pub struct EnemySpawnColliderHandles {
 }
 
 #[derive(Clone)]
+pub enum EnemySpawnEnemy {
+  /* Dragonspawn */
+  Goblin,
+  Imp,
+  Aranea(Id),
+  /* Angelic Constructs */
+  Defender,
+  Seeker,
+  SeekerGenerator,
+  Sniper,
+  SniperGenerator,
+}
+
+#[derive(Clone)]
 pub struct EnemySpawn {
-  pub name: Enemy,
+  pub name: EnemySpawnEnemy,
   pub hitboxes: Vec<Collider>,
   pub hurtboxes: Vec<Collider>,
   pub rigid_body: RigidBody,
 }
 
 impl EnemySpawn {
-  pub fn new(name: MapEnemyName, translation: Vector2<f32>) -> Self {
-    let hitboxes = hitboxes_from_enemy_name(name);
-    let hurtboxes = hurtboxes_from_enemy_name(name);
+  pub fn new(name: EnemySpawnEnemy, translation: Vector2<f32>) -> Self {
+    let hitboxes = hitboxes_from_enemy_name(&name);
+    let hurtboxes = hurtboxes_from_enemy_name(&name);
     let mut rigid_body = RigidBodyBuilder::dynamic().translation(translation).build();
     rigid_body.wake_up(true);
     EnemySpawn {
-      name: Enemy::default_from_map(name.clone()),
+      name,
       hitboxes,
       hurtboxes,
       rigid_body,
@@ -800,7 +860,7 @@ impl EnemySpawn {
       hurtboxes,
     } = collider_handles;
     match self.name {
-      Enemy::Goblin(_) => ComponentSet::new()
+      EnemySpawnEnemy::Goblin => ComponentSet::new()
         .insert(Damageable {
           health: 60.0,
           max_health: 60.0,
@@ -818,7 +878,7 @@ impl EnemySpawn {
           chance_health: 0.5,
           chance_mana: 0.0,
         }),
-      Enemy::Imp(_) => ComponentSet::new()
+      EnemySpawnEnemy::Imp => ComponentSet::new()
         .insert(Damageable {
           hurtboxes,
           health: 50.0,
@@ -836,7 +896,25 @@ impl EnemySpawn {
           chance_health: 0.5,
           chance_mana: 0.0,
         }),
-      Enemy::Defender(_) => ComponentSet::new()
+      EnemySpawnEnemy::Aranea(_) => ComponentSet::new()
+        .insert(Damageable {
+          hurtboxes,
+          health: 80.0,
+          max_health: 80.0,
+          destroy_on_zero_health: true,
+          current_hitstun: 0.0,
+          max_hitstun: 0.0,
+        })
+        .insert(Damager {
+          hitboxes,
+          damage: 10.0,
+        })
+        .insert(DropOnDestroy {
+          amount: 15.0,
+          chance_health: 0.5,
+          chance_mana: 0.0,
+        }),
+      EnemySpawnEnemy::Defender => ComponentSet::new()
         .insert(Damageable {
           hurtboxes,
           health: 100.0,
@@ -854,7 +932,7 @@ impl EnemySpawn {
           chance_health: 0.4,
           chance_mana: 0.0,
         }),
-      Enemy::Seeker(_) => ComponentSet::new()
+      EnemySpawnEnemy::Seeker => ComponentSet::new()
         .insert(Damageable {
           hurtboxes,
           health: 30.0,
@@ -872,7 +950,7 @@ impl EnemySpawn {
           chance_health: 0.5,
           chance_mana: 0.0,
         }),
-      Enemy::SeekerGenerator(_) => ComponentSet::new()
+      EnemySpawnEnemy::SeekerGenerator => ComponentSet::new()
         .insert(Damageable {
           hurtboxes,
           health: 120.0,
@@ -890,7 +968,7 @@ impl EnemySpawn {
           chance_health: 0.7,
           chance_mana: 0.0,
         }),
-      Enemy::Sniper(_) => ComponentSet::new()
+      EnemySpawnEnemy::Sniper => ComponentSet::new()
         .insert(Damageable {
           hurtboxes,
           health: 60.0,
@@ -908,7 +986,7 @@ impl EnemySpawn {
           chance_health: 0.7,
           chance_mana: 0.0,
         }),
-      Enemy::SniperGenerator(_) => ComponentSet::new()
+      EnemySpawnEnemy::SniperGenerator => ComponentSet::new()
         .insert(Damageable {
           hurtboxes,
           health: 140.0,
@@ -927,8 +1005,13 @@ impl EnemySpawn {
           chance_mana: 0.0,
         }),
     }
-    .insert(self.name.clone())
   }
+}
+
+#[derive(Clone)]
+pub struct AraneaEgg {
+  pub id: i32,
+  pub collider: Collider,
 }
 
 #[derive(Clone)]
@@ -1073,15 +1156,16 @@ pub struct Wall {
   pub damageable: Option<f32>,
 }
 
-fn hurtboxes_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
+fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
   let collider_builders = match name {
-    MapEnemyName::Goblin => vec![ColliderBuilder::cuboid(0.4, 0.4)],
-    MapEnemyName::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
-    MapEnemyName::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
-    MapEnemyName::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
-    MapEnemyName::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
-    MapEnemyName::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
-    MapEnemyName::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7).mass(50.0)],
+    EnemySpawnEnemy::Goblin => vec![ColliderBuilder::cuboid(0.4, 0.4)],
+    EnemySpawnEnemy::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
+    EnemySpawnEnemy::Aranea(_) => vec![ColliderBuilder::cuboid(0.3, 0.3)],
+    EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
+    EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
+    EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
+    EnemySpawnEnemy::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
+    EnemySpawnEnemy::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7).mass(50.0)],
   };
 
   collider_builders
@@ -1094,15 +1178,16 @@ fn hurtboxes_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
     .collect()
 }
 
-fn hitboxes_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
+fn hitboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
   let collider_builders = match name {
-    MapEnemyName::Goblin => vec![ColliderBuilder::cuboid(0.4, 0.4)],
-    MapEnemyName::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
-    MapEnemyName::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
-    MapEnemyName::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
-    MapEnemyName::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
-    MapEnemyName::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
-    MapEnemyName::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
+    EnemySpawnEnemy::Goblin => vec![ColliderBuilder::cuboid(0.4, 0.4)],
+    EnemySpawnEnemy::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
+    EnemySpawnEnemy::Aranea(_) => vec![ColliderBuilder::cuboid(0.3, 0.3)],
+    EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
+    EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
+    EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
+    EnemySpawnEnemy::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
+    EnemySpawnEnemy::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
   };
 
   collider_builders
@@ -1119,6 +1204,7 @@ fn hitboxes_from_enemy_name(name: MapEnemyName) -> Vec<Collider> {
 pub enum MapComponent {
   Player(PlayerSpawn),
   Enemy(EnemySpawn),
+  AraneaEgg(AraneaEgg),
   ItemPickup(ItemPickup),
   MapTransition(MapTransition),
   SavePoint(SavePoint),
@@ -1151,6 +1237,20 @@ impl Object {
   pub fn into(&self, map_height: f32) -> MapComponent {
     match self {
       Object::EnemySpawn(enemy_spawn) => MapComponent::Enemy(enemy_spawn.into(map_height)),
+
+      Object::AraneaEgg(aranea_egg) => MapComponent::AraneaEgg(AraneaEgg {
+        id: aranea_egg.id,
+        collider: ColliderBuilder::ball(0.5)
+          .translation(physics_translation_from_map(
+            aranea_egg.x,
+            aranea_egg.y,
+            0.0,
+            0.0,
+            map_height,
+          ))
+          .sensor(true)
+          .build(),
+      }),
 
       Object::PlayerSpawn(player_spawn) => MapComponent::Player(PlayerSpawn {
         id: player_spawn.id,
@@ -1670,6 +1770,7 @@ pub struct Map {
   pub colliders: Vec<MapTile>,
   pub player_spawns: Vec<PlayerSpawn>,
   pub enemy_spawns: Vec<EnemySpawn>,
+  pub aranea_eggs: HashTrieMap<Id, AraneaEgg>,
   pub item_pickups: Vec<ItemPickup>,
   pub map_transitions: Vec<MapTransition>,
   pub save_points: Vec<SavePoint>,
@@ -1713,6 +1814,17 @@ impl RawMap {
         }
       })
       .collect();
+
+    let aranea_eggs = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::AraneaEgg(aranea_egg) = object {
+          vec![(Id { id: aranea_egg.id }, aranea_egg.clone())]
+        } else {
+          vec![]
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
 
     let player_spawns = converted_entities
       .iter()
@@ -1940,6 +2052,7 @@ impl RawMap {
       bottom_right: physics_translation_from_map(map_width, map_height, 0.0, 0.0, map_height),
       colliders,
       enemy_spawns,
+      aranea_eggs,
       player_spawns,
       item_pickups,
       map_transitions,

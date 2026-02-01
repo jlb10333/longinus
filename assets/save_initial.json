@@ -1,6 +1,6 @@
 {
-  "player_spawn_id": 6,
-  "map_name": "start",
+  "player_spawn_id": 7,
+  "map_name": "MP7",
   "unequipped_modules": ["Missile"],
   "equipped_modules": [
     [

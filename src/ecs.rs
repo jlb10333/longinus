@@ -12,8 +12,8 @@ use rpds::List;
 use crate::{
   combat::WeaponModuleKind,
   enemy::{
-    EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState, EnemySeeker,
-    EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
+    EnemyAranea, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState,
+    EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
   },
   load_map::{MapAbilityType, MapEnemyName},
 };
@@ -193,6 +193,7 @@ pub enum Enemy {
   /* Dragonspawn */
   Goblin(EnemyGoblin),
   Imp(EnemyImp),
+  Aranea(EnemyAranea),
   /* Angelic Constructs */
   Defender(EnemyDefender),
   Seeker(EnemySeeker),
@@ -201,23 +202,6 @@ pub enum Enemy {
   SniperGenerator(EnemySniperGenerator),
 }
 
-impl Enemy {
-  pub fn default_from_map(map_enemy: MapEnemyName) -> Enemy {
-    match map_enemy {
-      MapEnemyName::Goblin => Self::Goblin(EnemyGoblin {
-        state: EnemyGoblinState::initial(),
-      }),
-      MapEnemyName::Imp => Self::Imp(EnemyImp {
-        state: EnemyImpState::initial(),
-      }),
-      MapEnemyName::Defender => Self::Defender(EnemyDefender { cooldown: 0 }),
-      MapEnemyName::Seeker => Self::Seeker(EnemySeeker),
-      MapEnemyName::SeekerGenerator => Self::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 }),
-      MapEnemyName::Sniper => Self::Sniper(EnemySniper::new()),
-      MapEnemyName::SniperGenerator => Self::SniperGenerator(EnemySniperGenerator::new()),
-    }
-  }
-}
 impl Component for Enemy {}
 
 pub struct GivesItemOnCollision {
@@ -351,6 +335,7 @@ pub struct Terminal {
 }
 impl Component for Terminal {}
 
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct Id {
   pub id: i32,
 }

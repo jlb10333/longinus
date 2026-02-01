@@ -6,10 +6,11 @@ use rapier2d::{na::Vector2, prelude::*};
 use crate::{
   combat::{Projectile, distance_projection_physics},
   controls::angle_from_vec,
-  ecs::{ComponentSet, Enemy, Entity, EntityHandle},
+  ecs::{ComponentSet, Damageable, Enemy, Entity, EntityHandle},
   load_map::{
     COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL,
-    ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, MapEnemyName, RAYCAST_INTERACTION_GROUPS,
+    ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, EnemySpawnEnemy, MapEnemyName,
+    RAYCAST_INTERACTION_GROUPS,
   },
   physics::PhysicsSystem,
   save::SaveData,
@@ -67,6 +68,7 @@ impl System for EnemySystem {
       physics_system.player_handle,
       &physics_system.rigid_body_set,
       &physics_system.collider_set,
+      &physics_system.narrow_phase,
       &query_pipeline,
       &rng,
     );
@@ -85,6 +87,7 @@ fn enemy_behavior_generator(
   player_handle: RigidBodyHandle,
   physics_rigid_bodies: &RigidBodySet,
   physics_colliders: &ColliderSet,
+  narrow_phase: &NarrowPhase,
   query_pipeline: &QueryPipeline,
   rng: &RandGenerator,
 ) -> impl Fn((&EntityHandle, &Rc<Entity>)) -> Option<EnemyDecision> {
@@ -111,6 +114,17 @@ fn enemy_behavior_generator(
             query_pipeline,
             rng,
           ),
+          Enemy::Aranea(aranea) => {
+            let damageable = entity.components.get::<Damageable>().unwrap();
+            aranea.behavior(
+              rigid_body_handle,
+              damageable.as_ref(),
+              player_translation,
+              physics_colliders,
+              physics_rigid_bodies,
+              narrow_phase,
+            )
+          }
           Enemy::Defender(defender) => defender.behavior(rigid_body_handle),
           Enemy::Seeker(seeker) => {
             seeker.behavior(rigid_body_handle, player_translation, physics_rigid_bodies)
@@ -513,6 +527,201 @@ impl EnemyImp {
 }
 
 #[derive(Clone)]
+pub enum EnemyAraneaState {
+  Idle,
+  Launching(i32),
+  Stopping(i32),
+  Shooting,
+  Cooldown(i32),
+}
+
+#[derive(Clone)]
+pub struct EnemyAranea {
+  state: EnemyAraneaState,
+  egg_handle: ColliderHandle,
+}
+
+const ENEMY_ARANEA_LAUNCH_FORCE: f32 = 5.0;
+const ENEMY_ARANEA_STOPPING_FRAMES: i32 = 5;
+const ENEMY_ARANEA_STOPPING_FORCE: f32 =
+  ENEMY_ARANEA_LAUNCH_FORCE / ENEMY_ARANEA_STOPPING_FRAMES as f32;
+const ENEMY_ARANEA_COOLDOWN_INITIAL_FRAMES: i32 = 35;
+const ENEMY_ARANEA_SHOOTING_FORCE: f32 = 0.65;
+const ENEMY_ARANEA_PROJECTILE_DAMAGE: f32 = 10.0;
+
+impl EnemyAranea {
+  pub fn new(egg_handle: ColliderHandle) -> Self {
+    Self {
+      state: EnemyAraneaState::Idle,
+      egg_handle,
+    }
+  }
+
+  pub fn behavior(
+    &self,
+    handle: RigidBodyHandle,
+    damageable: &Damageable,
+    player_translation: &Vector2<f32>,
+    collider_set: &ColliderSet,
+    rigid_body_set: &RigidBodySet,
+    narrow_phase: &NarrowPhase,
+  ) -> EnemyDecision {
+    match self.state {
+      EnemyAraneaState::Idle => {
+        if narrow_phase
+          .intersection_pairs_with(self.egg_handle)
+          .any(|(_, _, colliding)| colliding)
+          || damageable.health < damageable.max_health
+        {
+          let self_rigid_body = &rigid_body_set[handle];
+
+          let self_translation = self_rigid_body.translation();
+
+          let egg_translation = collider_set[self.egg_handle].translation();
+          let vector_to_egg = egg_translation - self_translation;
+
+          let movement_force = vector_to_egg.normalize() * ENEMY_ARANEA_LAUNCH_FORCE;
+
+          let launch_frames = (vector_to_egg.magnitude()
+            / (movement_force.magnitude() / self_rigid_body.mass())
+            * 60.0) as i32;
+
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Aranea(Self {
+              egg_handle: self.egg_handle,
+              state: EnemyAraneaState::Launching(launch_frames),
+            }),
+            movement_force,
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Aranea(Self {
+              egg_handle: self.egg_handle,
+              state: EnemyAraneaState::Idle,
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemyAraneaState::Launching(frames_left) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Aranea(Self {
+              egg_handle: self.egg_handle,
+              state: EnemyAraneaState::Launching(frames_left - 1),
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Aranea(Self {
+              egg_handle: self.egg_handle,
+              state: EnemyAraneaState::Stopping(ENEMY_ARANEA_STOPPING_FRAMES),
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemyAraneaState::Stopping(frames_left) => {
+        let self_rigid_body = &rigid_body_set[handle];
+
+        if frames_left > 0 {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Aranea(Self {
+              egg_handle: self.egg_handle,
+              state: EnemyAraneaState::Stopping(frames_left - 1),
+            }),
+            movement_force: self_rigid_body.linvel() * -1.0 * ENEMY_ARANEA_STOPPING_FORCE,
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Aranea(Self {
+              egg_handle: self.egg_handle,
+              state: EnemyAraneaState::Cooldown(ENEMY_ARANEA_COOLDOWN_INITIAL_FRAMES),
+            }),
+            movement_force: self_rigid_body.linvel() * -1.0 * ENEMY_ARANEA_STOPPING_FORCE,
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemyAraneaState::Cooldown(frames_left) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Aranea(Self {
+              egg_handle: self.egg_handle,
+              state: EnemyAraneaState::Cooldown(frames_left - 1),
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Aranea(Self {
+              egg_handle: self.egg_handle,
+              state: EnemyAraneaState::Shooting,
+            }),
+            movement_force: vec_zero(),
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemyAraneaState::Shooting => {
+        let self_rigid_body = &rigid_body_set[handle];
+
+        let self_translation = self_rigid_body.translation();
+
+        let vector_to_player = player_translation - self_translation;
+
+        let shooting_force = vector_to_player.normalize() * ENEMY_ARANEA_SHOOTING_FORCE;
+
+        let projectile = Projectile {
+          collider: ColliderBuilder::ball(0.2)
+            .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
+            .build(),
+          damage: ENEMY_ARANEA_PROJECTILE_DAMAGE,
+          initial_impulse: PhysicsVector::from_vec(shooting_force),
+          offset: PhysicsVector::zero(),
+          force_mod: 0.0,
+          component_set: ComponentSet::new(),
+        };
+
+        EnemyDecision {
+          handle,
+          enemy: Enemy::Aranea(Self {
+            egg_handle: self.egg_handle,
+            state: EnemyAraneaState::Cooldown(ENEMY_ARANEA_COOLDOWN_INITIAL_FRAMES),
+          }),
+          projectiles: vec![projectile],
+          movement_force: vec_zero(),
+          enemies_to_spawn: vec![],
+        }
+      }
+    }
+  }
+}
+
+#[derive(Clone)]
 pub struct EnemyDefender {
   pub cooldown: i32,
 }
@@ -618,7 +827,7 @@ impl EnemySeekerGenerator {
         let initial_force = direction_to_player.normalize() * SEEKER_GENERATOR_INITIAL_FORCE;
         vec![EnemyDecisionEnemySpawn {
           initial_force,
-          enemy_spawn: EnemySpawn::new(MapEnemyName::Seeker, *self_rigid_body.translation()),
+          enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Seeker, *self_rigid_body.translation()),
         }]
       } else {
         vec![]
@@ -845,7 +1054,7 @@ impl EnemySniperGenerator {
                 .into_vec();
             vec![EnemyDecisionEnemySpawn {
               initial_force,
-              enemy_spawn: EnemySpawn::new(MapEnemyName::Sniper, *self_translation),
+              enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Sniper, *self_translation),
             }]
           } else {
             vec![]

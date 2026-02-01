@@ -7,12 +7,12 @@
     "expandedProjectPaths": [
         "maps/templates",
         "maps/generated/templates",
-        "maps/old",
-        "maps/templates/enemies",
+        ".",
         "maps/generated",
         "maps/tilesets",
-        ".",
-        "maps"
+        "maps",
+        "maps/templates/enemies",
+        "maps/old"
     ],
     "fileStates": {
         "maps/MP1.json": {
@@ -96,11 +96,11 @@
             }
         },
         "maps/generated/MP11.json": {
-            "scale": 4,
+            "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 393.375,
-                "y": 43.875
+                "x": 1362.5,
+                "y": 1456.5
             }
         },
         "maps/generated/MP14.json": {
@@ -139,16 +139,16 @@
             "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 273.66666666666663,
-                "y": 485.66666666666663
+                "x": 225.66666666666663,
+                "y": 85
             }
         },
         "maps/generated/MP20.json": {
             "scale": 1.5,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 99.66666666666663,
-                "y": 335.6666666666667
+                "x": 199.66666666666663,
+                "y": 120
             }
         },
         "maps/generated/MP21.json": {
@@ -179,8 +179,8 @@
             "scale": 2,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 861.75,
-                "y": 649.75
+                "x": 1207.25,
+                "y": 523.25
             }
         },
         "maps/generated/MP4.json": {
@@ -224,11 +224,11 @@
             }
         },
         "maps/generated/boost.json": {
-            "scale": 2,
+            "scale": 0.75,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 115.25,
-                "y": -48.75
+                "x": 800.6666666666666,
+                "y": 84.66666666666674
             }
         },
         "maps/generated/boss1.json": {
@@ -352,7 +352,7 @@
         }
     },
     "last.externalTilesetPath": "/home/jack/longinus/assets/maps/tilesets",
-    "last.objectTemplatePath": "/home/jack/longinus/assets/maps/templates",
+    "last.objectTemplatePath": "/home/jack/longinus/assets/maps/generated/templates",
     "last.worldFilePath": "/home/jack/longinus/assets/maps/generated",
     "loadedWorlds": [
         "/home/jack/longinus/assets/maps/CL.world",
@@ -372,11 +372,11 @@
     "project": "project.tiled-project",
     "property.type": "object",
     "recentFiles": [
+        "maps/generated/MP20.json",
+        "maps/generated/MP11.json",
         "maps/old/CL4-3.json",
         "maps/old/CL5-1.json",
         "maps/old/CL5-3.json",
-        "maps/generated/MP20.json",
-        "maps/generated/MP11.json",
         "maps/generated/MP22.json",
         "maps/generated/MP15.json",
         "maps/generated/MP14.json",

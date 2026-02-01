@@ -13,17 +13,21 @@ use crate::{
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
     Activator, And, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
-    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Engine, Entity, EntityHandle,
-    ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision, GivesItemOnCollision,
-    GravitySource, HealOnCollision, Id, IncreaseMaxHealthOnCollision, Locomotor,
-    MapTransitionOnCollision, Not, Or, SaveMenuOnCollision, SimpleActivatable, Switch, Terminal,
-    TouchSensor,
+    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, Engine, Entity,
+    EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision,
+    GivesItemOnCollision, GravitySource, HealOnCollision, Id, IncreaseMaxHealthOnCollision,
+    Locomotor, MapTransitionOnCollision, Not, Or, SaveMenuOnCollision, SimpleActivatable, Switch,
+    Terminal, TouchSensor,
   },
-  enemy::EnemySystem,
+  enemy::{
+    EnemyAranea, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState,
+    EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator, EnemySystem,
+  },
   load_map::{
     COLLISION_GROUP_CHAIN, COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE,
     COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL,
-    EnemySpawnColliderHandles, Map, MapAbilityType, MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
+    EnemySpawnColliderHandles, EnemySpawnEnemy, Map, MapAbilityType, MapEnemyName, MapSystem,
+    MapTile, PLAYER_INTERACTION_GROUPS,
   },
   menu::MenuSystem,
   save::SaveData,
@@ -134,12 +138,35 @@ fn load_new_map(
         })
         .collect::<Vec<_>>();
 
+      let enemy = match enemy_spawn.name {
+        EnemySpawnEnemy::Goblin => Enemy::Goblin(EnemyGoblin {
+          state: EnemyGoblinState::initial(),
+        }),
+        EnemySpawnEnemy::Imp => Enemy::Imp(EnemyImp {
+          state: EnemyImpState::initial(),
+        }),
+        EnemySpawnEnemy::Aranea(egg_id) => {
+          let aranea_egg = map.aranea_eggs.get(&egg_id).unwrap().collider.clone();
+          let egg_handle = collider_set.insert(aranea_egg);
+          Enemy::Aranea(EnemyAranea::new(egg_handle))
+        }
+        EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender { cooldown: 0 }),
+        EnemySpawnEnemy::Seeker => Enemy::Seeker(EnemySeeker),
+        EnemySpawnEnemy::SeekerGenerator => {
+          Enemy::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 })
+        }
+        EnemySpawnEnemy::Sniper => Enemy::Sniper(EnemySniper::new()),
+        EnemySpawnEnemy::SniperGenerator => Enemy::SniperGenerator(EnemySniperGenerator::new()),
+      };
+
       Entity {
         handle: EntityHandle::RigidBody(handle),
-        components: enemy_spawn.into_entity_components(EnemySpawnColliderHandles {
-          hitboxes,
-          hurtboxes,
-        }),
+        components: enemy_spawn
+          .into_entity_components(EnemySpawnColliderHandles {
+            hitboxes,
+            hurtboxes,
+          })
+          .insert(enemy),
         label: "enemy".to_string(),
       }
     })

@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <template>
- <object name="Aranea Egg" type="AraneaEgg"/>
+ <object name="AraneaEgg" type="AraneaEgg"/>
 </template>
