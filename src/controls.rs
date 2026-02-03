@@ -126,7 +126,7 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
     })
   }
 
-  fn run(&self, ctx: &ProcessContext<Input>) -> Rc<dyn System<Input = Self::Input>> {
+  fn update(&self, ctx: &ProcessContext<Input>) -> Rc<dyn System<Input = Self::Input>> {
     let kbd_w_pressed = is_key_down(KeyCode::W);
     let kbd_a_pressed = is_key_down(KeyCode::A);
     let kbd_s_pressed = is_key_down(KeyCode::S);
@@ -259,5 +259,9 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
         }
       }
     })
+  }
+
+  fn fixed_update(&self, _: &ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
   }
 }

@@ -24,10 +24,9 @@ use crate::{
     EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator, EnemySystem,
   },
   load_map::{
-    COLLISION_GROUP_CHAIN, COLLISION_GROUP_ENEMY, COLLISION_GROUP_ENEMY_PROJECTILE,
-    COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL,
-    EnemySpawnColliderHandles, EnemySpawnEnemy, Map, MapAbilityType, MapEnemyName, MapSystem,
-    MapTile, PLAYER_INTERACTION_GROUPS,
+    COLLISION_GROUP_CHAIN, COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE,
+    COLLISION_GROUP_WALL, EnemySpawnColliderHandles, EnemySpawnEnemy, Map, MapAbilityType,
+    MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
   },
   menu::MenuSystem,
   save::SaveData,
@@ -44,6 +43,7 @@ pub const CHAIN_ANGULAR_DAMPING: f32 = 1.0;
 
 pub const ENGINE_MAX_SPEED: f32 = 0.005;
 
+#[derive(Clone)]
 pub struct PhysicsSystem {
   pub rigid_body_set: RigidBodySet,
   pub collider_set: ColliderSet,
@@ -782,7 +782,14 @@ impl System for PhysicsSystem {
     )
   }
 
-  fn run(
+  fn update(
+    &self,
+    _: &crate::system::ProcessContext<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
+  }
+
+  fn fixed_update(
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
@@ -1049,16 +1056,38 @@ impl System for PhysicsSystem {
                 .collect::<Vec<_>>();
               rigid_body_set[handle].apply_impulse(enemy_to_spawn.initial_force, true);
 
+              let enemy = match enemy_to_spawn.enemy_spawn.name {
+                EnemySpawnEnemy::Goblin => Enemy::Goblin(EnemyGoblin {
+                  state: EnemyGoblinState::initial(),
+                }),
+                EnemySpawnEnemy::Imp => Enemy::Imp(EnemyImp {
+                  state: EnemyImpState::initial(),
+                }),
+                EnemySpawnEnemy::Aranea(_) => {
+                  panic!("Cannot spawn aranea child")
+                }
+                EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender { cooldown: 0 }),
+                EnemySpawnEnemy::Seeker => Enemy::Seeker(EnemySeeker),
+                EnemySpawnEnemy::SeekerGenerator => {
+                  Enemy::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 })
+                }
+                EnemySpawnEnemy::Sniper => Enemy::Sniper(EnemySniper::new()),
+                EnemySpawnEnemy::SniperGenerator => {
+                  Enemy::SniperGenerator(EnemySniperGenerator::new())
+                }
+              };
+
               (
                 EntityHandle::RigidBody(handle),
                 Rc::new(Entity {
                   handle: EntityHandle::RigidBody(handle),
-                  components: enemy_to_spawn.enemy_spawn.into_entity_components(
-                    EnemySpawnColliderHandles {
+                  components: enemy_to_spawn
+                    .enemy_spawn
+                    .into_entity_components(EnemySpawnColliderHandles {
                       hitboxes,
                       hurtboxes,
-                    },
-                  ),
+                    })
+                    .insert(enemy),
                   label: "child enemy".to_string(),
                 }),
               )
@@ -1741,7 +1770,7 @@ impl System for PhysicsSystem {
       .into_iter()
       .map(|(&handle, entity)| {
         if let Some(touch_sensor) = entity.components.get::<TouchSensor>()
-          && let Some(activator) = entity.components.get::<Activator>()
+          && entity.components.get::<Activator>().is_some()
         {
           let activation = if !handle
             .intersecting_with_colliders(rigid_body_set, &narrow_phase)

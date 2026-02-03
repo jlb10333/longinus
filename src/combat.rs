@@ -7,10 +7,7 @@ use std::{
 use crate::{
   controls::{ControlsSystem, angle_from_vec},
   ecs::{ComponentSet, ExplodeOnCollision},
-  load_map::{
-    COLLISION_GROUP_ENEMY, COLLISION_GROUP_PLAYER_PROJECTILE, COLLISION_GROUP_WALL, MapSystem,
-    PLAYER_PROJECTILE_INTERACTION_GROUPS,
-  },
+  load_map::{MapSystem, PLAYER_PROJECTILE_INTERACTION_GROUPS},
   menu::MenuSystem,
   physics::PhysicsSystem,
   save::SaveData,
@@ -617,7 +614,14 @@ impl System for CombatSystem {
     })
   }
 
-  fn run(
+  fn update(
+    &self,
+    _: &crate::system::ProcessContext<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
+  }
+
+  fn fixed_update(
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {

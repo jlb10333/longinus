@@ -8,8 +8,7 @@ use crate::{
   camera::CameraSystem,
   combat::{
     CombatSystem, Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind,
-    distance_projection_physics, distance_projection_screen, get_reticle_pos, get_slot_positions,
-    weapon_module_from_kind,
+    distance_projection_screen, get_reticle_pos, get_slot_positions, weapon_module_from_kind,
   },
   controls::ControlsSystem,
   ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id},
@@ -22,9 +21,6 @@ use crate::{
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
-
-const TARGET_FPS: f32 = 60.0;
-const MIN_FRAME_TIME: f32 = 1.0 / TARGET_FPS;
 
 const RETICLE_SIZE: f32 = 3.0;
 
@@ -58,6 +54,7 @@ pub const COLOR_4: Color = Color {
   a: 1.0,
 };
 
+#[derive(Clone)]
 pub struct GraphicsSystem<Input>(PhantomData<Input>);
 
 const MINI_MAP_TILE_WIDTH: f32 = 2.0;
@@ -73,7 +70,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
     Rc::new(GraphicsSystem(PhantomData))
   }
 
-  fn run(
+  fn update(
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
@@ -378,16 +375,14 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       .rev()
       .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
 
-    /* Maintain target fps */
-    let frame_time = get_frame_time();
-
-    if frame_time < MIN_FRAME_TIME {
-      let time_to_sleep = (MIN_FRAME_TIME - frame_time) * 1000.0; // Calculate sleep time in ms
-
-      sleep(Duration::from_millis(time_to_sleep as u64)); // Sleep
-    }
-
     Rc::new(GraphicsSystem(PhantomData))
+  }
+
+  fn fixed_update(
+    &self,
+    _: &crate::system::ProcessContext<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
   }
 }
 

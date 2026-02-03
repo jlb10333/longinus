@@ -110,7 +110,7 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
     })
   }
 
-  fn run(
+  fn update(
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
@@ -197,6 +197,13 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
     }
 
     todo!("Expected to be in either a SaveData or ProcessStart GameState");
+  }
+
+  fn fixed_update(
+    &self,
+    _: &crate::system::ProcessContext<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
   }
 }
 

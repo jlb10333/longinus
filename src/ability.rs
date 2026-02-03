@@ -85,6 +85,7 @@ impl ManaTanksActiveInfo {
   }
 }
 
+#[derive(Clone)]
 pub struct AbilitySystem {
   pub acquired_boost: bool,
   pub acquired_chain: bool,
@@ -126,10 +127,18 @@ impl System for AbilitySystem {
     })
   }
 
-  fn run(
+  fn update(
+    &self,
+    _: &crate::system::ProcessContext<Self::Input>,
+  ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
+  }
+
+  fn fixed_update(
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
     let (boost_force, current_boost_cooldown, mana_tanks) = if controls_system.boost
@@ -156,6 +165,13 @@ impl System for AbilitySystem {
       )
     };
 
+    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+    let mana_tanks = if menu_system.active_menus.is_empty() {
+      mana_tanks.recharge().with(physics_system.incoming_mana)
+    } else {
+      self.mana_tanks
+    };
+
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
     let acquired_boost = self.acquired_boost
@@ -169,10 +185,6 @@ impl System for AbilitySystem {
         .new_abilities
         .iter()
         .any(|new_ability| matches!(new_ability, MapAbilityType::Chain));
-
-    let kill_chain = self.chain_activated
-      && controls_system.chain
-      && !controls_system.last_frame.as_ref().unwrap().chain;
 
     let chain_to_mount_point = if self.acquired_chain
       && !self.chain_activated
@@ -203,16 +215,12 @@ impl System for AbilitySystem {
       None
     };
 
-    let chain_activated = (self.chain_activated || chain_to_mount_point.is_some()) && !kill_chain;
+    let chain_activated =
+      (self.chain_activated || chain_to_mount_point.is_some()) && !self.kill_chain;
 
-    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
-    let mana_tanks = if menu_system.active_menus.is_empty() {
-      let mana_tanks = mana_tanks.recharge();
-      mana_tanks.with(physics_system.incoming_mana)
-    } else {
-      mana_tanks
-    };
-    let mana_tanks = mana_tanks.recharge();
+    let kill_chain = self.chain_activated
+      && controls_system.chain
+      && !controls_system.last_frame.as_ref().unwrap().chain;
 
     Rc::new(AbilitySystem {
       acquired_boost,
@@ -220,7 +228,7 @@ impl System for AbilitySystem {
       boost_force,
       current_boost_cooldown,
       max_boost_cooldown: self.max_boost_cooldown,
-      chain_to_mount_point,
+      chain_to_mount_point: self.chain_to_mount_point,
       chain_activated,
       kill_chain,
       mana_tanks,

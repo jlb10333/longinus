@@ -1764,6 +1764,7 @@ impl TileLayer {
   }
 }
 
+#[derive(Clone)]
 pub struct Map {
   pub top_left: Vector2<f32>,
   pub bottom_right: Vector2<f32>,
@@ -2100,6 +2101,7 @@ pub fn load_world() -> Option<World> {
     .map(|raw_file| serde_json::from_str(raw_file).expect("JSON was not well-formatted"))
 }
 
+#[derive(Clone)]
 pub struct MapSystem {
   pub map: Option<Map>,
   pub world: Rc<World>,
@@ -2157,7 +2159,7 @@ impl System for MapSystem {
     })
   }
 
-  fn run(
+  fn update(
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
@@ -2196,5 +2198,12 @@ impl System for MapSystem {
         world: Rc::clone(&self.world),
       })
     }
+  }
+
+  fn fixed_update(
+    &self,
+    _: &crate::system::ProcessContext<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
   }
 }

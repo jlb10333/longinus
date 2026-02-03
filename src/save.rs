@@ -71,6 +71,7 @@ pub fn load_save(save_to_load: &SaveToLoad) -> SaveData {
   .expect("JSON was not well-formatted")
 }
 
+#[derive(Clone)]
 pub struct SaveSystem<Input> {
   pub available_save_data: Vec<String>,
   phantom: PhantomData<Input>,
@@ -97,7 +98,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
     })
   }
 
-  fn run(
+  fn update(
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
@@ -154,5 +155,12 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
         .collect(),
       phantom: PhantomData,
     })
+  }
+
+  fn fixed_update(
+    &self,
+    _: &crate::system::ProcessContext<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
   }
 }

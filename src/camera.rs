@@ -43,6 +43,7 @@ fn get_camera_translation_change(player_translation: ScreenVector) -> Vector2<f3
   }
 }
 
+#[derive(Clone)]
 pub struct CameraSystem {
   pub translation: Vector2<f32>,
   pub map_top_left: Vector2<f32>,
@@ -58,7 +59,7 @@ impl System for CameraSystem {
     let map_system = ctx.get::<MapSystem>().unwrap();
     let map = map_system.map.as_ref().unwrap();
 
-    return Rc::new(Self {
+    Rc::new(Self {
       translation: map
         .player_spawns
         .iter()
@@ -70,10 +71,10 @@ impl System for CameraSystem {
         - vector![screen_width() / 2.0, screen_height() / 2.0],
       map_top_left: map.top_left,
       map_bottom_right: map.bottom_right,
-    });
+    })
   }
 
-  fn run(
+  fn update(
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
@@ -124,12 +125,19 @@ impl System for CameraSystem {
       map_bounds_offset_top + map_bounds_offset_bottom,
     ];
 
-    return Rc::new(Self {
+    Rc::new(Self {
       translation: self.translation
         + get_camera_translation_change(player_translation)
         + map_bounds_offset,
       map_top_left: self.map_top_left,
       map_bottom_right: self.map_bottom_right,
-    });
+    })
+  }
+
+  fn fixed_update(
+    &self,
+    _: &crate::system::ProcessContext<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
   }
 }

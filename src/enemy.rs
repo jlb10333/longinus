@@ -18,11 +18,13 @@ use crate::{
   units::{PhysicsVector, UnitConvert, UnitConvert2, vec_zero},
 };
 
+#[derive(Clone)]
 pub struct EnemyDecisionEnemySpawn {
   pub enemy_spawn: EnemySpawn,
   pub initial_force: Vector2<f32>,
 }
 
+#[derive(Clone)]
 pub struct EnemyDecision {
   pub handle: RigidBodyHandle,
   pub projectiles: Vec<Projectile>,
@@ -31,6 +33,7 @@ pub struct EnemyDecision {
   pub enemies_to_spawn: Vec<EnemyDecisionEnemySpawn>,
 }
 
+#[derive(Clone)]
 pub struct EnemySystem {
   pub decisions: Vec<EnemyDecision>,
 }
@@ -48,10 +51,17 @@ impl System for EnemySystem {
     })
   }
 
-  fn run(
+  fn update(
+    &self,
+    _: &crate::system::ProcessContext<Self::Input>,
+  ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
+    Rc::new(self.clone())
+  }
+
+  fn fixed_update(
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
+  ) -> Rc<dyn System<Input = Self::Input>> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
     let rng = rand::RandGenerator::new();

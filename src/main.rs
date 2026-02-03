@@ -1,5 +1,4 @@
 use macroquad::prelude::*;
-use std::rc::Rc;
 
 use crate::ability::AbilitySystem;
 use crate::camera::CameraSystem;
@@ -59,8 +58,8 @@ async fn main() {
           .add_system(SaveSystem::start)
           .add_system(MenuSystem::start)
           .add_system(GraphicsSystem::start)
-          .start()
-          .run_move(|ctx| {
+          .start(None)
+          .run(|ctx| {
             ctx
               .get::<MenuSystem<_>>()
               .unwrap()
@@ -72,22 +71,20 @@ async fn main() {
         State::Game(save_data)
       }
       State::Game(save_data) => {
-        let quit_decision = &Rc::new(
-          Process::new(&save_data)
-            .add_system(SaveSystem::start)
-            .add_system(CombatSystem::start)
-            .add_system(MapSystem::start)
-            .add_system(CameraSystem::start)
-            .add_system(PhysicsSystem::start)
-            .add_system(ControlsSystem::start)
-            .add_system(MenuSystem::start)
-            .add_system(EnemySystem::start)
-            .add_system(AbilitySystem::start)
-            .add_system(GraphicsSystem::start)
-            .start(),
-        )
-        .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())
-        .await;
+        let quit_decision = Process::new(&save_data)
+          .add_system(SaveSystem::start)
+          .add_system(CombatSystem::start)
+          .add_system(MapSystem::start)
+          .add_system(CameraSystem::start)
+          .add_system(PhysicsSystem::start)
+          .add_system(ControlsSystem::start)
+          .add_system(MenuSystem::start)
+          .add_system(EnemySystem::start)
+          .add_system(AbilitySystem::start)
+          .add_system(GraphicsSystem::start)
+          .start(None)
+          .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())
+          .await;
         match quit_decision {
           QuitDecision::LoadSave(save_to_load) => {
             State::Game(load_save(&menu::SaveToLoad::SaveData(save_to_load.clone())))
