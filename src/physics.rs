@@ -68,6 +68,7 @@ pub struct PhysicsSystem {
   pub terminal_contact_last_frame: Option<Rc<Terminal>>,
   pub mount_points_in_range: List<RigidBodyHandle>,
   pub incoming_mana: f32,
+  pub hitstop_frames_left: i32,
 }
 
 const PLAYER_MAX_HITSTUN: f32 = 100.0;
@@ -756,6 +757,7 @@ fn load_new_map(
     mount_points_in_range: list![],
     incoming_mana: 0.0,
     acquired_health_tanks: list![],
+    hitstop_frames_left: 0,
   })
 }
 
@@ -786,7 +788,10 @@ impl System for PhysicsSystem {
     &self,
     _: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    Rc::new(self.clone())
+    Rc::new(Self {
+      hitstop_frames_left: (self.hitstop_frames_left - 1).max(0),
+      ..self.clone()
+    })
   }
 
   fn fixed_update(
@@ -828,37 +833,6 @@ impl System for PhysicsSystem {
     let mut collider_set = self.collider_set.clone();
 
     let entities = self.entities.clone();
-
-    /* MARK: Don't do physics if currently in menu */
-    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
-
-    if !menu_system.active_menus.is_empty() {
-      return Rc::new(Self {
-        rigid_body_set: rigid_body_set.clone(),
-        collider_set,
-        integration_parameters: self.integration_parameters,
-        physics_pipeline: Rc::clone(&self.physics_pipeline),
-        island_manager,
-        broad_phase,
-        narrow_phase,
-        impulse_joint_set,
-        multibody_joint_set,
-        ccd_solver,
-        player_handle: self.player_handle,
-        entities: self.entities.clone(),
-        frame_count: self.frame_count + 1,
-        new_weapon_modules: list![],
-        new_abilities: list![],
-        load_new_map: None,
-        save_point_contact: self.save_point_contact,
-        save_point_contact_last_frame: self.save_point_contact_last_frame,
-        terminal_contact: self.terminal_contact.clone(),
-        terminal_contact_last_frame: self.terminal_contact_last_frame.clone(),
-        mount_points_in_range: list![],
-        incoming_mana: 0.0,
-        acquired_health_tanks: list![],
-      });
-    }
 
     /* MARK: Move the player */
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
@@ -1137,19 +1111,17 @@ impl System for PhysicsSystem {
       .collect::<HashTrieMap<_, _>>();
 
     /* MARK: Damage all entities colliding with damagers */
-    let entities = entities.iter().map(map_damageable_damage_taken(
-      rigid_body_set,
-      &narrow_phase,
-      &collider_set,
-      &entities,
-    ));
+    let (hitstop_frames, entities) = entities.iter().fold(
+      (0, HashTrieMap::new()),
+      fold_damageable_damage_taken(rigid_body_set, &narrow_phase, &collider_set, &entities),
+    );
 
     /* MARK: Destroy all marked to be destroyed on this frame */
-    let entities = entities.map(|(handle, entity)| {
+    let entities = entities.into_iter().map(|(handle, entity)| {
       if let Some(destroy_after_frames) = entity.components.get::<DestroyAfterFrames>() {
         if destroy_after_frames.frames > 0 {
           (
-            handle,
+            *handle,
             Rc::new(Entity {
               components: entity.components.with(DestroyAfterFrames {
                 frames: destroy_after_frames.frames - 1,
@@ -1159,7 +1131,7 @@ impl System for PhysicsSystem {
           )
         } else {
           (
-            handle,
+            *handle,
             Rc::new(Entity {
               components: entity.components.with(Destroyed),
               ..entity.as_ref().clone()
@@ -1167,7 +1139,7 @@ impl System for PhysicsSystem {
           )
         }
       } else {
-        (handle, entity)
+        (*handle, Rc::clone(entity))
       }
     });
 
@@ -2135,6 +2107,7 @@ impl System for PhysicsSystem {
       mount_points_in_range,
       incoming_mana,
       acquired_health_tanks,
+      hitstop_frames_left: hitstop_frames,
     })
   }
 }
@@ -2169,92 +2142,114 @@ fn player_movement_impulse(
   vector![safe_acceleration_x, safe_acceleration_y]
 }
 
-fn map_damageable_damage_taken(
+fn damage_to_hitstop_frames(damage: f32) -> i32 {
+  if damage < 7.0 {
+    2
+  } else if damage < 20.0 {
+    5
+  } else if damage < 40.0 {
+    10
+  } else {
+    15
+  }
+}
+
+type HitstopEntitiesTuple = (i32, HashTrieMap<EntityHandle, Rc<Entity>>);
+
+fn fold_damageable_damage_taken(
   rigid_body_set: &RigidBodySet,
   narrow_phase: &NarrowPhase,
   collider_set: &ColliderSet,
   entities: &HashTrieMap<EntityHandle, Rc<Entity>>,
-) -> impl Fn((&EntityHandle, &Rc<Entity>)) -> (EntityHandle, Rc<Entity>) {
-  |(&handle, entity)| {
-    let damageable = entity.components.get::<Damageable>();
+) -> impl Fn(HitstopEntitiesTuple, (&EntityHandle, &Rc<Entity>)) -> HitstopEntitiesTuple {
+  |(temp_hitstop, temp_entities), (handle, entity): (&EntityHandle, &Rc<Entity>)| {
+    let (hitstop_frames, entity) = {
+      let damageable = entity.components.get::<Damageable>();
 
-    if damageable.is_none() {
-      return (handle, Rc::clone(entity));
-    }
-    let damageable = damageable.unwrap();
+      if damageable.is_none() {
+        (0, Rc::clone(entity))
+      } else {
+        let damageable = damageable.unwrap();
 
-    if damageable.current_hitstun > 0.0 {
-      return (
-        handle,
-        Rc::new(Entity {
-          components: entity.components.with(Damageable {
-            current_hitstun: damageable.current_hitstun - 1.0,
-            ..(*damageable).clone()
-          }),
-          ..entity.as_ref().clone()
-        }),
-      );
-    }
-
-    let damagers = damageable
-      .hurtboxes
-      .iter()
-      .flat_map(|hurtbox| {
-        EntityHandle::Collider(*hurtbox)
-          .intersecting_with_colliders(rigid_body_set, narrow_phase)
-          .into_iter()
-          .flat_map(|&collider_handle| {
-            collider_set[collider_handle]
-              .parent()
-              .and_then(|rigid_body_handle| {
-                entities.get(&EntityHandle::RigidBody(rigid_body_handle))
-              })
-              .and_then(|entity| {
-                if let Some(damager) = entity.components.get::<Damager>()
-                  && damager.hitboxes.contains(&collider_handle)
-                {
-                  Some(damager)
-                } else {
-                  None
-                }
-              })
-          })
-          .collect::<Vec<_>>()
-      })
-      .collect::<Vec<_>>();
-
-    let incoming_damage = damagers
-      .iter()
-      .fold(0.0, |sum, damager| sum + damager.damage);
-
-    if incoming_damage == 0.0 {
-      if damageable.current_hitstun > 0.0 {
-        return (
-          handle,
-          Rc::new(Entity {
-            components: entity.components.with(Damageable {
-              current_hitstun: damageable.current_hitstun - 1.0,
-              ..(*damageable).clone()
+        if damageable.current_hitstun > 0.0 {
+          (
+            0,
+            Rc::new(Entity {
+              components: entity.components.with(Damageable {
+                current_hitstun: damageable.current_hitstun - 1.0,
+                ..(*damageable).clone()
+              }),
+              ..entity.as_ref().clone()
             }),
-            ..entity.as_ref().clone()
-          }),
-        );
+          )
+        } else {
+          let damagers = damageable
+            .hurtboxes
+            .iter()
+            .flat_map(|hurtbox| {
+              EntityHandle::Collider(*hurtbox)
+                .intersecting_with_colliders(rigid_body_set, narrow_phase)
+                .into_iter()
+                .flat_map(|&collider_handle| {
+                  collider_set[collider_handle]
+                    .parent()
+                    .and_then(|rigid_body_handle| {
+                      entities.get(&EntityHandle::RigidBody(rigid_body_handle))
+                    })
+                    .and_then(|entity| {
+                      if let Some(damager) = entity.components.get::<Damager>()
+                        && damager.hitboxes.contains(&collider_handle)
+                      {
+                        Some(damager)
+                      } else {
+                        None
+                      }
+                    })
+                })
+                .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+
+          let incoming_damage = damagers
+            .iter()
+            .fold(0.0, |sum, damager| sum + damager.damage);
+
+          let hitstop_frames = damage_to_hitstop_frames(incoming_damage);
+
+          if incoming_damage == 0.0 {
+            if damageable.current_hitstun > 0.0 {
+              (
+                0,
+                Rc::new(Entity {
+                  components: entity.components.with(Damageable {
+                    current_hitstun: damageable.current_hitstun - 1.0,
+                    ..(*damageable).clone()
+                  }),
+                  ..entity.as_ref().clone()
+                }),
+              )
+            } else {
+              (0, Rc::clone(entity))
+            }
+          } else {
+            (
+              hitstop_frames,
+              Rc::new(Entity {
+                components: entity.components.with(Damageable {
+                  health: damageable.health - incoming_damage,
+                  current_hitstun: damageable.max_hitstun,
+                  ..(*damageable).clone()
+                }),
+                ..entity.as_ref().clone()
+              }),
+            )
+          }
+        }
       }
+    };
+    let new_entities = temp_entities.insert(*handle, entity);
 
-      return (handle, Rc::clone(entity));
-    }
-
-    (
-      handle,
-      Rc::new(Entity {
-        components: entity.components.with(Damageable {
-          health: damageable.health - incoming_damage,
-          current_hitstun: damageable.max_hitstun,
-          ..(*damageable).clone()
-        }),
-        ..entity.as_ref().clone()
-      }),
-    )
+    (hitstop_frames.max(temp_hitstop), new_entities)
   }
 }
 

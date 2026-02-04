@@ -8,9 +8,7 @@ use crate::{
   controls::angle_from_vec,
   ecs::{ComponentSet, Damageable, Enemy, Entity, EntityHandle},
   load_map::{
-    COLLISION_GROUP_ENEMY_PROJECTILE, COLLISION_GROUP_PLAYER, COLLISION_GROUP_WALL,
-    ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, EnemySpawnEnemy, MapEnemyName,
-    RAYCAST_INTERACTION_GROUPS,
+    ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, EnemySpawnEnemy, RAYCAST_INTERACTION_GROUPS,
   },
   physics::PhysicsSystem,
   save::SaveData,
@@ -185,6 +183,7 @@ pub struct EnemyGoblin {
 
 const GOBLIN_AGGRO_RANGE: f32 = 20.0;
 const GOBLIN_LUNGE_FORCE: f32 = 9.0;
+const GOBLIN_MAX_LUNGE_DISTANCE: f32 = 4.0;
 const GOBLIN_SLOWING_FRAMES: i32 = 70;
 const GOBLIN_SLOWING_FORCE: f32 = GOBLIN_LUNGE_FORCE / GOBLIN_SLOWING_FRAMES as f32;
 const GOBLIN_RECOVERING_FRAMES: i32 = 50;
@@ -219,9 +218,10 @@ impl EnemyGoblin {
 
           let movement_force = vector_to_player.normalize() * GOBLIN_LUNGE_FORCE;
 
-          let lunge_frames = (vector_to_player.magnitude()
-            / (movement_force.magnitude() / self_rigid_body.mass())
-            * 60.0) as i32;
+          let lunge_distance = vector_to_player.magnitude().min(GOBLIN_MAX_LUNGE_DISTANCE);
+
+          let lunge_frames =
+            (lunge_distance / (GOBLIN_LUNGE_FORCE / self_rigid_body.mass()) * 60.0) as i32;
 
           EnemyDecision {
             handle,
@@ -860,7 +860,7 @@ pub struct EnemySniper {
 
 const SNIPER_AGGRO_RANGE: f32 = 40.0;
 const SNIPER_COOLDOWN_INITIAL_FRAMES: i32 = 200;
-const SNIPER_PROJECTILE_DAMAGE: f32 = 15.0;
+const SNIPER_PROJECTILE_DAMAGE: f32 = 20.0;
 const SNIPER_SHOOTING_FORCE: f32 = 15.0;
 
 impl EnemySniper {
@@ -904,7 +904,7 @@ impl EnemySniper {
           EnemyDecision {
             handle,
             enemy: Enemy::Sniper(Self {
-              state: EnemySniperState::Shooting,
+              state: EnemySniperState::Cooldown(SNIPER_COOLDOWN_INITIAL_FRAMES),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -970,7 +970,7 @@ impl EnemySniper {
           EnemyDecision {
             handle,
             enemy: Enemy::Sniper(Self {
-              state: EnemySniperState::Idle,
+              state: EnemySniperState::Shooting,
             }),
             enemies_to_spawn: vec![],
             movement_force: vec_zero(),

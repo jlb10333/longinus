@@ -75,7 +75,7 @@
                         {
                          "name":"TargetPlayerSpawn",
                          "type":"int",
-                         "value":1
+                         "value":4
                         }],
                  "template":"templates\/MapTransition.tx",
                  "width":40,

@@ -616,8 +616,21 @@ impl System for CombatSystem {
 
   fn update(
     &self,
-    _: &crate::system::ProcessContext<Self::Input>,
+    ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
+    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+
+    if let Some(inventory_update) = &menu_system.inventory_update {
+      return Rc::new(Self {
+        unequipped_modules: inventory_update.unequipped_modules.clone(),
+        equipped_modules: inventory_update.equipped_modules,
+        current_weapons: build_weapons(inventory_update.equipped_modules),
+        new_projectiles: Vec::new(),
+        reticle_angle: self.reticle_angle,
+        acquired_items: self.acquired_items.clone(),
+      });
+    }
+
     Rc::new(self.clone())
   }
 
@@ -660,27 +673,6 @@ impl System for CombatSystem {
           .map(|id| (map_system.current_map_name.clone(), *id)),
       )
       .collect();
-
-    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
-
-    if !menu_system.active_menus.is_empty() {
-      if let Some(inventory_update) = &menu_system.inventory_update {
-        return Rc::new(Self {
-          unequipped_modules: inventory_update.unequipped_modules.clone(),
-          equipped_modules: inventory_update.equipped_modules,
-          current_weapons: build_weapons(inventory_update.equipped_modules),
-          new_projectiles: Vec::new(),
-          reticle_angle: self.reticle_angle,
-          acquired_items: self.acquired_items.clone(),
-        });
-      }
-
-      return Rc::new(Self {
-        unequipped_modules,
-        acquired_items,
-        ..self.clone()
-      });
-    }
 
     /* Decrement cooldown for active weapons */
     let reduced_cooldown_weapons: Vec<Weapon> = self

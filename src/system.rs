@@ -19,18 +19,22 @@ pub trait System: Any {
   fn fixed_update(&self, _: &ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>;
 }
 
-#[derive(Clone, Copy)]
-pub struct ProcessContextOptions {
+#[derive(Clone)]
+pub struct ProcessContextOptions<Input: Clone + 'static> {
   /// Interval to target for fixed_update calls, in seconds
   pub fixed_time_interval: f32,
   pub target_fps: i32,
+  /// Callback to determine whether or not to freeze the fixed update loop of the process based
+  /// on current process state
+  pub should_freeze_fixed: Option<fn(&ProcessContext<Input>) -> bool>,
 }
 
-impl Default for ProcessContextOptions {
+impl<Input: Clone + 'static> Default for ProcessContextOptions<Input> {
   fn default() -> Self {
     Self {
       fixed_time_interval: 1.0 / 60.0,
-      target_fps: 24,
+      target_fps: 60,
+      should_freeze_fixed: None,
     }
   }
 }
@@ -39,7 +43,7 @@ impl Default for ProcessContextOptions {
 pub struct ProcessContext<Input: Clone + 'static> {
   pub systems: Vec<Rc<dyn System<Input = Input>>>,
   pub input: Input,
-  options: ProcessContextOptions,
+  options: ProcessContextOptions<Input>,
 }
 
 impl<Input: Clone + 'static> ProcessContext<Input> {
@@ -77,7 +81,7 @@ impl<Input: Clone + 'static> ProcessContext<Input> {
         })
         .collect(),
       input: self.input.clone(),
-      options: self.options,
+      options: self.options.clone(),
     }
   }
 
@@ -106,20 +110,30 @@ impl<Input: Clone + 'static> ProcessContext<Input> {
 
       next_frame().await;
 
-      let fixed_update_count =
-        (acc_time / (game_state.options.fixed_time_interval * 1_000_000.0)).floor() as i32;
+      let skipping_fixed = game_state
+        .options
+        .should_freeze_fixed
+        .as_ref()
+        .map(|should_freeze_fixed| should_freeze_fixed(&game_state))
+        .unwrap_or(false);
 
-      acc_time -= game_state.options.fixed_time_interval * 1_000_000.0 * fixed_update_count as f32;
+      if !skipping_fixed {
+        let fixed_update_count =
+          (acc_time / (game_state.options.fixed_time_interval * 1_000_000.0)).floor() as i32;
 
-      game_state = (0..fixed_update_count).fold(game_state.clone(), |temp_state, _| {
-        temp_state
-          .systems
-          .iter()
-          .enumerate()
-          .fold(temp_state.clone(), |temp_state, (index, system)| {
-            temp_state.with(index, &system.fixed_update(&temp_state))
-          })
-      });
+        acc_time -=
+          game_state.options.fixed_time_interval * 1_000_000.0 * fixed_update_count as f32;
+
+        game_state = (0..fixed_update_count).fold(game_state.clone(), |temp_state, _| {
+          temp_state
+            .systems
+            .iter()
+            .enumerate()
+            .fold(temp_state.clone(), |temp_state, (index, system)| {
+              temp_state.with(index, &system.fixed_update(&temp_state))
+            })
+        });
+      }
 
       let frame_time = now.elapsed().as_millis() as f32;
 
@@ -131,7 +145,9 @@ impl<Input: Clone + 'static> ProcessContext<Input> {
         sleep(Duration::from_millis(time_to_sleep as u64));
       }
 
-      acc_time += now.elapsed().as_micros() as f32;
+      if !skipping_fixed {
+        acc_time += now.elapsed().as_micros() as f32;
+      }
     }
   }
 }
@@ -160,7 +176,7 @@ impl<Input: Clone + 'static> Process<Input> {
     }
   }
 
-  pub fn start(&self, options: Option<ProcessContextOptions>) -> ProcessContext<Input> {
+  pub fn start(&self, options: Option<ProcessContextOptions<Input>>) -> ProcessContext<Input> {
     self.ctx_initializers.iter().fold(
       ProcessContext {
         systems: vec![],

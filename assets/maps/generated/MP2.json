@@ -268,13 +268,6 @@
                  "y":184
                 }, 
                 {
-                 "id":20,
-                 "name":"Sniper",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":123.5,
-                 "y":122
-                }, 
-                {
                  "height":0,
                  "id":21,
                  "name":"Gravity Source",

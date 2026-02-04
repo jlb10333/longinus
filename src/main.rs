@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use system::ProcessContextOptions;
 
 use crate::ability::AbilitySystem;
 use crate::camera::CameraSystem;
@@ -82,7 +83,13 @@ async fn main() {
           .add_system(EnemySystem::start)
           .add_system(AbilitySystem::start)
           .add_system(GraphicsSystem::start)
-          .start(None)
+          .start(Some(ProcessContextOptions {
+            should_freeze_fixed: Some(|ctx| {
+              !ctx.get::<MenuSystem<_>>().unwrap().active_menus.is_empty()
+                || ctx.get::<PhysicsSystem>().unwrap().hitstop_frames_left > 0
+            }),
+            ..Default::default()
+          }))
           .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())
           .await;
         match quit_decision {
