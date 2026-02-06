@@ -74,6 +74,13 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":168,
                  "y":120
+                }, 
+                {
+                 "id":9,
+                 "name":"FortyFiveSlot",
+                 "template":"templates\/ItemPickup.tx",
+                 "x":224,
+                 "y":80
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -82,7 +89,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":9,
+ "nextobjectid":10,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

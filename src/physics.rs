@@ -2142,15 +2142,17 @@ fn player_movement_impulse(
   vector![safe_acceleration_x, safe_acceleration_y]
 }
 
-fn damage_to_hitstop_frames(damage: f32) -> i32 {
-  if damage < 7.0 {
+fn max_health_to_hitstop_frames(max_health: f32) -> i32 {
+  if max_health < 15.0 {
     2
-  } else if damage < 20.0 {
+  } else if max_health < 30.0 {
     5
-  } else if damage < 40.0 {
+  } else if max_health < 50.0 {
     10
-  } else {
+  } else if max_health < 100.0 {
     15
+  } else {
+    20
   }
 }
 
@@ -2214,8 +2216,6 @@ fn fold_damageable_damage_taken(
             .iter()
             .fold(0.0, |sum, damager| sum + damager.damage);
 
-          let hitstop_frames = damage_to_hitstop_frames(incoming_damage);
-
           if incoming_damage == 0.0 {
             if damageable.current_hitstun > 0.0 {
               (
@@ -2232,6 +2232,12 @@ fn fold_damageable_damage_taken(
               (0, Rc::clone(entity))
             }
           } else {
+            let hitstop_frames = if damageable.health - incoming_damage > 0.0 {
+              0
+            } else {
+              max_health_to_hitstop_frames(damageable.max_health)
+            };
+
             (
               hitstop_frames,
               Rc::new(Entity {

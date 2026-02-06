@@ -1,19 +1,19 @@
 {
   "player_spawn_id": 7,
   "map_name": "MP7",
-  "unequipped_modules": ["Missile"],
+  "unequipped_modules": ["Plasma", "FortyFiveSlot", "Front2Slot"],
   "equipped_modules": [
     [
       null,
       null,
-      "Front2Slot",
-      "FortyFiveSlot"
+      null,
+      null
     ],
     [
       null,
       null,
-      "Missile",
-      "Plasma"
+      null,
+      null
     ],
     [
       null,
@@ -32,7 +32,7 @@
   "player_health": 100.0,
   "player_max_health": 100.0,
   "visited_maps": ["start"],
-  "acquired_boost": true,
+  "acquired_boost": false,
   "acquired_chain": false,
   "mana_tanks_capacity": {
     "auto_recharge_mana_tanks": 2,

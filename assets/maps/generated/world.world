@@ -1,7 +1,7 @@
 {
   "maps": [
     {
-      "fileName": "start.json",
+      "fileName": "MP1.json",
       "width": 30,
       "height": 40,
       "x": 0,
@@ -134,11 +134,25 @@
       "y": -1360
     },
     {
-      "fileName": "MP24.json",
-      "width": 52,
-      "height": 24,
-      "x": -1056,
-      "y": -1168
+      "fileName": "MP25.json",
+      "width": 50,
+      "height": 60,
+      "x": -240,
+      "y": 320
+    },
+    {
+      "fileName": "MP26.json",
+      "width": 40,
+      "height": 80,
+      "x": -200,
+      "y": 800
+    },
+    {
+      "fileName": "start.json",
+      "width": 40,
+      "height": 40,
+      "x": -200,
+      "y": 1440
     }
   ]
 }

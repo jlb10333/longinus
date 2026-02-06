@@ -22,7 +22,7 @@
                 {
                  "height":0,
                  "id":1,
-                 "name":"SavePoint",
+                 "name":"Save Point",
                  "properties":[
                         {
                          "name":"PlayerSpawnId",
@@ -30,7 +30,7 @@
                          "value":2
                         }],
                  "rotation":0,
-                 "type":"",
+                 "type":"SavePoint",
                  "visible":true,
                  "width":0,
                  "x":76,

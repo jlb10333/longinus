@@ -652,18 +652,6 @@
                  "y":192
                 }, 
                 {
-                 "id":31,
-                 "properties":[
-                        {
-                         "name":"Capacity",
-                         "type":"float",
-                         "value":30
-                        }],
-                 "template":"templates\/Health Tank.tx",
-                 "x":296,
-                 "y":208
-                }, 
-                {
                  "id":32,
                  "name":"Goblin",
                  "template":"templates\/EnemySpawn.tx",
@@ -746,6 +734,25 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":392,
                  "y":288
+                }, 
+                {
+                 "id":44,
+                 "name":"Front2Slot",
+                 "template":"templates\/ItemPickup.tx",
+                 "x":296,
+                 "y":208
+                }, 
+                {
+                 "id":46,
+                 "properties":[
+                        {
+                         "name":"Capacity",
+                         "type":"float",
+                         "value":30
+                        }],
+                 "template":"templates\/Health Tank.tx",
+                 "x":408,
+                 "y":312
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -754,7 +761,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":44,
+ "nextobjectid":47,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",
