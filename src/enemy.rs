@@ -6,6 +6,7 @@ use rapier2d::{na::Vector2, prelude::*};
 use crate::{
   combat::{Projectile, distance_projection_physics},
   controls::angle_from_vec,
+  easing,
   ecs::{ComponentSet, Damageable, Enemy, Entity, EntityHandle},
   load_map::{
     ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, EnemySpawnEnemy, RAYCAST_INTERACTION_GROUPS,
@@ -324,9 +325,7 @@ pub enum EnemyImpState {
   Idle,
   Shooting,
   ShootingCooldown(i32),
-  Cruising(i32),
-  Accelerating(i32, Vector2<f32>),
-  Decelerating(i32),
+  Moving(i32, Vector2<f32>),
 }
 
 impl EnemyImpState {
@@ -341,12 +340,11 @@ pub struct EnemyImp {
 }
 
 const IMP_AGGRO_RANGE: f32 = 20.0;
-const IMP_STATE_CRUISING_INITIAL_FRAMES: i32 = 70;
+const IMP_STATE_MOVING_INITIAL_FRAMES: i32 = 90;
 const IMP_STATE_SHOOTING_COOLDOWN_INITIAL_FRAMES: i32 = 50;
-const IMP_STATE_ACCELERATING_INITIAL_FRAMES: i32 = 10;
-const IMP_STATE_DECELERATING_INITIAL_FRAMES: i32 = 10;
 
 const IMP_MOVE_FORCE: f32 = 0.2;
+const IMP_MOVE_DISTANCE: f32 = 4.0;
 const IMP_PROJECTILE_SPEED: f32 = 0.7;
 const IMP_PROJECTILE_DAMAGE: f32 = 5.0;
 
@@ -361,10 +359,10 @@ impl EnemyImp {
     rng: &RandGenerator,
   ) -> EnemyDecision {
     let player_translation = rigid_body_set[player_handle].translation();
+    let self_rigid_body = &rigid_body_set[handle];
+    let movement_force = stop_linvel(IMP_MOVE_FORCE, self_rigid_body);
     match self.state {
       EnemyImpState::Idle => {
-        let self_rigid_body = &rigid_body_set[handle];
-
         let self_translation = self_rigid_body.translation();
 
         let direction_to_player = player_translation - self_translation;
@@ -381,7 +379,7 @@ impl EnemyImp {
             enemy: Enemy::Imp(Self {
               state: EnemyImpState::Shooting,
             }),
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -391,7 +389,7 @@ impl EnemyImp {
               state: EnemyImpState::Idle,
             }),
             handle,
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -442,7 +440,7 @@ impl EnemyImp {
             enemy: Enemy::Imp(Self {
               state: EnemyImpState::ShootingCooldown(frames_left - 1),
             }),
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -450,73 +448,31 @@ impl EnemyImp {
           EnemyDecision {
             handle,
             enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Accelerating(
-                IMP_STATE_ACCELERATING_INITIAL_FRAMES,
-                vector![rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0)],
+              state: EnemyImpState::Moving(
+                IMP_STATE_MOVING_INITIAL_FRAMES,
+                vector![rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0)].normalize()
+                  * IMP_MOVE_DISTANCE,
               ),
             }),
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
         }
       }
-      EnemyImpState::Cruising(frames_left) => {
+      EnemyImpState::Moving(frames_left, direction) => {
         if frames_left > 0 {
-          EnemyDecision {
-            handle,
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Cruising(frames_left - 1),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
-          }
-        } else {
-          EnemyDecision {
-            handle,
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Decelerating(IMP_STATE_DECELERATING_INITIAL_FRAMES),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
-          }
-        }
-      }
-      EnemyImpState::Accelerating(frames_left, direction) => {
-        if frames_left > 0 {
-          EnemyDecision {
-            handle,
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Accelerating(frames_left - 1, direction),
-            }),
-            movement_force: direction.normalize() * IMP_MOVE_FORCE,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
-          }
-        } else {
-          EnemyDecision {
-            handle,
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Cruising(IMP_STATE_CRUISING_INITIAL_FRAMES),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
-          }
-        }
-      }
-      EnemyImpState::Decelerating(frames_left) => {
-        let linvel = rigid_body_set[handle].linvel();
+          let ease =
+            easing::ease_in_out_sine_ddt2() * (direction / IMP_STATE_MOVING_INITIAL_FRAMES as f32);
+          let x = 1.0 - frames_left as f32 / IMP_STATE_MOVING_INITIAL_FRAMES as f32;
+          let movement_force = ease.at(x);
 
-        if frames_left > 0 && linvel.magnitude() > 0.0 {
           EnemyDecision {
             handle,
             enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Decelerating(frames_left - 1),
+              state: EnemyImpState::Moving(frames_left - 1, direction),
             }),
-            movement_force: -linvel.normalize() * IMP_MOVE_FORCE,
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -524,9 +480,9 @@ impl EnemyImp {
           EnemyDecision {
             handle,
             enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Shooting,
+              state: EnemyImpState::Idle,
             }),
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -558,6 +514,7 @@ const ENEMY_ARANEA_STOPPING_FORCE: f32 =
 const ENEMY_ARANEA_COOLDOWN_INITIAL_FRAMES: i32 = 35;
 const ENEMY_ARANEA_SHOOTING_FORCE: f32 = 0.65;
 const ENEMY_ARANEA_PROJECTILE_DAMAGE: f32 = 10.0;
+const ENEMY_ARANEA_HOLD_FORCE: f32 = 0.3;
 
 impl EnemyAranea {
   pub fn new(egg_handle: ColliderHandle) -> Self {
@@ -576,6 +533,8 @@ impl EnemyAranea {
     rigid_body_set: &RigidBodySet,
     narrow_phase: &NarrowPhase,
   ) -> EnemyDecision {
+    let self_rigid_body = &rigid_body_set[handle];
+    let movement_force = stop_linvel(ENEMY_ARANEA_HOLD_FORCE, self_rigid_body);
     match self.state {
       EnemyAraneaState::Idle => {
         if narrow_phase
@@ -583,8 +542,6 @@ impl EnemyAranea {
           .any(|(_, _, colliding)| colliding)
           || damageable.health < damageable.max_health
         {
-          let self_rigid_body = &rigid_body_set[handle];
-
           let self_translation = self_rigid_body.translation();
 
           let egg_translation = collider_set[self.egg_handle].translation();
@@ -613,7 +570,7 @@ impl EnemyAranea {
               egg_handle: self.egg_handle,
               state: EnemyAraneaState::Idle,
             }),
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -645,8 +602,6 @@ impl EnemyAranea {
         }
       }
       EnemyAraneaState::Stopping(frames_left) => {
-        let self_rigid_body = &rigid_body_set[handle];
-
         if frames_left > 0 {
           EnemyDecision {
             handle,
@@ -679,7 +634,7 @@ impl EnemyAranea {
               egg_handle: self.egg_handle,
               state: EnemyAraneaState::Cooldown(frames_left - 1),
             }),
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -690,15 +645,13 @@ impl EnemyAranea {
               egg_handle: self.egg_handle,
               state: EnemyAraneaState::Shooting,
             }),
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
         }
       }
       EnemyAraneaState::Shooting => {
-        let self_rigid_body = &rigid_body_set[handle];
-
         let self_translation = self_rigid_body.translation();
 
         let vector_to_player = player_translation - self_translation;
@@ -1144,4 +1097,12 @@ pub fn calculate_lead_direction(
     (target_relative_position + (target_relative_velocity * delta_time))
       / (bullet_speed * delta_time)
   })
+}
+
+pub fn stop_linvel(move_speed: f32, rigid_body: &RigidBody) -> Vector2<f32> {
+  if rigid_body.linvel().magnitude() > move_speed {
+    -rigid_body.linvel().normalize() * move_speed
+  } else {
+    -rigid_body.linvel()
+  }
 }

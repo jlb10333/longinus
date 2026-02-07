@@ -17,6 +17,7 @@ mod ability;
 mod camera;
 mod combat;
 mod controls;
+mod easing;
 mod ecs;
 mod enemy;
 mod f;
