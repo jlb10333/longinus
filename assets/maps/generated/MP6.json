@@ -736,13 +736,6 @@
                  "y":288
                 }, 
                 {
-                 "id":44,
-                 "name":"Front2Slot",
-                 "template":"templates\/ItemPickup.tx",
-                 "x":296,
-                 "y":208
-                }, 
-                {
                  "id":46,
                  "properties":[
                         {
@@ -751,8 +744,8 @@
                          "value":30
                         }],
                  "template":"templates\/Health Tank.tx",
-                 "x":408,
-                 "y":312
+                 "x":296,
+                 "y":224
                 }],
          "opacity":1,
          "type":"objectgroup",

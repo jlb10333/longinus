@@ -178,6 +178,105 @@
                  "template":"templates\/Aranea Egg.tx",
                  "x":96,
                  "y":344
+                }, 
+                {
+                 "id":17,
+                 "name":"Aranea",
+                 "properties":[
+                        {
+                         "name":"EggId",
+                         "type":"object",
+                         "value":18
+                        }],
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":176,
+                 "y":264
+                }, 
+                {
+                 "id":18,
+                 "template":"templates\/Aranea Egg.tx",
+                 "x":176,
+                 "y":304
+                }, 
+                {
+                 "id":19,
+                 "name":"Aranea",
+                 "properties":[
+                        {
+                         "name":"EggId",
+                         "type":"object",
+                         "value":20
+                        }],
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":144,
+                 "y":352
+                }, 
+                {
+                 "id":20,
+                 "template":"templates\/Aranea Egg.tx",
+                 "x":144,
+                 "y":320
+                }, 
+                {
+                 "id":21,
+                 "name":"Aranea",
+                 "properties":[
+                        {
+                         "name":"EggId",
+                         "type":"object",
+                         "value":22
+                        }],
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":296,
+                 "y":112
+                }, 
+                {
+                 "id":22,
+                 "template":"templates\/Aranea Egg.tx",
+                 "x":264,
+                 "y":96
+                }, 
+                {
+                 "id":23,
+                 "name":"Aranea",
+                 "properties":[
+                        {
+                         "name":"EggId",
+                         "type":"object",
+                         "value":24
+                        }],
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":112,
+                 "y":32
+                }, 
+                {
+                 "id":24,
+                 "template":"templates\/Aranea Egg.tx",
+                 "x":112,
+                 "y":72
+                }, 
+                {
+                 "height":0,
+                 "id":25,
+                 "name":"Save Point",
+                 "properties":[
+                        {
+                         "name":"PlayerSpawnId",
+                         "type":"object",
+                         "value":26
+                        }],
+                 "rotation":0,
+                 "type":"SavePoint",
+                 "visible":true,
+                 "width":0,
+                 "x":56,
+                 "y":104
+                }, 
+                {
+                 "id":26,
+                 "template":"templates\/Player Spawn.tx",
+                 "x":56,
+                 "y":80
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -186,7 +285,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":17,
+ "nextobjectid":27,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

@@ -74,6 +74,13 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":176,
                  "y":232
+                }, 
+                {
+                 "id":7,
+                 "name":"SniperGenerator",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":240,
+                 "y":72
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -82,7 +89,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":7,
+ "nextobjectid":8,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

@@ -1,6 +1,6 @@
 {
-  "player_spawn_id": 7,
-  "map_name": "MP7",
+  "player_spawn_id": 8,
+  "map_name": "start",
   "unequipped_modules": ["Plasma", "FortyFiveSlot", "Front2Slot"],
   "equipped_modules": [
     [

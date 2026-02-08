@@ -151,7 +151,7 @@ fn load_new_map(
           let egg_handle = collider_set.insert(aranea_egg);
           Enemy::Aranea(EnemyAranea::new(egg_handle))
         }
-        EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender { cooldown: 0 }),
+        EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
         EnemySpawnEnemy::Seeker => Enemy::Seeker(EnemySeeker),
         EnemySpawnEnemy::SeekerGenerator => {
           Enemy::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 })
@@ -1040,7 +1040,7 @@ impl System for PhysicsSystem {
                 EnemySpawnEnemy::Aranea(_) => {
                   panic!("Cannot spawn aranea child")
                 }
-                EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender { cooldown: 0 }),
+                EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
                 EnemySpawnEnemy::Seeker => Enemy::Seeker(EnemySeeker),
                 EnemySpawnEnemy::SeekerGenerator => {
                   Enemy::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 })

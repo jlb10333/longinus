@@ -534,13 +534,6 @@
                  "y":208
                 }, 
                 {
-                 "id":38,
-                 "name":"Sniper",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":424,
-                 "y":240
-                }, 
-                {
                  "id":39,
                  "name":"Sniper",
                  "template":"templates\/EnemySpawn.tx",
@@ -684,6 +677,13 @@
                  "template":"templates\/ItemPickup.tx",
                  "x":216,
                  "y":296
+                }, 
+                {
+                 "id":50,
+                 "name":"Defender",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":424,
+                 "y":224
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -692,7 +692,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":50,
+ "nextobjectid":51,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

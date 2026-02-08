@@ -266,33 +266,6 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":168,
                  "y":184
-                }, 
-                {
-                 "height":0,
-                 "id":21,
-                 "name":"Gravity Source",
-                 "properties":[
-                        {
-                         "name":"ActivatorId",
-                         "type":"object",
-                         "value":0
-                        }, 
-                        {
-                         "name":"Radius",
-                         "type":"float",
-                         "value":3
-                        }, 
-                        {
-                         "name":"Strength",
-                         "type":"float",
-                         "value":-0.075
-                        }],
-                 "rotation":0,
-                 "type":"GravitySource",
-                 "visible":true,
-                 "width":0,
-                 "x":112,
-                 "y":168
                 }],
          "opacity":1,
          "type":"objectgroup",

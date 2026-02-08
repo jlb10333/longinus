@@ -94,65 +94,70 @@ impl System for EnemySystem {
 
 fn enemy_behavior_generator(
   player_handle: RigidBodyHandle,
-  physics_rigid_bodies: &RigidBodySet,
-  physics_colliders: &ColliderSet,
+  rigid_body_set: &RigidBodySet,
+  collider_set: &ColliderSet,
   narrow_phase: &NarrowPhase,
   query_pipeline: &QueryPipeline,
   rng: &RandGenerator,
 ) -> impl Fn((&EntityHandle, &Rc<Entity>)) -> Option<EnemyDecision> {
-  let player_translation = physics_rigid_bodies[player_handle].translation();
+  let player_translation = rigid_body_set[player_handle].translation();
 
   move |(&handle, entity)| {
-    if let EntityHandle::RigidBody(rigid_body_handle) = handle {
+    if let EntityHandle::RigidBody(handle) = handle {
       entity
         .components
         .get::<Enemy>()
         .map(|enemy| match enemy.as_ref() {
           Enemy::Goblin(goblin) => goblin.behavior(
-            rigid_body_handle,
+            handle,
             player_handle,
-            physics_rigid_bodies,
-            physics_colliders,
+            rigid_body_set,
+            collider_set,
             query_pipeline,
           ),
           Enemy::Imp(imp) => imp.behavior(
-            rigid_body_handle,
+            handle,
             player_handle,
-            physics_rigid_bodies,
-            physics_colliders,
+            rigid_body_set,
+            collider_set,
             query_pipeline,
             rng,
           ),
           Enemy::Aranea(aranea) => {
             let damageable = entity.components.get::<Damageable>().unwrap();
             aranea.behavior(
-              rigid_body_handle,
+              handle,
               damageable.as_ref(),
               player_translation,
-              physics_colliders,
-              physics_rigid_bodies,
+              collider_set,
+              rigid_body_set,
               narrow_phase,
             )
           }
-          Enemy::Defender(defender) => defender.behavior(rigid_body_handle),
-          Enemy::Seeker(seeker) => {
-            seeker.behavior(rigid_body_handle, player_translation, physics_rigid_bodies)
-          }
+          Enemy::Defender(defender) => defender.behavior(
+            handle,
+            player_handle,
+            player_translation,
+            collider_set,
+            rigid_body_set,
+            query_pipeline,
+          ),
+          Enemy::Seeker(seeker) => seeker.behavior(handle, player_translation, rigid_body_set),
           Enemy::SeekerGenerator(seeker_generator) => {
-            seeker_generator.behavior(rigid_body_handle, player_translation, physics_rigid_bodies)
+            seeker_generator.behavior(handle, player_translation, rigid_body_set)
           }
           Enemy::Sniper(sniper) => sniper.behavior(
-            rigid_body_handle,
+            handle,
             player_handle,
-            physics_colliders,
-            physics_rigid_bodies,
+            collider_set,
+            rigid_body_set,
             query_pipeline,
           ),
           Enemy::SniperGenerator(sniper_generator) => sniper_generator.behavior(
-            rigid_body_handle,
+            handle,
             player_handle,
-            physics_colliders,
-            physics_rigid_bodies,
+            collider_set,
+            rigid_body_set,
             query_pipeline,
             rng,
           ),
@@ -685,40 +690,131 @@ impl EnemyAranea {
 }
 
 #[derive(Clone)]
-pub struct EnemyDefender {
-  pub cooldown: i32,
+pub enum EnemyDefenderState {
+  Idle,
+  Shooting(i32),
+  Cooldown(i32, i32),
 }
 
+#[derive(Clone)]
+pub struct EnemyDefender {
+  state: EnemyDefenderState,
+}
+
+const DEFENDER_HOLD_FORCE: f32 = 0.2;
+const DEFENDER_COOLDOWN_INITIAL_FRAMES: i32 = 35;
+const DEFENDER_EASE_PERIOD: f32 = 15.0;
+
 impl EnemyDefender {
-  pub fn behavior(&self, handle: RigidBodyHandle) -> EnemyDecision {
-    let should_fire_projectiles = self.cooldown % 50 == 0;
-    EnemyDecision {
-      handle,
-      movement_force: vec_zero(),
-      projectiles: if should_fire_projectiles {
+  pub fn new() -> EnemyDefender {
+    Self {
+      state: EnemyDefenderState::Idle,
+    }
+  }
+
+  pub fn behavior(
+    &self,
+    handle: RigidBodyHandle,
+    player_handle: RigidBodyHandle,
+    player_translation: &Vector2<f32>,
+    collider_set: &ColliderSet,
+    rigid_body_set: &RigidBodySet,
+    query_pipeline: &QueryPipeline,
+  ) -> EnemyDecision {
+    let self_rigid_body = &rigid_body_set[handle];
+
+    let movement_force = stop_linvel(DEFENDER_HOLD_FORCE, self_rigid_body);
+
+    match self.state {
+      EnemyDefenderState::Idle => {
+        let self_translation = self_rigid_body.translation();
+
+        let direction_to_player = player_translation - self_translation;
+
+        if let Some((reached_handle, _)) = query_pipeline.cast_ray(
+          &Ray::new((*self_translation).into(), direction_to_player),
+          IMP_AGGRO_RANGE,
+          true,
+        ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
+          && reached_parent_handle == player_handle
+        {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Defender(Self {
+              state: EnemyDefenderState::Shooting(0),
+            }),
+            movement_force,
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        } else {
+          EnemyDecision {
+            enemy: Enemy::Defender(Self {
+              state: EnemyDefenderState::Idle,
+            }),
+            handle,
+            movement_force,
+            enemies_to_spawn: vec![],
+            projectiles: vec![],
+          }
+        }
+      }
+      EnemyDefenderState::Shooting(count) => {
+        let ease = easing::ease_in_out_sine() * 2.0 * PI;
+
+        let x = count as f32 / DEFENDER_EASE_PERIOD;
+
+        let angle = ease.at(x);
+
         let projectile = |offset: f32| Projectile {
           collider: ColliderBuilder::ball(0.2)
             .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
             .build(),
           damage: 5.0,
-          initial_impulse: distance_projection_physics(offset + self.cooldown as f32 / 120.0, 0.7),
+          initial_impulse: distance_projection_physics(offset + angle, 0.7),
           offset: PhysicsVector::zero(),
           component_set: ComponentSet::new(),
           force_mod: 0.0,
         };
-        Vec::from([
-          projectile(0.0),
-          projectile(PI / 2.0),
-          projectile(PI),
-          projectile(PI + (PI / 2.0)),
-        ])
-      } else {
-        Vec::new()
-      },
-      enemy: Enemy::Defender(EnemyDefender {
-        cooldown: self.cooldown - 1,
-      }),
-      enemies_to_spawn: vec![],
+
+        EnemyDecision {
+          handle,
+          movement_force,
+          projectiles: vec![
+            projectile(0.0),
+            projectile(PI / 2.0),
+            projectile(PI),
+            projectile(PI + (PI / 2.0)),
+          ],
+          enemy: Enemy::Defender(EnemyDefender {
+            state: EnemyDefenderState::Cooldown(count, DEFENDER_COOLDOWN_INITIAL_FRAMES),
+          }),
+          enemies_to_spawn: vec![],
+        }
+      }
+      EnemyDefenderState::Cooldown(count, frames_left) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Defender(EnemyDefender {
+              state: EnemyDefenderState::Cooldown(count, frames_left - 1),
+            }),
+            movement_force,
+            projectiles: vec![],
+            enemies_to_spawn: vec![],
+          }
+        } else {
+          EnemyDecision {
+            handle,
+            enemy: Enemy::Defender(EnemyDefender {
+              state: EnemyDefenderState::Shooting((count + 1) % DEFENDER_EASE_PERIOD as i32),
+            }),
+            movement_force,
+            projectiles: vec![],
+            enemies_to_spawn: vec![],
+          }
+        }
+      }
     }
   }
 }
@@ -815,6 +911,7 @@ const SNIPER_AGGRO_RANGE: f32 = 40.0;
 const SNIPER_COOLDOWN_INITIAL_FRAMES: i32 = 200;
 const SNIPER_PROJECTILE_DAMAGE: f32 = 20.0;
 const SNIPER_SHOOTING_FORCE: f32 = 15.0;
+const SNIPER_HOLD_FORCE: f32 = 0.2;
 
 impl EnemySniper {
   pub fn new() -> Self {
@@ -836,6 +933,7 @@ impl EnemySniper {
     let self_rigid_body = &rigid_body_set[handle];
     let self_translation = self_rigid_body.translation();
     let direction_to_player = player_translation - self_translation;
+    let movement_force = stop_linvel(SNIPER_HOLD_FORCE, self_rigid_body);
 
     match self.state {
       EnemySniperState::Idle => {
@@ -859,7 +957,7 @@ impl EnemySniper {
             enemy: Enemy::Sniper(Self {
               state: EnemySniperState::Cooldown(SNIPER_COOLDOWN_INITIAL_FRAMES),
             }),
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -869,7 +967,7 @@ impl EnemySniper {
               state: EnemySniperState::Idle,
             }),
             handle,
-            movement_force: vec_zero(),
+            movement_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -880,7 +978,7 @@ impl EnemySniper {
         enemy: Enemy::Sniper(Self {
           state: EnemySniperState::Cooldown(SNIPER_COOLDOWN_INITIAL_FRAMES),
         }),
-        movement_force: vec_zero(),
+        movement_force,
         enemies_to_spawn: vec![],
         projectiles: {
           let collider = ColliderBuilder::ball(0.08)
@@ -916,7 +1014,7 @@ impl EnemySniper {
               state: EnemySniperState::Cooldown(frames_left - 1),
             }),
             enemies_to_spawn: vec![],
-            movement_force: vec_zero(),
+            movement_force,
             projectiles: vec![],
           }
         } else {
@@ -926,7 +1024,7 @@ impl EnemySniper {
               state: EnemySniperState::Shooting,
             }),
             enemies_to_spawn: vec![],
-            movement_force: vec_zero(),
+            movement_force,
             projectiles: vec![],
           }
         }
