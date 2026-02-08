@@ -72,7 +72,7 @@
                  "id":7,
                  "name":"Sniper",
                  "template":"templates\/EnemySpawn.tx",
-                 "x":192,
+                 "x":80,
                  "y":296
                 }, 
                 {
@@ -86,15 +86,8 @@
                  "id":9,
                  "name":"Defender",
                  "template":"templates\/EnemySpawn.tx",
-                 "x":96,
+                 "x":160,
                  "y":304
-                }, 
-                {
-                 "id":10,
-                 "name":"Sniper",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":192,
-                 "y":368
                 }, 
                 {
                  "id":11,
@@ -458,7 +451,7 @@
                         {
                          "name":"Strength",
                          "type":"float",
-                         "value":0.075
+                         "value":0.08
                         }],
                  "rotation":0,
                  "type":"GravitySource",
@@ -485,7 +478,7 @@
                         {
                          "name":"Strength",
                          "type":"float",
-                         "value":0.075
+                         "value":0.08
                         }],
                  "rotation":0,
                  "type":"GravitySource",
@@ -512,7 +505,7 @@
                         {
                          "name":"Strength",
                          "type":"float",
-                         "value":0.075
+                         "value":0.08
                         }],
                  "rotation":0,
                  "type":"GravitySource",
@@ -520,6 +513,13 @@
                  "width":0,
                  "x":188,
                  "y":196
+                }, 
+                {
+                 "id":34,
+                 "name":"Defender",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":160,
+                 "y":352
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -528,7 +528,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":34,
+ "nextobjectid":35,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

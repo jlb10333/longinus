@@ -1,6 +1,6 @@
 {
-  "player_spawn_id": 8,
-  "map_name": "start",
+  "player_spawn_id": 1,
+  "map_name": "MP15",
   "unequipped_modules": ["Plasma", "FortyFiveSlot", "Front2Slot"],
   "equipped_modules": [
     [

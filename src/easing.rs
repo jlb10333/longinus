@@ -81,3 +81,7 @@ pub fn ease_in_out_sine_ddt() -> Easing<'static, f32> {
 pub fn ease_in_out_sine_ddt2() -> Easing<'static, f32> {
   Easing::new(|x| (PI * PI / 2.0) * (x * PI).cos())
 }
+
+pub fn ease_out_cubic() -> Easing<'static, f32> {
+  Easing::new(|x| 1.0 - (1.0 - x).powf(3.0))
+}

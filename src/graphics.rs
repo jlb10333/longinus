@@ -11,6 +11,7 @@ use crate::{
     distance_projection_screen, get_reticle_pos, get_slot_positions, weapon_module_from_kind,
   },
   controls::ControlsSystem,
+  easing::{ease_out_cubic, ease_out_sine},
   ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id},
   enemy::{EnemySniperState, calculate_lead_direction},
   graphics_utils::{draw_collider, draw_label},
@@ -19,7 +20,7 @@ use crate::{
   physics::PhysicsSystem,
   save::SaveSystem,
   system::System,
-  units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
+  units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 
 const RETICLE_SIZE: f32 = 3.0;
@@ -121,24 +122,86 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             }
           }
 
-          let alpha = if let Some(gravity_source) = entity.components.get::<GravitySource>()
-            && let Some(target_activator_id) = gravity_source.activator_id
-            && let Some((_, other_entity)) =
-              physics_system.entities.iter().find(|(_, other_entity)| {
-                if let Some(id) = other_entity.components.get::<Id>()
-                  && id.id == target_activator_id
-                {
-                  true
-                } else {
-                  false
-                }
-              })
-            && let Some(activator) = other_entity.components.get::<Activator>()
+          if let Some(gravity_source) = entity.components.get::<GravitySource>()
+            && let EntityHandle::Collider(handle) = entity.handle
+            && let Some(ball) = physics_system.collider_set[handle].shape().as_ball()
           {
-            Some(activator.activation / 2.0)
-          } else {
-            None
-          };
+            let activation = if let Some(target_activator_id) = gravity_source.activator_id
+              && let Some((_, other_entity)) =
+                physics_system.entities.iter().find(|(_, other_entity)| {
+                  if let Some(id) = other_entity.components.get::<Id>()
+                    && id.id == target_activator_id
+                  {
+                    true
+                  } else {
+                    false
+                  }
+                })
+              && let Some(activator) = other_entity.components.get::<Activator>()
+            {
+              activator.activation
+            } else {
+              1.0
+            };
+
+            let gravity_strength = gravity_source.strength * activation;
+
+            if gravity_strength == 0.0 {
+              return;
+            }
+
+            let ball_radius_screen = *PhysicsScalar(ball.radius).convert();
+
+            let period = (gravity_strength * ball_radius_screen * 30.0).abs();
+
+            let ball_1_completion_ratio = (physics_system.frame_count as f32 % period) / period;
+
+            let ball_1_completion_ratio = if gravity_strength > 0.0 {
+              1.0 - ball_1_completion_ratio
+            } else {
+              ball_1_completion_ratio
+            };
+
+            let ball_1_radius = ball_1_completion_ratio * ball_radius_screen;
+
+            let ball_2_completion_ratio =
+              ((physics_system.frame_count as f32 + (period / 2.0)) % period) / period;
+
+            let ball_2_completion_ratio = if gravity_strength > 0.0 {
+              1.0 - ball_2_completion_ratio
+            } else {
+              ball_2_completion_ratio
+            };
+
+            let ball_2_radius = ball_2_completion_ratio * ball_radius_screen;
+
+            let translation =
+              PhysicsVector::from_vec(*physics_system.collider_set[handle].translation())
+                .into_pos(camera_system.translation);
+
+            let alpha_ease = ease_out_cubic() * 0.15;
+
+            draw_circle(
+              translation.x(),
+              translation.y(),
+              ball_1_radius,
+              COLOR_3.with_alpha(alpha_ease.at(1.0 - ball_1_completion_ratio)),
+            );
+            draw_circle(
+              translation.x(),
+              translation.y(),
+              ball_2_radius,
+              COLOR_3.with_alpha(alpha_ease.at(1.0 - ball_2_completion_ratio)),
+            );
+            draw_circle(
+              translation.x(),
+              translation.y(),
+              ball_radius_screen,
+              COLOR_2.with_alpha(0.2),
+            );
+
+            return;
+          }
 
           handle
             .colliders(&physics_system.rigid_body_set)
@@ -156,7 +219,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                 } else {
                   None
                 },
-                alpha,
+                None,
               );
             });
 

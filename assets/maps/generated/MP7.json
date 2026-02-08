@@ -100,7 +100,7 @@
                         {
                          "name":"Strength",
                          "type":"float",
-                         "value":-0.2
+                         "value":-0.4
                         }],
                  "rotation":0,
                  "type":"GravitySource",
@@ -190,7 +190,7 @@
                         }],
                  "template":"templates\/EnemySpawn.tx",
                  "x":176,
-                 "y":264
+                 "y":272
                 }, 
                 {
                  "id":18,

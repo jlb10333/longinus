@@ -232,7 +232,7 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":23
+                         "value":22
                         }, 
                         {
                          "name":"ReverseDirection",
@@ -304,6 +304,27 @@
                  "width":0,
                  "x":324,
                  "y":152
+                }, 
+                {
+                 "id":23,
+                 "name":"Defender",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":168,
+                 "y":160
+                }, 
+                {
+                 "id":24,
+                 "name":"Defender",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":168,
+                 "y":280
+                }, 
+                {
+                 "id":25,
+                 "name":"Defender",
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":104,
+                 "y":360
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -312,7 +333,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":23,
+ "nextobjectid":26,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

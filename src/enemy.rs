@@ -941,14 +941,6 @@ impl EnemySniper {
           &Ray::new((*self_translation).into(), direction_to_player),
           SNIPER_AGGRO_RANGE,
           true,
-        ) {
-          println!("{:?} {:?}", reached_handle, player_handle);
-        }
-
-        if let Some((reached_handle, _)) = query_pipeline.cast_ray(
-          &Ray::new((*self_translation).into(), direction_to_player),
-          SNIPER_AGGRO_RANGE,
-          true,
         ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
           && reached_parent_handle == player_handle
         {
@@ -1049,8 +1041,8 @@ const SNIPER_GENERATOR_GENERATING_INITIAL_FRAMES: i32 = 60;
 const SNIPER_GENERATOR_NUM_SNIPERS_GENERATED: i32 = 3;
 const SNIPER_GENERATOR_GENERATING_INTERVAL: i32 =
   SNIPER_GENERATOR_GENERATING_INITIAL_FRAMES / SNIPER_GENERATOR_NUM_SNIPERS_GENERATED;
-const SNIPER_GENERATOR_COOLDOWN_INITIAL_FRAMES: i32 = 500;
-const SNIPER_GENERATOR_GENERATING_INITIAL_FORCE: f32 = 10.0;
+const SNIPER_GENERATOR_COOLDOWN_INITIAL_FRAMES: i32 = 450;
+const SNIPER_GENERATOR_GENERATING_INITIAL_FORCE: f32 = 25.0;
 
 impl EnemySniperGenerator {
   pub fn new() -> Self {
