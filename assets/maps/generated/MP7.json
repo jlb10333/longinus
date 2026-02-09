@@ -151,14 +151,14 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":12
+                         "value":27
                         }],
                  "rotation":0,
                  "type":"Not",
                  "visible":true,
                  "width":0,
-                 "x":184,
-                 "y":216
+                 "x":200,
+                 "y":200
                 }, 
                 {
                  "id":14,
@@ -277,6 +277,23 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":56,
                  "y":80
+                }, 
+                {
+                 "height":0,
+                 "id":27,
+                 "name":"Engine",
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":12
+                        }],
+                 "rotation":0,
+                 "type":"Engine",
+                 "visible":true,
+                 "width":0,
+                 "x":176,
+                 "y":216
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -285,7 +302,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":27,
+ "nextobjectid":28,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

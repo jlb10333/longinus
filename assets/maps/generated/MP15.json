@@ -520,6 +520,27 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":160,
                  "y":352
+                }, 
+                {
+                 "id":42,
+                 "template":"templates\/Player Spawn.tx",
+                 "x":16,
+                 "y":364
+                }, 
+                {
+                 "height":40,
+                 "id":43,
+                 "name":"MP17",
+                 "properties":[
+                        {
+                         "name":"TargetPlayerSpawn",
+                         "type":"int",
+                         "value":31
+                        }],
+                 "template":"templates\/MapTransition.tx",
+                 "width":8,
+                 "x":0,
+                 "y":344
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -528,7 +549,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":35,
+ "nextobjectid":44,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

@@ -90,13 +90,6 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":88,
                  "y":280
-                }, 
-                {
-                 "id":14,
-                 "name":"Defender",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":176,
-                 "y":248
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -105,7 +98,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":15,
+ "nextobjectid":18,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

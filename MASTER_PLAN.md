@@ -3,28 +3,36 @@
 - Mechanical prototype
   - Get it playtested
 - Mechanical prototype v2
+  - Bugs
+    - Fix bug causing boost to be hard to activate (not consumed by physics)
+    - Fix bug causing menu update from item acquisition to not be consumed by physics
+    - Fix player movement (normalize diagonal)
   - Visual explainability
     - Show all health tank and mana tanks in inventory
     - Show mana levels better
   - Enemies
-    - Aranea
-      - 'Egg' trigger at a different point; if player touches egg, aranea launches towards player and once reaching the egg, starts shooting scattershot towards player
+    - Make map transitions solid for enemies
+    - Persistent enemy death
+    - Activation trigger as a result of enemy death
+    - Time slow effect on killing an enemy
   - First boss
   - Mana
     - Unrechargeable bars can be replenished with enemy drops
     - Both rechargeable and unrechargeable bars can be found in environment
-  - Activation
-    - Magnet balls
-    - Crank
-    - Min
-    - Max
-    - Lasers
-    - Saving/loading of activation levels
+  - Modules
+    - Add upgrades that affect projectile speed
 - Messy experiments in variety
   - Come up with a list of places where variety(!!) emerges from
   - For each one, develop a small prototype
   - Playtest them
   - Come up with a strategy for how to make the rest of the game
+- Activation
+  - Magnet balls
+  - Crank
+  - Min
+  - Max
+  - Lasers
+  - Saving/loading of activation levels
 - Exploration game loop
   - Combat
     - Modules
@@ -52,9 +60,9 @@
     - Make chain deal damage to enemies
     - Increase defensive power
     - Increase damage taken but also received
-  - Water Physics (maybe)
+      - Water Physics (maybe)
+  - Time-slow zones?
 ### Squash bugs
-- Chain can be activated outside of the mount radius
 - Culling is over-eager for cuboids in the direct corners of the screen
 - Seeker enemies will slam into the wall bc the speed cap uses absolute value
 ### Level design
@@ -64,7 +72,6 @@
 - Collect feedback from playtesters
 - Refine feedback into actionable items
 ## Writing
-- Why does the Spirit know about the erasure from history?
 - What's the story behind the player character?
 - Basic outline for each cyst layer expedition
 ## Art

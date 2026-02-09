@@ -1,0 +1,2 @@
+- Why does the Spirit know about the erasure from history?
+  - Because the person or thing who kills a dragon retains its memories even as the timeline rewrites for everyone else
