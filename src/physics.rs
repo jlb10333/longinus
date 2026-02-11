@@ -34,8 +34,8 @@ use crate::{
   units::{PhysicsVector, UnitConvert2},
 };
 
-const PLAYER_SPEED_LIMIT: f32 = 2.5;
-const PLAYER_ACCELERATION_MOD: f32 = 0.25;
+const PLAYER_SPEED_LIMIT: f32 = 5.5;
+const PLAYER_ACCELERATION_MOD: f32 = 0.35;
 
 const CHAIN_SEGMENT_LENGTH: f32 = 0.5;
 const CHAIN_SEGMENT_HEIGHT: f32 = 0.05;
@@ -846,7 +846,7 @@ impl System for PhysicsSystem {
     let player_mass = rigid_body_set[self.player_handle].mass();
 
     if let Some(boost_force) = ability_system.boost_force {
-      rigid_body_set[self.player_handle].apply_impulse(boost_force * player_mass, true);
+      rigid_body_set[self.player_handle].set_linvel(boost_force, true);
     }
 
     /* MARK: Gravity source behavior */

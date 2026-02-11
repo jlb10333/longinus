@@ -91,36 +91,36 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       if SHOW_COLLIDERS {
         physics_system.entities.iter().for_each(|(handle, entity)| {
           /* Debug: draw leading lines for snipers */
-          if let Some(enemy) = entity.components.get::<Enemy>()
-            && let Enemy::Sniper(sniper) = enemy.as_ref()
-            && matches!(sniper.state, EnemySniperState::Cooldown(_))
-            && let EntityHandle::RigidBody(handle) = handle
-          {
-            let player_rigid_body = &physics_system.rigid_body_set[physics_system.player_handle];
-            let self_rigid_body = &physics_system.rigid_body_set[*handle];
-            let player_relative_velocity = *player_rigid_body.linvel() - *self_rigid_body.linvel();
+          // if let Some(enemy) = entity.components.get::<Enemy>()
+          //   && let Enemy::Sniper(sniper) = enemy.as_ref()
+          //   && matches!(sniper.state, EnemySniperState::Cooldown(_))
+          //   && let EntityHandle::RigidBody(handle) = handle
+          // {
+          //   let player_rigid_body = &physics_system.rigid_body_set[physics_system.player_handle];
+          //   let self_rigid_body = &physics_system.rigid_body_set[*handle];
+          //   let player_relative_velocity = *player_rigid_body.linvel() - *self_rigid_body.linvel();
 
-            let direction_to_player =
-              player_rigid_body.translation() - self_rigid_body.translation();
+          //   let direction_to_player =
+          //     player_rigid_body.translation() - self_rigid_body.translation();
 
-            if let Some(lead_direction) =
-              calculate_lead_direction(direction_to_player, player_relative_velocity, 5.0)
-            {
-              let self_screen_translation = PhysicsVector::from_vec(*self_rigid_body.translation())
-                .into_pos(camera_system.translation);
-              let lead_direction_screen =
-                PhysicsVector::from_vec((lead_direction * 1000.0) + self_rigid_body.translation())
-                  .into_pos(camera_system.translation);
-              draw_line(
-                self_screen_translation.x(),
-                self_screen_translation.y(),
-                lead_direction_screen.x(),
-                lead_direction_screen.y(),
-                2.0,
-                COLOR_2,
-              );
-            }
-          }
+          //   if let Some(lead_direction) =
+          //     calculate_lead_direction(direction_to_player, player_relative_velocity, 5.0)
+          //   {
+          //     let self_screen_translation = PhysicsVector::from_vec(*self_rigid_body.translation())
+          //       .into_pos(camera_system.translation);
+          //     let lead_direction_screen =
+          //       PhysicsVector::from_vec((lead_direction * 1000.0) + self_rigid_body.translation())
+          //         .into_pos(camera_system.translation);
+          //     draw_line(
+          //       self_screen_translation.x(),
+          //       self_screen_translation.y(),
+          //       lead_direction_screen.x(),
+          //       lead_direction_screen.y(),
+          //       2.0,
+          //       COLOR_2,
+          //     );
+          //   }
+          // }
 
           if let Some(gravity_source) = entity.components.get::<GravitySource>()
             && let EntityHandle::Collider(handle) = entity.handle

@@ -1,158 +1,160 @@
 {
-  "maps": [
-    {
-      "fileName": "MP1.json",
-      "width": 30,
-      "height": 40,
-      "x": 0,
-      "y": 0
-    },
-    {
-      "fileName": "MP2.json",
-      "width": 40,
-      "height": 40,
-      "x": 80,
-      "y": -320
-    },
-    {
-      "fileName": "MP3.json",
-      "width": 50,
-      "height": 50,
-      "x": -560,
-      "y": -400
-    },
-    {
-      "fileName": "MP4.json",
-      "width": 40,
-      "height": 20,
-      "x": 400,
-      "y": -320
-    },
-    {
-      "fileName": "MP5.json",
-      "width": 60,
-      "height": 20,
-      "x": 400,
-      "y": -160
-    },
-    {
-      "fileName": "MP6.json",
-      "width": 60,
-      "height": 50,
-      "x": 720,
-      "y": -560
-    },
-    {
-      "fileName": "MP7.json",
-      "width": 40,
-      "height": 50,
-      "x": 880,
-      "y": -160
-    },
-    {
-      "fileName": "boost.json",
-      "width": 80,
-      "height": 50,
-      "x": 240,
-      "y": 0
-    },
-    {
-      "fileName": "MP9.json",
-      "width": 20,
-      "height": 60,
-      "x": 560,
-      "y": -800
-    },
-    {
-      "fileName": "boss1.json",
-      "width": 40,
-      "height": 40,
-      "x": 240,
-      "y": -640
-    },
-    {
-      "fileName": "MP11.json",
-      "width": 80,
-      "height": 50,
-      "x": 80,
-      "y": -1200
-    },
-    {
-      "fileName": "MISL.json",
-      "width": 20,
-      "height": 20,
-      "x": 80,
-      "y": -640
-    },
-    {
-      "fileName": "MP14.json",
-      "width": 50,
-      "height": 50,
-      "x": 720,
-      "y": -960
-    },
-    {
-      "fileName": "MP15.json",
-      "width": 40,
-      "height": 70,
-      "x": -400,
-      "y": -960
-    },
-    {
-      "fileName": "MP17.json",
-      "width": 30,
-      "height": 50,
-      "x": -640,
-      "y": -880
-    },
-    {
-      "fileName": "MP19.json",
-      "width": 30,
-      "height": 50,
-      "x": -640,
-      "y": -1280
-    },
-    {
-      "fileName": "MP20.json",
-      "width": 50,
-      "height": 30,
-      "x": -320,
-      "y": -1200
-    },
-    {
-      "fileName": "MP21.json",
-      "width": 30,
-      "height": 20,
-      "x": -160,
-      "y": -320
-    },
-    {
-      "fileName": "MP22.json",
-      "width": 20,
-      "height": 20,
-      "x": 400,
-      "y": -1360
-    },
-    {
-      "fileName": "MP25.json",
-      "width": 50,
-      "height": 60,
-      "x": -240,
-      "y": 320
-    },
-    {
-      "fileName": "MP26.json",
-      "width": 40,
-      "height": 80,
-      "x": -200,
-      "y": 800
-    },
-    {
-      "fileName": "start.json",
-      "width": 40,
-      "height": 40,
-      "x": -200,
-      "y": 1440
-    }
-  ]
+    "maps": [
+        {
+            "fileName": "MP1.json",
+            "height": 40,
+            "width": 30,
+            "x": 0,
+            "y": 0
+        },
+        {
+            "fileName": "MP2.json",
+            "height": 40,
+            "width": 40,
+            "x": 80,
+            "y": -320
+        },
+        {
+            "fileName": "MP3.json",
+            "height": 50,
+            "width": 50,
+            "x": -560,
+            "y": -400
+        },
+        {
+            "fileName": "MP4.json",
+            "height": 20,
+            "width": 40,
+            "x": 400,
+            "y": -320
+        },
+        {
+            "fileName": "MP5.json",
+            "height": 20,
+            "width": 60,
+            "x": 400,
+            "y": -160
+        },
+        {
+            "fileName": "MP6.json",
+            "height": 50,
+            "width": 60,
+            "x": 720,
+            "y": -560
+        },
+        {
+            "fileName": "MP7.json",
+            "height": 50,
+            "width": 40,
+            "x": 880,
+            "y": -160
+        },
+        {
+            "fileName": "boost.json",
+            "height": 50,
+            "width": 80,
+            "x": 240,
+            "y": 0
+        },
+        {
+            "fileName": "MP9.json",
+            "height": 60,
+            "width": 20,
+            "x": 560,
+            "y": -800
+        },
+        {
+            "fileName": "boss1.json",
+            "height": 40,
+            "width": 40,
+            "x": 240,
+            "y": -640
+        },
+        {
+            "fileName": "MP11.json",
+            "height": 50,
+            "width": 80,
+            "x": 80,
+            "y": -1200
+        },
+        {
+            "fileName": "MISL.json",
+            "height": 20,
+            "width": 20,
+            "x": 80,
+            "y": -640
+        },
+        {
+            "fileName": "MP14.json",
+            "height": 50,
+            "width": 50,
+            "x": 720,
+            "y": -960
+        },
+        {
+            "fileName": "MP15.json",
+            "height": 70,
+            "width": 40,
+            "x": -400,
+            "y": -960
+        },
+        {
+            "fileName": "MP17.json",
+            "height": 50,
+            "width": 30,
+            "x": -640,
+            "y": -880
+        },
+        {
+            "fileName": "MP19.json",
+            "height": 50,
+            "width": 30,
+            "x": -640,
+            "y": -1280
+        },
+        {
+            "fileName": "MP20.json",
+            "height": 30,
+            "width": 50,
+            "x": -320,
+            "y": -1200
+        },
+        {
+            "fileName": "MP21.json",
+            "height": 20,
+            "width": 30,
+            "x": -160,
+            "y": -320
+        },
+        {
+            "fileName": "MP22.json",
+            "height": 160,
+            "width": 160,
+            "x": 280,
+            "y": -1360
+        },
+        {
+            "fileName": "MP25.json",
+            "height": 60,
+            "width": 50,
+            "x": -240,
+            "y": 320
+        },
+        {
+            "fileName": "MP26.json",
+            "height": 80,
+            "width": 40,
+            "x": -200,
+            "y": 800
+        },
+        {
+            "fileName": "start.json",
+            "height": 40,
+            "width": 40,
+            "x": -200,
+            "y": 1440
+        }
+    ],
+    "onlyShowAdjacentMaps": false,
+    "type": "world"
 }

@@ -15,7 +15,7 @@ use crate::{
 
 const MANA_TANK_CAPACITY: f32 = 3.0;
 const MANA_TANK_RECHARGE_RATE: f32 = 1.0 / 60.0;
-const BOOST_MOD: f32 = 5.5;
+const BOOST_MOD: f32 = 10.0;
 const BOOST_MANA_USE: f32 = 3.0;
 const BOOST_MAX_COOLDOWN: f32 = 10.0;
 
@@ -46,7 +46,7 @@ impl ManaTanksActiveInfo {
   pub fn recharge(&self) -> Self {
     Self {
       rechargeable_mana_level: (self.rechargeable_mana_level + MANA_TANK_RECHARGE_RATE)
-        .min(self.capacity.max_non_rechargeable_mana_level()),
+        .min(self.capacity.max_rechargeable_mana_level()),
       ..*self
     }
   }
