@@ -868,6 +868,7 @@ impl EnemySpawn {
           current_hitstun: 0.0,
           max_hitstun: 0.0,
           hurtboxes,
+          damaged: false,
         })
         .insert(Damager {
           damage: 15.0,
@@ -886,6 +887,7 @@ impl EnemySpawn {
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
+          damaged: false,
         })
         .insert(Damager {
           hitboxes,
@@ -904,6 +906,7 @@ impl EnemySpawn {
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
+          damaged: false,
         })
         .insert(Damager {
           hitboxes,
@@ -922,6 +925,7 @@ impl EnemySpawn {
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
+          damaged: false,
         })
         .insert(Damager {
           hitboxes,
@@ -940,6 +944,7 @@ impl EnemySpawn {
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
+          damaged: false,
         })
         .insert(Damager {
           hitboxes,
@@ -958,6 +963,7 @@ impl EnemySpawn {
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
+          damaged: false,
         })
         .insert(Damager {
           hitboxes,
@@ -976,6 +982,7 @@ impl EnemySpawn {
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
+          damaged: false,
         })
         .insert(Damager {
           hitboxes,
@@ -994,6 +1001,7 @@ impl EnemySpawn {
           destroy_on_zero_health: true,
           current_hitstun: 0.0,
           max_hitstun: 0.0,
+          damaged: false,
         })
         .insert(Damager {
           hitboxes,

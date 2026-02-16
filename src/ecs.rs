@@ -175,6 +175,7 @@ pub struct Damageable {
   pub current_hitstun: f32,
   pub max_hitstun: f32,
   pub hurtboxes: Vec<ColliderHandle>,
+  pub damaged: bool,
 }
 impl Component for Damageable {}
 
