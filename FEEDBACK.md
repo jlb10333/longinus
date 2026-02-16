@@ -23,3 +23,16 @@
 - River
   - Feedback
     - Issues with wired switch branded controller
+
+- Hyper
+  - Feedback
+    - Lines from sniper are too chaotic
+    - Hard to get signal for enemy intentions
+    - Hard to tell when hitting enemy
+      - Maybe needs audio, visual, and/or healthbar
+    - Be able to extend camera (annoying to have things shooting from out of sight)
+    - Boost is hard to remember that it exists
+      - Maybe design enemies where it's difficult to deal with them without boost
+    - Idea: Ability that stops all momentum
+      - Make this be a reflector too like shine
+    - Hard to tell when player is invuln

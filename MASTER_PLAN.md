@@ -1,7 +1,5 @@
 # Longinus Master Plan
 ## Gameplay
-- Mechanical prototype
-  - Get it playtested
 - Mechanical prototype v2
   - Bugs
     - Fix bug causing boost to be hard to activate (not consumed by physics)
@@ -10,6 +8,11 @@
   - Visual explainability
     - Show all health tank and mana tanks in inventory
     - Show mana levels better
+    - Enemy hit flash effect
+  - Audio explainability
+    - Enemy hit sfx
+    - Enemy death sfx
+    - Player hit sfx
   - Enemies
     - Make map transitions solid for enemies
     - Persistent enemy death
@@ -19,6 +22,8 @@
   - Mana
     - Unrechargeable bars can be replenished with enemy drops
     - Both rechargeable and unrechargeable bars can be found in environment
+  - Ability
+    - Ability that stops all momentum and reflects any objects in range
   - Modules
     - Add upgrades that affect projectile speed
 - Messy experiments in variety

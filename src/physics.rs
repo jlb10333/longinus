@@ -28,7 +28,6 @@ use crate::{
     COLLISION_GROUP_WALL, EnemySpawnColliderHandles, EnemySpawnEnemy, Map, MapAbilityType,
     MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
   },
-  menu::MenuSystem,
   save::SaveData,
   system::System,
   units::{PhysicsVector, UnitConvert2},
@@ -57,6 +56,7 @@ pub struct PhysicsSystem {
   pub ccd_solver: CCDSolver,
   pub player_handle: RigidBodyHandle,
   pub entities: HashTrieMap<EntityHandle, Rc<Entity>>,
+  pub destroyed_entities: HashTrieMap<EntityHandle, Rc<Entity>>,
   pub new_weapon_modules: List<(i32, WeaponModuleKind)>,
   pub new_abilities: List<MapAbilityType>,
   pub acquired_health_tanks: List<i32>,
@@ -114,6 +114,7 @@ fn load_new_map(
       current_hitstun: 0.0,
       max_hitstun: PLAYER_MAX_HITSTUN,
       hurtboxes: vec![player_hurtbox_handle],
+      damaged: false,
     }),
     label: "player".to_string(),
   };
@@ -593,6 +594,7 @@ fn load_new_map(
             current_hitstun: 0.0,
             max_hitstun: 0.0,
             hurtboxes: vec![collider_handle],
+            damaged: false,
           });
 
           let label = format!(
@@ -746,6 +748,7 @@ fn load_new_map(
     ccd_solver,
     player_handle,
     entities,
+    destroyed_entities: ht_map![],
     frame_count: 0,
     new_weapon_modules: list![],
     new_abilities: list![],
@@ -843,8 +846,6 @@ impl System for PhysicsSystem {
     rigid_body_set[self.player_handle].apply_impulse(next_player_impulse, true);
 
     /* MARK: Perform boost */
-    let player_mass = rigid_body_set[self.player_handle].mass();
-
     if let Some(boost_force) = ability_system.boost_force {
       rigid_body_set[self.player_handle].set_linvel(boost_force, true);
     }
@@ -2018,6 +2019,17 @@ impl System for PhysicsSystem {
     });
 
     /* MARK: Remove destroyed entities */
+    let destroyed_entities = entities
+      .iter()
+      .filter_map(|(&handle, entity)| {
+        if entity.components.get::<Destroyed>().is_some() {
+          Some((handle, Rc::clone(entity)))
+        } else {
+          None
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
+
     let entities = entities
       .into_iter()
       .filter_map(|(&handle, entity)| {
@@ -2096,6 +2108,7 @@ impl System for PhysicsSystem {
       ccd_solver,
       player_handle: self.player_handle,
       entities,
+      destroyed_entities,
       new_weapon_modules,
       new_abilities,
       frame_count: self.frame_count + 1,
@@ -2179,6 +2192,7 @@ fn fold_damageable_damage_taken(
             Rc::new(Entity {
               components: entity.components.with(Damageable {
                 current_hitstun: damageable.current_hitstun - 1.0,
+                damaged: false,
                 ..(*damageable).clone()
               }),
               ..entity.as_ref().clone()
@@ -2217,20 +2231,17 @@ fn fold_damageable_damage_taken(
             .fold(0.0, |sum, damager| sum + damager.damage);
 
           if incoming_damage == 0.0 {
-            if damageable.current_hitstun > 0.0 {
-              (
-                0,
-                Rc::new(Entity {
-                  components: entity.components.with(Damageable {
-                    current_hitstun: damageable.current_hitstun - 1.0,
-                    ..(*damageable).clone()
-                  }),
-                  ..entity.as_ref().clone()
+            (
+              0,
+              Rc::new(Entity {
+                components: entity.components.with(Damageable {
+                  current_hitstun: (damageable.current_hitstun - 1.0).max(0.0),
+                  damaged: false,
+                  ..(*damageable).clone()
                 }),
-              )
-            } else {
-              (0, Rc::clone(entity))
-            }
+                ..entity.as_ref().clone()
+              }),
+            )
           } else {
             let hitstop_frames = if damageable.health - incoming_damage > 0.0 {
               0
@@ -2244,6 +2255,7 @@ fn fold_damageable_damage_taken(
                 components: entity.components.with(Damageable {
                   health: damageable.health - incoming_damage,
                   current_hitstun: damageable.max_hitstun,
+                  damaged: true,
                   ..(*damageable).clone()
                 }),
                 ..entity.as_ref().clone()
