@@ -510,7 +510,7 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":23
+                         "value":52
                         }],
                  "rotation":0,
                  "type":"Gate",
@@ -782,12 +782,51 @@
                         {
                          "name":"TargetPlayerSpawn",
                          "type":"int",
-                         "value":33
+                         "value":41
                         }],
                  "template":"templates\/MapTransition.tx",
                  "width":32,
                  "x":320,
                  "y":0
+                }, 
+                {
+                 "height":16,
+                 "id":51,
+                 "name":"Touch Sensor",
+                 "properties":[
+                        {
+                         "name":"TargetActivation",
+                         "type":"float",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"TouchSensor",
+                 "visible":true,
+                 "width":16,
+                 "x":168,
+                 "y":80
+                }, 
+                {
+                 "height":0,
+                 "id":52,
+                 "name":"Or",
+                 "properties":[
+                        {
+                         "name":"Activator1Id",
+                         "type":"object",
+                         "value":51
+                        }, 
+                        {
+                         "name":"Activator2Id",
+                         "type":"object",
+                         "value":23
+                        }],
+                 "rotation":0,
+                 "type":"Or",
+                 "visible":true,
+                 "width":0,
+                 "x":144,
+                 "y":88
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -796,7 +835,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":51,
+ "nextobjectid":53,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

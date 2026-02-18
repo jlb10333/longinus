@@ -34,6 +34,10 @@ impl ManaTanksCapacityInfo {
   pub fn max_rechargeable_mana_level(&self) -> f32 {
     self.auto_recharge_mana_tanks as f32 * MANA_TANK_CAPACITY
   }
+
+  pub fn total_capacity(&self) -> f32 {
+    self.max_non_rechargeable_mana_level() + self.max_rechargeable_mana_level()
+  }
 }
 
 #[derive(Clone, Copy)]
@@ -76,6 +80,10 @@ impl ManaTanksActiveInfo {
 
   pub fn total_mana_level(&self) -> f32 {
     self.non_rechargeable_mana_level + self.rechargeable_mana_level
+  }
+
+  pub fn total_capacity(&self) -> f32 {
+    self.capacity.total_capacity()
   }
 
   pub fn without(&self, amount: f32) -> Option<Self> {

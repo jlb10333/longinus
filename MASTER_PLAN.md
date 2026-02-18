@@ -7,7 +7,6 @@
     - Fix player movement (normalize diagonal)
   - Visual explainability
     - Show all health tank and mana tanks in inventory
-    - Show mana levels better
   - Audio explainability
     - Enemy hit sfx
     - Enemy death sfx
@@ -23,6 +22,7 @@
     - Both rechargeable and unrechargeable bars can be found in environment
   - Ability
     - Ability that stops all momentum and reflects any objects in range
+      - Costs mana proportional to the total MOMENTUM of objects reflected with a baseline 
   - Modules
     - Add upgrades that affect projectile speed
 - Messy experiments in variety
@@ -63,7 +63,7 @@
     - Make chain deal damage to enemies
     - Increase defensive power
     - Increase damage taken but also received
-      - Water Physics (maybe)
+  - Water Physics (maybe)
   - Time-slow zones?
 ### Squash bugs
 - Culling is over-eager for cuboids in the direct corners of the screen

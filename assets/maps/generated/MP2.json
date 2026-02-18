@@ -266,6 +266,13 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":168,
                  "y":184
+                }, 
+                {
+                 "id":23,
+                 "name":"ManaCost",
+                 "template":"templates\/ItemPickup.tx",
+                 "x":280,
+                 "y":232
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -274,7 +281,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":23,
+ "nextobjectid":24,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",
