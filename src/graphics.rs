@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, rc::Rc, thread::sleep, time::Duration};
+use std::{marker::PhantomData, rc::Rc};
 
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
@@ -11,9 +11,8 @@ use crate::{
     distance_projection_screen, get_reticle_pos, get_slot_positions, weapon_module_from_kind,
   },
   controls::ControlsSystem,
-  easing::{ease_out_cubic, ease_out_sine},
-  ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id},
-  enemy::{EnemySniperState, calculate_lead_direction},
+  easing::ease_out_cubic,
+  ecs::{Activator, Damageable, Damager, EntityHandle, GravitySource, Id},
   graphics_utils::{draw_collider, draw_label},
   load_map::{MapSystem, PLAYER_INTERACTION_GROUPS, physics_scalar_to_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
@@ -1033,6 +1032,7 @@ fn debug_module_symbol(module_kind: WeaponModuleKind) -> &'static str {
     WeaponModuleKind::FortyFiveSlot => "45SL",
     WeaponModuleKind::SideSlot => "SDSL",
     WeaponModuleKind::MirrorSlot => "RVSL",
+    WeaponModuleKind::ManaCost => "M4NC",
   }
 }
 
@@ -1065,6 +1065,9 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
         "modifier; allows weapon to fire from the reverse equivalents of any",
         "front slots it currently fires from",
       ]
+    }
+    WeaponModuleKind::ManaCost => {
+      vec!["modifier; doubles damage but incurs a mana cost for each shot"]
     }
   }
 }

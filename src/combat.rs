@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::{
+  ability::{AbilitySystem, ManaTanksActiveInfo},
   controls::{ControlsSystem, angle_from_vec},
   ecs::{ComponentSet, ExplodeOnCollision},
   load_map::{MapSystem, PLAYER_PROJECTILE_INTERACTION_GROUPS},
@@ -134,6 +135,7 @@ pub struct Weapon {
   current_cooldown: f32,
   max_cooldown: f32,
   reversed: bool,
+  mana_cost: f32,
 }
 
 impl Weapon {
@@ -150,9 +152,13 @@ impl Weapon {
     }
   }
 
-  pub fn fire_if_ready(&self, available_slots: ProjectileSlots) -> (Self, Vec<Projectile>) {
+  pub fn fire_if_ready(
+    &self,
+    available_slots: ProjectileSlots,
+    mana_tanks_info: ManaTanksActiveInfo,
+  ) -> (Self, Vec<Projectile>, f32) {
     if self.current_cooldown > 0.0 {
-      return (self.clone(), Vec::new());
+      return (self.clone(), Vec::new(), 0.0);
     }
 
     let slot_positions = if self
@@ -168,6 +174,12 @@ impl Weapon {
     } else {
       &self.slot_positions
     };
+
+    let mana_cost = self.mana_cost * slot_positions.size() as f32;
+
+    if mana_tanks_info.total_mana_level() < mana_cost {
+      return (self.clone(), Vec::new(), 0.0);
+    }
 
     (
       Weapon {
@@ -196,6 +208,7 @@ impl Weapon {
           }
         })
         .collect(),
+      mana_cost,
     )
   }
 }
@@ -248,6 +261,7 @@ fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> W
     damage_mod: 1.0,
     velocity_mod: 1.0,
     reversed: false,
+    mana_cost: 0.0,
   }
 }
 
@@ -304,7 +318,7 @@ fn mirror_slot(weapon: &Weapon) -> Weapon {
   }
 }
 
-// PWUP
+// D75F
 fn double_damage_75_freq(weapon: &Weapon) -> Weapon {
   Weapon {
     damage_mod: weapon.damage_mod * 2.0,
@@ -313,11 +327,20 @@ fn double_damage_75_freq(weapon: &Weapon) -> Weapon {
   }
 }
 
-// FQUP
+// F75D
 fn double_freq_75_damage(weapon: &Weapon) -> Weapon {
   Weapon {
     max_cooldown: weapon.max_cooldown * 0.5,
     damage_mod: weapon.damage_mod * 0.75,
+    ..weapon.clone()
+  }
+}
+
+// M4NC
+fn mana_cost(weapon: &Weapon) -> Weapon {
+  Weapon {
+    damage_mod: weapon.damage_mod * 2.0,
+    mana_cost: weapon.mana_cost + 0.2,
     ..weapon.clone()
   }
 }
@@ -348,6 +371,7 @@ pub enum WeaponModuleKind {
   MirrorSlot,
   DoubleDamage75Freq,
   DoubleFreq75Damage,
+  ManaCost,
 }
 
 type Generator = fn() -> Weapon;
@@ -392,6 +416,9 @@ pub fn weapon_module_from_kind(kind: WeaponModuleKind) -> WeaponModule {
     }
     WeaponModuleKind::MirrorSlot => {
       WeaponModule::Modulator(Rc::new(mirror_slot), HashSet::from([Down]))
+    }
+    WeaponModuleKind::ManaCost => {
+      WeaponModule::Modulator(Rc::new(mana_cost), HashSet::from([Left]))
     }
   }
 }
@@ -511,8 +538,8 @@ fn build_weapons(equipped_modules: EquippedModules) -> Vec<Weapon> {
         .clone()
         .iter()
         .enumerate()
-        .map(|(x, value)| {
-          value.map(
+        .filter_map(|(x, value)| {
+          value.and_then(
             |weapon_module_kind| match weapon_module_from_kind(weapon_module_kind) {
               WeaponModule::Modulator(_, _) => None,
               WeaponModule::Generator(generator) => Some(build_adjacent_modules(
@@ -524,8 +551,6 @@ fn build_weapons(equipped_modules: EquippedModules) -> Vec<Weapon> {
         })
         .collect::<Vec<_>>()
     })
-    .flatten()
-    .flatten()
     /* Apply reverse on slots */
     .map(|weapon| Weapon {
       slot_positions: if weapon.reversed {
@@ -590,6 +615,7 @@ pub struct CombatSystem {
   pub new_projectiles: Vec<Projectile>,
   pub acquired_items: Vec<(String, i32)>,
   pub reticle_angle: f32,
+  pub total_mana_cost: f32,
 }
 
 impl System for CombatSystem {
@@ -611,6 +637,7 @@ impl System for CombatSystem {
       new_projectiles: vec![],
       reticle_angle: 0.0,
       acquired_items: save_data.acquired_items,
+      total_mana_cost: 0.0,
     })
   }
 
@@ -628,6 +655,7 @@ impl System for CombatSystem {
         new_projectiles: Vec::new(),
         reticle_angle: self.reticle_angle,
         acquired_items: self.acquired_items.clone(),
+        total_mana_cost: 0.0,
       });
     }
 
@@ -689,27 +717,37 @@ impl System for CombatSystem {
       angle_from_vec(controls_system.right_stick)
     };
 
-    let weapons_firing: Vec<(Weapon, Vec<Projectile>)> = if controls_system.firing {
+    let ability_system = ctx.get::<AbilitySystem>().unwrap();
+
+    let weapons_firing = if controls_system.firing {
       reduced_cooldown_weapons
         .iter()
-        .map(|weapon| weapon.fire_if_ready(get_slot_positions(reticle_angle)))
-        .collect()
+        .map(|weapon| {
+          weapon.fire_if_ready(get_slot_positions(reticle_angle), ability_system.mana_tanks)
+        })
+        .collect::<Vec<_>>()
     } else {
       reduced_cooldown_weapons
         .iter()
-        .map(|weapon| (weapon.clone(), Vec::new()))
-        .collect()
+        .map(|weapon| (weapon.clone(), Vec::new(), 0.0))
+        .collect::<Vec<_>>()
     };
 
     let new_weapons = weapons_firing
       .iter()
-      .map(|(weapon, _)| weapon.clone())
+      .map(|(weapon, _, _)| weapon.clone())
       .collect();
 
     let new_projectiles = weapons_firing
       .iter()
-      .flat_map(|(_, projectiles)| projectiles.clone())
+      .flat_map(|(_, projectiles, _)| projectiles.clone())
       .collect();
+
+    let total_mana_cost = weapons_firing
+      .iter()
+      .fold(0.0, |total_mana_cost, (_, _, mana_cost)| {
+        total_mana_cost + mana_cost
+      });
 
     Rc::new(Self {
       unequipped_modules,
@@ -718,6 +756,7 @@ impl System for CombatSystem {
       new_projectiles,
       reticle_angle,
       acquired_items,
+      total_mana_cost,
     })
   }
 }

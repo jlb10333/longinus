@@ -90,6 +90,20 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":88,
                  "y":280
+                }, 
+                {
+                 "id":18,
+                 "name":"ManaCost",
+                 "template":"templates\/ItemPickup.tx",
+                 "x":128,
+                 "y":288
+                }, 
+                {
+                 "id":19,
+                 "name":"DoubleFreq75Damage",
+                 "template":"templates\/ItemPickup.tx",
+                 "x":152,
+                 "y":280
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -98,7 +112,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":18,
+ "nextobjectid":20,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

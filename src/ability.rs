@@ -4,6 +4,7 @@ use rapier2d::{na::Vector2, prelude::RigidBodyHandle};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+  combat::CombatSystem,
   controls::ControlsSystem,
   load_map::MapAbilityType,
   menu::MenuSystem,
@@ -43,6 +44,14 @@ pub struct ManaTanksActiveInfo {
 }
 
 impl ManaTanksActiveInfo {
+  pub fn empty(&self) -> Self {
+    Self {
+      capacity: self.capacity,
+      non_rechargeable_mana_level: 0.0,
+      rechargeable_mana_level: 0.0,
+    }
+  }
+
   pub fn recharge(&self) -> Self {
     Self {
       rechargeable_mana_level: (self.rechargeable_mana_level + MANA_TANK_RECHARGE_RATE)
@@ -140,6 +149,8 @@ impl System for AbilitySystem {
   ) -> Rc<dyn System<Input = Self::Input>> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
+    let combat_system = ctx.get::<CombatSystem>().unwrap();
+    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
 
     let (boost_force, current_boost_cooldown, mana_tanks) = if controls_system.boost
       && !controls_system
@@ -165,14 +176,15 @@ impl System for AbilitySystem {
       )
     };
 
-    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
     let mana_tanks = if menu_system.active_menus.is_empty() {
       mana_tanks.recharge().with(physics_system.incoming_mana)
     } else {
       self.mana_tanks
     };
 
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+    let mana_tanks = mana_tanks
+      .without(combat_system.total_mana_cost)
+      .unwrap_or(mana_tanks.empty());
 
     let acquired_boost = self.acquired_boost
       || physics_system

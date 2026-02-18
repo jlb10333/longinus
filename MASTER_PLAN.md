@@ -8,7 +8,6 @@
   - Visual explainability
     - Show all health tank and mana tanks in inventory
     - Show mana levels better
-    - Enemy hit flash effect
   - Audio explainability
     - Enemy hit sfx
     - Enemy death sfx
@@ -51,7 +50,6 @@
       - STPT StatusPotency (Increases the amount by which statuses are applied)
       - STDR StatusDuration (Increases duration of applied statuses)
       - B1GR Bigger (Increases size of projectiles)
-      - M4NC ManaCost (Increases damage of weapon drastically but makes it consume mana)
       - M4NF ManaFree (Makes weapon no longer consume mana, but also deal no damage)
       - G4TL Gatling (Increases frequency of weapon drastically but makes it less accurate)
     - Shield 
