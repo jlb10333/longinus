@@ -225,8 +225,9 @@ pub struct SaveMenuOnCollision;
 impl Component for SaveMenuOnCollision {}
 
 pub struct DropOnDestroy {
-  pub amount: f32,
+  pub health_amount: f32,
   pub chance_health: f32,
+  pub mana_amount: f32,
   pub chance_mana: f32,
 }
 impl Component for DropOnDestroy {}

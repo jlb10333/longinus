@@ -875,9 +875,10 @@ impl EnemySpawn {
           hitboxes,
         })
         .insert(DropOnDestroy {
-          amount: 20.0,
-          chance_health: 0.5,
-          chance_mana: 0.0,
+          health_amount: 20.0,
+          chance_health: 0.3,
+          mana_amount: 1.0,
+          chance_mana: 0.2,
         }),
       EnemySpawnEnemy::Imp => ComponentSet::new()
         .insert(Damageable {
@@ -894,9 +895,10 @@ impl EnemySpawn {
           damage: 10.0,
         })
         .insert(DropOnDestroy {
-          amount: 15.0,
-          chance_health: 0.5,
-          chance_mana: 0.0,
+          health_amount: 15.0,
+          chance_health: 0.3,
+          mana_amount: 1.0,
+          chance_mana: 0.2,
         }),
       EnemySpawnEnemy::Aranea(_) => ComponentSet::new()
         .insert(Damageable {
@@ -913,9 +915,10 @@ impl EnemySpawn {
           damage: 10.0,
         })
         .insert(DropOnDestroy {
-          amount: 15.0,
-          chance_health: 0.5,
-          chance_mana: 0.0,
+          health_amount: 15.0,
+          chance_health: 0.3,
+          mana_amount: 1.0,
+          chance_mana: 0.2,
         }),
       EnemySpawnEnemy::Defender => ComponentSet::new()
         .insert(Damageable {
@@ -932,9 +935,10 @@ impl EnemySpawn {
           damage: 10.0,
         })
         .insert(DropOnDestroy {
-          amount: 20.0,
-          chance_health: 0.4,
-          chance_mana: 0.0,
+          health_amount: 20.0,
+          chance_health: 0.3,
+          mana_amount: 1.0,
+          chance_mana: 0.2,
         }),
       EnemySpawnEnemy::Seeker => ComponentSet::new()
         .insert(Damageable {
@@ -951,9 +955,10 @@ impl EnemySpawn {
           damage: 25.0,
         })
         .insert(DropOnDestroy {
-          amount: 10.0,
-          chance_health: 0.5,
-          chance_mana: 0.0,
+          health_amount: 10.0,
+          chance_health: 0.3,
+          mana_amount: 1.0,
+          chance_mana: 0.2,
         }),
       EnemySpawnEnemy::SeekerGenerator => ComponentSet::new()
         .insert(Damageable {
@@ -970,9 +975,10 @@ impl EnemySpawn {
           damage: 10.0,
         })
         .insert(DropOnDestroy {
-          amount: 35.0,
-          chance_health: 0.7,
-          chance_mana: 0.0,
+          health_amount: 35.0,
+          chance_health: 0.3,
+          mana_amount: 1.0,
+          chance_mana: 0.2,
         }),
       EnemySpawnEnemy::Sniper => ComponentSet::new()
         .insert(Damageable {
@@ -989,9 +995,10 @@ impl EnemySpawn {
           damage: 10.0,
         })
         .insert(DropOnDestroy {
-          amount: 35.0,
-          chance_health: 0.7,
-          chance_mana: 0.0,
+          health_amount: 35.0,
+          chance_health: 0.3,
+          mana_amount: 1.0,
+          chance_mana: 0.2,
         }),
       EnemySpawnEnemy::SniperGenerator => ComponentSet::new()
         .insert(Damageable {
@@ -1008,9 +1015,10 @@ impl EnemySpawn {
           damage: 10.0,
         })
         .insert(DropOnDestroy {
-          amount: 35.0,
-          chance_health: 0.7,
-          chance_mana: 0.0,
+          health_amount: 35.0,
+          chance_health: 0.3,
+          mana_amount: 1.0,
+          chance_mana: 0.2,
         }),
     }
   }

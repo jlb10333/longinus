@@ -1229,42 +1229,71 @@ impl System for PhysicsSystem {
         {
           return vec![(handle, entity)];
         };
-        let drop_health = entity.components.get::<DropOnDestroy>().unwrap();
+        let drop_on_destroy = entity.components.get::<DropOnDestroy>().unwrap();
 
         let random = rng.gen_range(0.0, 1.0);
-        let should_drop_health = random < drop_health.chance_health;
+        let should_drop_health = random < drop_on_destroy.chance_health;
+        let should_drop_mana = (1.0 - random) < drop_on_destroy.chance_mana;
 
-        if !should_drop_health {
-          return vec![(handle, entity)];
+        if should_drop_health {
+          let new_handle = collider_set.insert(
+            ColliderBuilder::ball(0.31)
+              .collision_groups(InteractionGroups {
+                memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+                filter: COLLISION_GROUP_PLAYER,
+                ..Default::default()
+              })
+              .sensor(true)
+              .translation(*entity.handle.translation(rigid_body_set, &collider_set))
+              .build(),
+          );
+          vec![
+            (handle, entity),
+            (
+              EntityHandle::Collider(new_handle),
+              Entity {
+                handle: EntityHandle::Collider(new_handle),
+                components: ComponentSet::new().insert(DestroyOnCollision).insert(
+                  HealOnCollision {
+                    amount: drop_on_destroy.health_amount,
+                  },
+                ),
+                label: "health".to_string(),
+              }
+              .into(),
+            ),
+          ]
+        } else if should_drop_mana {
+          let new_handle = collider_set.insert(
+            ColliderBuilder::ball(0.31)
+              .collision_groups(InteractionGroups {
+                memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+                filter: COLLISION_GROUP_PLAYER,
+                ..Default::default()
+              })
+              .sensor(true)
+              .translation(*entity.handle.translation(rigid_body_set, &collider_set))
+              .build(),
+          );
+          vec![
+            (handle, entity),
+            (
+              EntityHandle::Collider(new_handle),
+              Entity {
+                handle: EntityHandle::Collider(new_handle),
+                components: ComponentSet::new().insert(DestroyOnCollision).insert(
+                  GiveManaOnCollision {
+                    amount: drop_on_destroy.mana_amount,
+                  },
+                ),
+                label: "mana".to_string(),
+              }
+              .into(),
+            ),
+          ]
+        } else {
+          vec![(handle, entity)]
         }
-
-        let new_handle = collider_set.insert(
-          ColliderBuilder::ball(0.31)
-            .collision_groups(InteractionGroups {
-              memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
-              filter: COLLISION_GROUP_PLAYER,
-              ..Default::default()
-            })
-            .sensor(true)
-            .translation(*entity.handle.translation(rigid_body_set, &collider_set))
-            .build(),
-        );
-        vec![
-          (handle, entity),
-          (
-            EntityHandle::Collider(new_handle),
-            Entity {
-              handle: EntityHandle::Collider(new_handle),
-              components: ComponentSet::new()
-                .insert(DestroyOnCollision)
-                .insert(HealOnCollision {
-                  amount: drop_health.amount,
-                }),
-              label: "health".to_string(),
-            }
-            .into(),
-          ),
-        ]
       })
       .collect::<HashTrieMap<_, _>>();
 
