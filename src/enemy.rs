@@ -2,6 +2,7 @@ use std::{f32::consts::PI, rc::Rc};
 
 use macroquad::{prelude::rand, rand::RandGenerator};
 use rapier2d::{na::Vector2, prelude::*};
+use rpds::{List, list};
 
 use crate::{
   combat::{Projectile, distance_projection_physics},
@@ -417,6 +418,7 @@ impl EnemyImp {
             offset: PhysicsVector::zero(),
             force_mod: 0.0,
             component_set: ComponentSet::new(),
+            status_effects: list![],
           };
 
           let base_impulse_angle = angle_from_vec(PhysicsVector::from_vec(
@@ -672,6 +674,7 @@ impl EnemyAranea {
           offset: PhysicsVector::zero(),
           force_mod: 0.0,
           component_set: ComponentSet::new(),
+          status_effects: list![],
         };
 
         EnemyDecision {
@@ -775,6 +778,7 @@ impl EnemyDefender {
           offset: PhysicsVector::zero(),
           component_set: ComponentSet::new(),
           force_mod: 0.0,
+          status_effects: list![],
         };
 
         EnemyDecision {
@@ -992,6 +996,7 @@ impl EnemySniper {
               offset: PhysicsVector::zero(),
               force_mod: 0.0,
               component_set: ComponentSet::new(),
+              status_effects: list![],
             }]
           } else {
             vec![]

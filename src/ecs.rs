@@ -7,15 +7,15 @@ use rapier2d::{
     RigidBodyHandle, RigidBodySet,
   },
 };
-use rpds::List;
+use rpds::{HashTrieMap, List};
 
 use crate::{
   combat::WeaponModuleKind,
   enemy::{
-    EnemyAranea, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState,
-    EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
+    EnemyAranea, EnemyDefender, EnemyGoblin, EnemyImp, EnemySeeker, EnemySeekerGenerator,
+    EnemySniper, EnemySniperGenerator,
   },
-  load_map::{MapAbilityType, MapEnemyName},
+  load_map::MapAbilityType,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -167,7 +167,31 @@ impl ComponentSet {
 
 pub trait Component: Any {}
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+pub enum StatusEffect {
+  Bleed,
+  Deteriorate,
+  Explosion,
+  Paralyze,
+  Vulnerable,
+  Weakness,
+}
+
+impl StatusEffect {
+  // TODO: Move this onto the status effect applicaton (damager/building)
+  pub fn initial_steps_left(&self) -> i32 {
+    match self {
+      Self::Bleed => 1,
+      Self::Deteriorate => 600,
+      Self::Explosion => 1,
+      Self::Paralyze => 300,
+      Self::Vulnerable => 1000,
+      Self::Weakness => 1000,
+    }
+  }
+}
+
+#[derive(Clone, Default)]
 pub struct Damageable {
   pub health: f32,
   pub max_health: f32,
@@ -176,13 +200,28 @@ pub struct Damageable {
   pub max_hitstun: f32,
   pub hurtboxes: Vec<ColliderHandle>,
   pub damaged: bool,
+  pub status_effect_threshold: f32,
+  pub building_status_effects: HashTrieMap<StatusEffect, f32>,
+  pub applied_status_effects: List<(StatusEffect, i32)>,
+  pub status_resistances: Vec<(StatusEffect, i32)>,
 }
 impl Component for Damageable {}
 
-#[derive(Clone)]
+impl Damageable {
+  pub fn get_applied_status_effect_count(&self, given_status_effect: StatusEffect) -> usize {
+    self
+      .applied_status_effects
+      .iter()
+      .filter(|(status_effect, _)| *status_effect == given_status_effect)
+      .count()
+  }
+}
+
+#[derive(Clone, Default)]
 pub struct Damager {
   pub damage: f32,
   pub hitboxes: Vec<ColliderHandle>,
+  pub status_effects: List<(StatusEffect, f32)>,
 }
 impl Component for Damager {}
 

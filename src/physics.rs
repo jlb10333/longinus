@@ -16,8 +16,8 @@ use crate::{
     DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, Engine, Entity,
     EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision,
     GivesItemOnCollision, GravitySource, HealOnCollision, Id, IncreaseMaxHealthOnCollision,
-    Locomotor, MapTransitionOnCollision, Not, Or, SaveMenuOnCollision, SimpleActivatable, Switch,
-    Terminal, TouchSensor,
+    Locomotor, MapTransitionOnCollision, Not, Or, SaveMenuOnCollision, SimpleActivatable,
+    StatusEffect, Switch, Terminal, TouchSensor,
   },
   enemy::{
     EnemyAranea, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState,
@@ -41,6 +41,8 @@ const CHAIN_SEGMENT_HEIGHT: f32 = 0.05;
 pub const CHAIN_ANGULAR_DAMPING: f32 = 1.0;
 
 pub const ENGINE_MAX_SPEED: f32 = 0.005;
+
+const BUILDING_STATUS_EFFECT_DECLINE_RATE: f32 = 0.1;
 
 #[derive(Clone)]
 pub struct PhysicsSystem {
@@ -110,11 +112,9 @@ fn load_new_map(
     components: ComponentSet::new().insert(Damageable {
       health: player_health,
       max_health: player_max_health,
-      destroy_on_zero_health: false,
-      current_hitstun: 0.0,
       max_hitstun: PLAYER_MAX_HITSTUN,
       hurtboxes: vec![player_hurtbox_handle],
-      damaged: false,
+      ..Default::default()
     }),
     label: "player".to_string(),
   };
@@ -586,15 +586,14 @@ fn load_new_map(
           let damager = wall.damaging.map(|damaging| Damager {
             damage: damaging,
             hitboxes: vec![collider_handle],
+            ..Default::default()
           });
           let damageable = wall.damageable.map(|damageable| Damageable {
             health: damageable,
             max_health: damageable,
             destroy_on_zero_health: true,
-            current_hitstun: 0.0,
-            max_hitstun: 0.0,
             hurtboxes: vec![collider_handle],
-            damaged: false,
+            ..Default::default()
           });
 
           let label = format!(
@@ -932,6 +931,7 @@ impl System for PhysicsSystem {
               .insert(Damager {
                 damage: projectile.damage,
                 hitboxes: vec![collider_handle],
+                status_effects: projectile.status_effects.clone(),
               }),
             label: "p".to_string(),
           }),
@@ -988,6 +988,7 @@ impl System for PhysicsSystem {
                     .insert(Damager {
                       damage: projectile.damage,
                       hitboxes: vec![collider_handle],
+                      ..Default::default()
                     }),
                   label: "ep".to_string(),
                 }),
@@ -1117,12 +1118,74 @@ impl System for PhysicsSystem {
       fold_damageable_damage_taken(rigid_body_set, &narrow_phase, &collider_set, &entities),
     );
 
+    /* MARK: Apply status effects and tick down */
+    let entities =
+      entities.into_iter().map(|(handle, entity)| {
+        if let Some(damageable) = entity.components.get::<Damageable>() {
+          let new_status_effects = damageable.building_status_effects.iter().filter_map(
+            |(status_effect, built_amount)| {
+              if *built_amount > damageable.status_effect_threshold {
+                Some((*status_effect, status_effect.initial_steps_left()))
+              } else {
+                None
+              }
+            },
+          );
+
+          let applied_status_effects = damageable
+            .applied_status_effects
+            .iter()
+            .filter_map(|(status_effect, steps_left)| {
+              if *steps_left > 0 {
+                Some((*status_effect, steps_left - 1))
+              } else {
+                None
+              }
+            })
+            .chain(new_status_effects)
+            .collect::<List<_>>();
+
+          let building_status_effects = damageable
+            .building_status_effects
+            .iter()
+            .filter_map(|(status_effect, applied_amount)| {
+              if applied_amount - BUILDING_STATUS_EFFECT_DECLINE_RATE >= 0.0
+                && *applied_amount <= damageable.status_effect_threshold
+              {
+                Some((
+                  *status_effect,
+                  applied_amount - BUILDING_STATUS_EFFECT_DECLINE_RATE,
+                ))
+              } else {
+                None
+              }
+            })
+            .collect::<HashTrieMap<_, _>>();
+
+          let damageable = Damageable {
+            applied_status_effects,
+            building_status_effects,
+            ..damageable.as_ref().clone()
+          };
+
+          (
+            *handle,
+            Rc::new(Entity {
+              components: entity.components.with(damageable),
+              ..entity.as_ref().clone()
+            }),
+          )
+        } else {
+          (*handle, Rc::clone(entity))
+        }
+      });
+
     /* MARK: Destroy all marked to be destroyed on this frame */
-    let entities = entities.into_iter().map(|(handle, entity)| {
+    let entities = entities.map(|(handle, entity)| {
       if let Some(destroy_after_frames) = entity.components.get::<DestroyAfterFrames>() {
         if destroy_after_frames.frames > 0 {
           (
-            *handle,
+            handle,
             Rc::new(Entity {
               components: entity.components.with(DestroyAfterFrames {
                 frames: destroy_after_frames.frames - 1,
@@ -1132,7 +1195,7 @@ impl System for PhysicsSystem {
           )
         } else {
           (
-            *handle,
+            handle,
             Rc::new(Entity {
               components: entity.components.with(Destroyed),
               ..entity.as_ref().clone()
@@ -1140,7 +1203,7 @@ impl System for PhysicsSystem {
           )
         }
       } else {
-        (*handle, Rc::clone(entity))
+        (handle, entity)
       }
     });
 
@@ -1286,6 +1349,7 @@ impl System for PhysicsSystem {
                     amount: drop_on_destroy.mana_amount,
                   },
                 ),
+
                 label: "mana".to_string(),
               }
               .into(),
@@ -2200,6 +2264,11 @@ fn max_health_to_hitstop_frames(max_health: f32) -> i32 {
 
 type HitstopEntitiesTuple = (i32, HashTrieMap<EntityHandle, Rc<Entity>>);
 
+const DETERIORATION_STEP_FREQ: i32 = 60;
+const DETERIORATION_DAMAGE_PERCENT: f32 = 0.06;
+const WEAKNESS_INTENSITY: f32 = 0.7;
+const VULNERABLE_INTENSITY: f32 = 1.3;
+
 fn fold_damageable_damage_taken(
   rigid_body_set: &RigidBodySet,
   narrow_phase: &NarrowPhase,
@@ -2228,7 +2297,7 @@ fn fold_damageable_damage_taken(
             }),
           )
         } else {
-          let damagers = damageable
+          let colliding_damager_entities = damageable
             .hurtboxes
             .iter()
             .flat_map(|hurtbox| {
@@ -2245,7 +2314,7 @@ fn fold_damageable_damage_taken(
                       if let Some(damager) = entity.components.get::<Damager>()
                         && damager.hitboxes.contains(&collider_handle)
                       {
-                        Some(damager)
+                        Some((damager, entity.components.get::<Damageable>()))
                       } else {
                         None
                       }
@@ -2255,9 +2324,64 @@ fn fold_damageable_damage_taken(
             })
             .collect::<Vec<_>>();
 
-          let incoming_damage = damagers
+          let incoming_damage =
+            colliding_damager_entities
+              .iter()
+              .fold(0.0, |sum, (damager, maybe_damageable)| {
+                let weakness_modifier = maybe_damageable
+                  .as_ref()
+                  .map(|damageable| {
+                    WEAKNESS_INTENSITY.powi(
+                      damageable.get_applied_status_effect_count(StatusEffect::Weakness) as i32,
+                    )
+                  })
+                  .unwrap_or(1.0);
+
+                sum + (damager.damage * weakness_modifier)
+              });
+
+          let num_active_deterioration_effects = damageable
+            .applied_status_effects
             .iter()
-            .fold(0.0, |sum, damager| sum + damager.damage);
+            .filter(|(status_effect, steps_left)| {
+              if *status_effect == StatusEffect::Deteriorate
+                && steps_left % DETERIORATION_STEP_FREQ == 0
+              {
+                println!("{steps_left}")
+              }
+
+              *status_effect == StatusEffect::Deteriorate
+                && steps_left % DETERIORATION_STEP_FREQ == 0
+            })
+            .count() as f32;
+          let incoming_deterioration_damage =
+            num_active_deterioration_effects * DETERIORATION_DAMAGE_PERCENT * damageable.max_health;
+          if incoming_deterioration_damage > 0.0 {
+            println!("incoming det damage {}", incoming_deterioration_damage)
+          }
+          let incoming_damage = incoming_damage + incoming_deterioration_damage;
+
+          let num_vulnerable_effects =
+            damageable.get_applied_status_effect_count(StatusEffect::Vulnerable);
+          let vulnerable_modifier = VULNERABLE_INTENSITY.powi(num_vulnerable_effects as i32);
+          let incoming_damage = incoming_damage * vulnerable_modifier;
+
+          let building_status_effects = colliding_damager_entities
+            .iter()
+            .flat_map(|(damager, _)| damager.status_effects.iter())
+            .fold(
+              damageable.building_status_effects.clone(),
+              |building_status_effects, (status_effect, application_amount)| {
+                let existing_applied_amount = building_status_effects
+                  .get(status_effect)
+                  .copied()
+                  .unwrap_or(0.0);
+
+                let new_applied_amount = existing_applied_amount + application_amount;
+
+                building_status_effects.insert(*status_effect, new_applied_amount)
+              },
+            );
 
           if incoming_damage == 0.0 {
             (
@@ -2266,6 +2390,7 @@ fn fold_damageable_damage_taken(
                 components: entity.components.with(Damageable {
                   current_hitstun: (damageable.current_hitstun - 1.0).max(0.0),
                   damaged: false,
+                  building_status_effects,
                   ..(*damageable).clone()
                 }),
                 ..entity.as_ref().clone()
@@ -2285,6 +2410,7 @@ fn fold_damageable_damage_taken(
                   health: damageable.health - incoming_damage,
                   current_hitstun: damageable.max_hitstun,
                   damaged: true,
+                  building_status_effects,
                   ..(*damageable).clone()
                 }),
                 ..entity.as_ref().clone()
@@ -2323,6 +2449,7 @@ fn spawn_explosion(
       .insert(Damager {
         damage: explosion.damage,
         hitboxes: vec![hitbox_handle],
+        ..Default::default()
       })
       .insert(GravitySource {
         strength: explosion.strength,

@@ -7,7 +7,7 @@ use std::{
 use crate::{
   ability::{AbilitySystem, ManaTanksActiveInfo},
   controls::{ControlsSystem, angle_from_vec},
-  ecs::{ComponentSet, ExplodeOnCollision},
+  ecs::{ComponentSet, ExplodeOnCollision, StatusEffect},
   load_map::{MapSystem, PLAYER_PROJECTILE_INTERACTION_GROUPS},
   menu::MenuSystem,
   physics::PhysicsSystem,
@@ -117,6 +117,7 @@ pub struct Projectile {
   pub force_mod: f32,
   pub damage: f32,
   pub component_set: ComponentSet,
+  pub status_effects: List<(StatusEffect, f32)>,
 }
 
 #[derive(Clone, Copy)]
@@ -136,6 +137,7 @@ pub struct Weapon {
   max_cooldown: f32,
   reversed: bool,
   mana_cost: f32,
+  status_effects: List<(StatusEffect, f32)>,
 }
 
 impl Weapon {
@@ -205,6 +207,7 @@ impl Weapon {
             component_set: base_projectile.component_set,
             initial_impulse,
             force_mod: base_projectile.force_mod,
+            status_effects: self.status_effects.clone(),
           }
         })
         .collect(),
@@ -224,6 +227,7 @@ fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projecti
       component_set: ComponentSet::new(),
       initial_impulse: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
+      status_effects: list![],
     },
     ProjectileType::Missile => Projectile {
       collider: ColliderBuilder::cuboid(0.3, 0.3)
@@ -239,6 +243,7 @@ fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projecti
       }),
       initial_impulse: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
+      status_effects: list![],
     },
     ProjectileType::Laser => todo!(),
   }
@@ -262,6 +267,7 @@ fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> W
     velocity_mod: 1.0,
     reversed: false,
     mana_cost: 0.0,
+    status_effects: list![],
   }
 }
 
@@ -345,6 +351,17 @@ fn mana_cost(weapon: &Weapon) -> Weapon {
   }
 }
 
+// DETR
+fn deteriorate(weapon: &Weapon) -> Weapon {
+  Weapon {
+    status_effects: weapon
+      .status_effects
+      .push_front((StatusEffect::Deteriorate, 6.0)),
+    mana_cost: weapon.mana_cost + 0.1,
+    ..weapon.clone()
+  }
+}
+
 pub type UnequippedModules = Vec<WeaponModuleKind>;
 
 pub const EQUIP_SLOTS_WIDTH: i32 = 4;
@@ -372,6 +389,7 @@ pub enum WeaponModuleKind {
   DoubleDamage75Freq,
   DoubleFreq75Damage,
   ManaCost,
+  StatusDeteriorate,
 }
 
 type Generator = fn() -> Weapon;
@@ -386,7 +404,7 @@ pub enum Direction {
   Right,
 }
 use Direction::*;
-use rpds::{HashTrieSet, ht_set};
+use rpds::{HashTrieSet, List, ht_set, list};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
@@ -412,13 +430,16 @@ pub fn weapon_module_from_kind(kind: WeaponModuleKind) -> WeaponModule {
       WeaponModule::Modulator(Rc::new(double_damage_75_freq), HashSet::from([Left]))
     }
     WeaponModuleKind::DoubleFreq75Damage => {
-      WeaponModule::Modulator(Rc::new(double_freq_75_damage), HashSet::from([Right]))
+      WeaponModule::Modulator(Rc::new(double_freq_75_damage), HashSet::from([Left]))
     }
     WeaponModuleKind::MirrorSlot => {
       WeaponModule::Modulator(Rc::new(mirror_slot), HashSet::from([Down]))
     }
     WeaponModuleKind::ManaCost => {
       WeaponModule::Modulator(Rc::new(mana_cost), HashSet::from([Left]))
+    }
+    WeaponModuleKind::StatusDeteriorate => {
+      WeaponModule::Modulator(Rc::new(deteriorate), HashSet::from([Right]))
     }
   }
 }

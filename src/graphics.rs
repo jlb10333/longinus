@@ -1090,6 +1090,7 @@ fn debug_module_symbol(module_kind: WeaponModuleKind) -> &'static str {
     WeaponModuleKind::SideSlot => "SDSL",
     WeaponModuleKind::MirrorSlot => "RVSL",
     WeaponModuleKind::ManaCost => "M4NC",
+    WeaponModuleKind::StatusDeteriorate => "DETR",
   }
 }
 
@@ -1125,6 +1126,12 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
     }
     WeaponModuleKind::ManaCost => {
       vec!["modifier; doubles damage but incurs a mana cost for each shot"]
+    }
+    WeaponModuleKind::StatusDeteriorate => {
+      vec![
+        "modifier; applies the DETERIORATE status which causes enemies to be",
+        "damaged over time",
+      ]
     }
   }
 }

@@ -862,17 +862,17 @@ impl EnemySpawn {
     match self.name {
       EnemySpawnEnemy::Goblin => ComponentSet::new()
         .insert(Damageable {
+          status_effect_threshold: 20.0,
           health: 60.0,
           max_health: 60.0,
           destroy_on_zero_health: true,
-          current_hitstun: 0.0,
-          max_hitstun: 0.0,
           hurtboxes,
-          damaged: false,
+          ..Default::default()
         })
         .insert(Damager {
           damage: 15.0,
           hitboxes,
+          ..Default::default()
         })
         .insert(DropOnDestroy {
           health_amount: 20.0,
@@ -882,17 +882,17 @@ impl EnemySpawn {
         }),
       EnemySpawnEnemy::Imp => ComponentSet::new()
         .insert(Damageable {
+          status_effect_threshold: 20.0,
           hurtboxes,
           health: 50.0,
           max_health: 50.0,
           destroy_on_zero_health: true,
-          current_hitstun: 0.0,
-          max_hitstun: 0.0,
-          damaged: false,
+          ..Default::default()
         })
         .insert(Damager {
           hitboxes,
           damage: 10.0,
+          ..Default::default()
         })
         .insert(DropOnDestroy {
           health_amount: 15.0,
@@ -902,17 +902,17 @@ impl EnemySpawn {
         }),
       EnemySpawnEnemy::Aranea(_) => ComponentSet::new()
         .insert(Damageable {
+          status_effect_threshold: 20.0,
           hurtboxes,
           health: 80.0,
           max_health: 80.0,
           destroy_on_zero_health: true,
-          current_hitstun: 0.0,
-          max_hitstun: 0.0,
-          damaged: false,
+          ..Default::default()
         })
         .insert(Damager {
           hitboxes,
           damage: 10.0,
+          ..Default::default()
         })
         .insert(DropOnDestroy {
           health_amount: 15.0,
@@ -922,17 +922,17 @@ impl EnemySpawn {
         }),
       EnemySpawnEnemy::Defender => ComponentSet::new()
         .insert(Damageable {
+          status_effect_threshold: 20.0,
           hurtboxes,
           health: 100.0,
           max_health: 100.0,
           destroy_on_zero_health: true,
-          current_hitstun: 0.0,
-          max_hitstun: 0.0,
-          damaged: false,
+          ..Default::default()
         })
         .insert(Damager {
           hitboxes,
           damage: 10.0,
+          ..Default::default()
         })
         .insert(DropOnDestroy {
           health_amount: 20.0,
@@ -942,17 +942,17 @@ impl EnemySpawn {
         }),
       EnemySpawnEnemy::Seeker => ComponentSet::new()
         .insert(Damageable {
+          status_effect_threshold: 20.0,
           hurtboxes,
           health: 30.0,
           max_health: 30.0,
           destroy_on_zero_health: true,
-          current_hitstun: 0.0,
-          max_hitstun: 0.0,
-          damaged: false,
+          ..Default::default()
         })
         .insert(Damager {
           hitboxes,
           damage: 25.0,
+          ..Default::default()
         })
         .insert(DropOnDestroy {
           health_amount: 10.0,
@@ -962,17 +962,17 @@ impl EnemySpawn {
         }),
       EnemySpawnEnemy::SeekerGenerator => ComponentSet::new()
         .insert(Damageable {
+          status_effect_threshold: 20.0,
           hurtboxes,
           health: 120.0,
           max_health: 120.0,
           destroy_on_zero_health: true,
-          current_hitstun: 0.0,
-          max_hitstun: 0.0,
-          damaged: false,
+          ..Default::default()
         })
         .insert(Damager {
           hitboxes,
           damage: 10.0,
+          ..Default::default()
         })
         .insert(DropOnDestroy {
           health_amount: 35.0,
@@ -982,17 +982,17 @@ impl EnemySpawn {
         }),
       EnemySpawnEnemy::Sniper => ComponentSet::new()
         .insert(Damageable {
+          status_effect_threshold: 20.0,
           hurtboxes,
           health: 60.0,
           max_health: 60.0,
           destroy_on_zero_health: true,
-          current_hitstun: 0.0,
-          max_hitstun: 0.0,
-          damaged: false,
+          ..Default::default()
         })
         .insert(Damager {
           hitboxes,
           damage: 10.0,
+          ..Default::default()
         })
         .insert(DropOnDestroy {
           health_amount: 35.0,
@@ -1002,17 +1002,17 @@ impl EnemySpawn {
         }),
       EnemySpawnEnemy::SniperGenerator => ComponentSet::new()
         .insert(Damageable {
+          status_effect_threshold: 20.0,
           hurtboxes,
           health: 140.0,
           max_health: 140.0,
           destroy_on_zero_health: true,
-          current_hitstun: 0.0,
-          max_hitstun: 0.0,
-          damaged: false,
+          ..Default::default()
         })
         .insert(Damager {
           hitboxes,
           damage: 10.0,
+          ..Default::default()
         })
         .insert(DropOnDestroy {
           health_amount: 35.0,

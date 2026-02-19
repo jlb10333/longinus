@@ -18,7 +18,6 @@
     - Time slow effect on killing an enemy
   - First boss
   - Mana
-    - Unrechargeable bars can be replenished with enemy drops
     - Both rechargeable and unrechargeable bars can be found in environment
   - Ability
     - Ability that stops all momentum and reflects any objects in range
@@ -31,6 +30,9 @@
   - Playtest them
   - Come up with a strategy for how to make the rest of the game
 - Activation
+  - Cannon thing
+    - Explodes, damages player and enemies
+    - Triggers when reaching > 0.5 activation
   - Magnet balls
   - Crank
   - Min
