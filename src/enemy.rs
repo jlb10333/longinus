@@ -5,6 +5,7 @@ use rapier2d::{na::Vector2, prelude::*};
 use rpds::{List, list};
 
 use crate::{
+  balance::BALANCING,
   combat::{Projectile, distance_projection_physics},
   controls::angle_from_vec,
   easing,
@@ -188,13 +189,6 @@ pub struct EnemyGoblin {
   pub state: EnemyGoblinState,
 }
 
-const GOBLIN_AGGRO_RANGE: f32 = 20.0;
-const GOBLIN_LUNGE_FORCE: f32 = 9.0;
-const GOBLIN_MAX_LUNGE_DISTANCE: f32 = 4.0;
-const GOBLIN_SLOWING_FRAMES: i32 = 70;
-const GOBLIN_SLOWING_FORCE: f32 = GOBLIN_LUNGE_FORCE / GOBLIN_SLOWING_FRAMES as f32;
-const GOBLIN_RECOVERING_FRAMES: i32 = 50;
-
 impl EnemyGoblin {
   pub fn behavior(
     &self,
@@ -215,7 +209,7 @@ impl EnemyGoblin {
 
         if let Some((reached_handle, _)) = query_pipeline.cast_ray(
           &Ray::new((*self_translation).into(), direction_to_player),
-          GOBLIN_AGGRO_RANGE,
+          BALANCING.enemies.goblin.aggro_range,
           true,
         ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
           && reached_parent_handle == player_handle
@@ -223,12 +217,15 @@ impl EnemyGoblin {
           let self_translation = self_rigid_body.translation();
           let vector_to_player = player_translation - self_translation;
 
-          let movement_force = vector_to_player.normalize() * GOBLIN_LUNGE_FORCE;
+          let movement_force = vector_to_player.normalize() * BALANCING.enemies.goblin.lunge_force;
 
-          let lunge_distance = vector_to_player.magnitude().min(GOBLIN_MAX_LUNGE_DISTANCE);
+          let lunge_distance = vector_to_player
+            .magnitude()
+            .min(BALANCING.enemies.goblin.max_lunge_distance);
 
-          let lunge_frames =
-            (lunge_distance / (GOBLIN_LUNGE_FORCE / self_rigid_body.mass()) * 60.0) as i32;
+          let lunge_frames = (lunge_distance
+            / (BALANCING.enemies.goblin.lunge_force / self_rigid_body.mass())
+            * 60.0) as i32;
 
           EnemyDecision {
             handle,
@@ -266,7 +263,7 @@ impl EnemyGoblin {
           EnemyDecision {
             handle,
             enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Slowing(GOBLIN_SLOWING_FRAMES),
+              state: EnemyGoblinState::Slowing(BALANCING.enemies.goblin.slowing_frames),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -283,7 +280,7 @@ impl EnemyGoblin {
             enemy: Enemy::Goblin(Self {
               state: EnemyGoblinState::Slowing(remaining_frames - 1),
             }),
-            movement_force: -linvel.normalize() * GOBLIN_SLOWING_FORCE,
+            movement_force: -linvel.normalize() * BALANCING.enemies.goblin.slowing_force(),
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -291,7 +288,7 @@ impl EnemyGoblin {
           EnemyDecision {
             handle,
             enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Recovering(GOBLIN_RECOVERING_FRAMES),
+              state: EnemyGoblinState::Recovering(BALANCING.enemies.goblin.recovering_frames),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -345,15 +342,6 @@ pub struct EnemyImp {
   pub state: EnemyImpState,
 }
 
-const IMP_AGGRO_RANGE: f32 = 20.0;
-const IMP_STATE_MOVING_INITIAL_FRAMES: i32 = 90;
-const IMP_STATE_SHOOTING_COOLDOWN_INITIAL_FRAMES: i32 = 50;
-
-const IMP_MOVE_FORCE: f32 = 0.2;
-const IMP_MOVE_DISTANCE: f32 = 4.0;
-const IMP_PROJECTILE_SPEED: f32 = 0.7;
-const IMP_PROJECTILE_DAMAGE: f32 = 5.0;
-
 impl EnemyImp {
   pub fn behavior(
     &self,
@@ -366,7 +354,7 @@ impl EnemyImp {
   ) -> EnemyDecision {
     let player_translation = rigid_body_set[player_handle].translation();
     let self_rigid_body = &rigid_body_set[handle];
-    let movement_force = stop_linvel(IMP_MOVE_FORCE, self_rigid_body);
+    let movement_force = stop_linvel(BALANCING.enemies.imp.move_force, self_rigid_body);
     match self.state {
       EnemyImpState::Idle => {
         let self_translation = self_rigid_body.translation();
@@ -375,7 +363,7 @@ impl EnemyImp {
 
         if let Some((reached_handle, _)) = query_pipeline.cast_ray(
           &Ray::new((*self_translation).into(), direction_to_player),
-          IMP_AGGRO_RANGE,
+          BALANCING.enemies.imp.aggro_range,
           true,
         ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
           && reached_parent_handle == player_handle
@@ -404,7 +392,9 @@ impl EnemyImp {
       EnemyImpState::Shooting => EnemyDecision {
         handle,
         enemy: Enemy::Imp(Self {
-          state: EnemyImpState::ShootingCooldown(IMP_STATE_SHOOTING_COOLDOWN_INITIAL_FRAMES),
+          state: EnemyImpState::ShootingCooldown(
+            BALANCING.enemies.imp.shooting_cooldown_initial_frames,
+          ),
         }),
         movement_force: vec_zero(),
         enemies_to_spawn: vec![],
@@ -413,7 +403,7 @@ impl EnemyImp {
             collider: ColliderBuilder::ball(0.2)
               .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
               .build(),
-            damage: IMP_PROJECTILE_DAMAGE,
+            damage: BALANCING.enemies.imp.projectile_damage,
             initial_impulse: PhysicsVector::zero(),
             offset: PhysicsVector::zero(),
             force_mod: 0.0,
@@ -434,7 +424,10 @@ impl EnemyImp {
           impulses
             .iter()
             .map(|&angle| Projectile {
-              initial_impulse: distance_projection_physics(angle, IMP_PROJECTILE_SPEED),
+              initial_impulse: distance_projection_physics(
+                angle,
+                BALANCING.enemies.imp.projectile_speed,
+              ),
               ..base_projectile.clone()
             })
             .collect()
@@ -456,9 +449,9 @@ impl EnemyImp {
             handle,
             enemy: Enemy::Imp(Self {
               state: EnemyImpState::Moving(
-                IMP_STATE_MOVING_INITIAL_FRAMES,
+                BALANCING.enemies.imp.moving_initial_frames,
                 vector![rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0)].normalize()
-                  * IMP_MOVE_DISTANCE,
+                  * BALANCING.enemies.imp.move_distance,
               ),
             }),
             movement_force,
@@ -469,9 +462,9 @@ impl EnemyImp {
       }
       EnemyImpState::Moving(frames_left, direction) => {
         if frames_left > 0 {
-          let ease =
-            easing::ease_in_out_sine_ddt2() * (direction / IMP_STATE_MOVING_INITIAL_FRAMES as f32);
-          let x = 1.0 - frames_left as f32 / IMP_STATE_MOVING_INITIAL_FRAMES as f32;
+          let ease = easing::ease_in_out_sine_ddt2()
+            * (direction / BALANCING.enemies.imp.moving_initial_frames as f32);
+          let x = 1.0 - frames_left as f32 / BALANCING.enemies.imp.moving_initial_frames as f32;
           let movement_force = ease.at(x);
 
           EnemyDecision {
@@ -514,10 +507,6 @@ pub struct EnemyAranea {
   egg_handle: ColliderHandle,
 }
 
-const ENEMY_ARANEA_LAUNCH_FORCE: f32 = 5.0;
-const ENEMY_ARANEA_STOPPING_FRAMES: i32 = 5;
-const ENEMY_ARANEA_STOPPING_FORCE: f32 =
-  ENEMY_ARANEA_LAUNCH_FORCE / ENEMY_ARANEA_STOPPING_FRAMES as f32;
 const ENEMY_ARANEA_COOLDOWN_INITIAL_FRAMES: i32 = 35;
 const ENEMY_ARANEA_SHOOTING_FORCE: f32 = 0.65;
 const ENEMY_ARANEA_PROJECTILE_DAMAGE: f32 = 10.0;
@@ -554,7 +543,7 @@ impl EnemyAranea {
           let egg_translation = collider_set[self.egg_handle].translation();
           let vector_to_egg = egg_translation - self_translation;
 
-          let movement_force = vector_to_egg.normalize() * ENEMY_ARANEA_LAUNCH_FORCE;
+          let movement_force = vector_to_egg.normalize() * BALANCING.enemies.aranea.launch_force;
 
           let launch_frames = (vector_to_egg.magnitude()
             / (movement_force.magnitude() / self_rigid_body.mass())
@@ -600,7 +589,7 @@ impl EnemyAranea {
             handle,
             enemy: Enemy::Aranea(Self {
               egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Stopping(ENEMY_ARANEA_STOPPING_FRAMES),
+              state: EnemyAraneaState::Stopping(BALANCING.enemies.aranea.stopping_frames),
             }),
             movement_force: vec_zero(),
             enemies_to_spawn: vec![],
@@ -616,7 +605,9 @@ impl EnemyAranea {
               egg_handle: self.egg_handle,
               state: EnemyAraneaState::Stopping(frames_left - 1),
             }),
-            movement_force: self_rigid_body.linvel() * -1.0 * ENEMY_ARANEA_STOPPING_FORCE,
+            movement_force: self_rigid_body.linvel()
+              * -1.0
+              * BALANCING.enemies.aranea.stopping_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -627,7 +618,9 @@ impl EnemyAranea {
               egg_handle: self.egg_handle,
               state: EnemyAraneaState::Cooldown(ENEMY_ARANEA_COOLDOWN_INITIAL_FRAMES),
             }),
-            movement_force: self_rigid_body.linvel() * -1.0 * ENEMY_ARANEA_STOPPING_FORCE,
+            movement_force: self_rigid_body.linvel()
+              * -1.0
+              * BALANCING.enemies.aranea.stopping_force,
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -736,7 +729,7 @@ impl EnemyDefender {
 
         if let Some((reached_handle, _)) = query_pipeline.cast_ray(
           &Ray::new((*self_translation).into(), direction_to_player),
-          IMP_AGGRO_RANGE,
+          BALANCING.enemies.defender.aggro_range,
           true,
         ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
           && reached_parent_handle == player_handle

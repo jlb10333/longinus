@@ -362,6 +362,28 @@ fn deteriorate(weapon: &Weapon) -> Weapon {
   }
 }
 
+// VLNR
+fn vulnerable(weapon: &Weapon) -> Weapon {
+  Weapon {
+    status_effects: weapon
+      .status_effects
+      .push_front((StatusEffect::Vulnerable, 8.0)),
+    mana_cost: weapon.mana_cost + 0.1,
+    ..weapon.clone()
+  }
+}
+
+// W3KR
+fn weakness(weapon: &Weapon) -> Weapon {
+  Weapon {
+    status_effects: weapon
+      .status_effects
+      .push_front((StatusEffect::Weakness, 8.0)),
+    mana_cost: weapon.mana_cost + 0.1,
+    ..weapon.clone()
+  }
+}
+
 pub type UnequippedModules = Vec<WeaponModuleKind>;
 
 pub const EQUIP_SLOTS_WIDTH: i32 = 4;
@@ -390,6 +412,8 @@ pub enum WeaponModuleKind {
   DoubleFreq75Damage,
   ManaCost,
   StatusDeteriorate,
+  StatusVulnerable,
+  StatusWeakness,
 }
 
 type Generator = fn() -> Weapon;
@@ -440,6 +464,12 @@ pub fn weapon_module_from_kind(kind: WeaponModuleKind) -> WeaponModule {
     }
     WeaponModuleKind::StatusDeteriorate => {
       WeaponModule::Modulator(Rc::new(deteriorate), HashSet::from([Right]))
+    }
+    WeaponModuleKind::StatusVulnerable => {
+      WeaponModule::Modulator(Rc::new(vulnerable), HashSet::from([Right]))
+    }
+    WeaponModuleKind::StatusWeakness => {
+      WeaponModule::Modulator(Rc::new(weakness), HashSet::from([Right]))
     }
   }
 }

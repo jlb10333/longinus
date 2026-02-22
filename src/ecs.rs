@@ -8,8 +8,11 @@ use rapier2d::{
   },
 };
 use rpds::{HashTrieMap, List};
+use serde::Deserialize;
+use struct_record::record;
 
 use crate::{
+  balance::{BALANCING, StatusEffectBalancing},
   combat::WeaponModuleKind,
   enemy::{
     EnemyAranea, EnemyDefender, EnemyGoblin, EnemyImp, EnemySeeker, EnemySeekerGenerator,
@@ -168,6 +171,11 @@ impl ComponentSet {
 pub trait Component: Any {}
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[record(
+  StatusEffectBalancing,
+  AllStatusEffectBalancing,
+  "#[derive(Deserialize)] pub"
+)]
 pub enum StatusEffect {
   Bleed,
   Deteriorate,
@@ -181,15 +189,22 @@ impl StatusEffect {
   // TODO: Move this onto the status effect applicaton (damager/building)
   pub fn initial_steps_left(&self) -> i32 {
     match self {
-      Self::Bleed => 1,
-      Self::Deteriorate => 600,
-      Self::Explosion => 1,
-      Self::Paralyze => 300,
-      Self::Vulnerable => 1000,
-      Self::Weakness => 1000,
+      Self::Bleed => BALANCING.status_effects.bleed.steps,
+      Self::Deteriorate => BALANCING.status_effects.deteriorate.steps,
+      Self::Explosion => BALANCING.status_effects.explosion.steps,
+      Self::Paralyze => BALANCING.status_effects.paralyze.steps,
+      Self::Vulnerable => BALANCING.status_effects.vulnerable.steps,
+      Self::Weakness => BALANCING.status_effects.weakness.steps,
     }
   }
 }
+
+// Self::Bleed => 1,
+// Self::Deteriorate => 600,
+// Self::Explosion => 1,
+// Self::Paralyze => 300,
+// Self::Vulnerable => 1000,
+// Self::Weakness => 1000,
 
 #[derive(Clone, Default)]
 pub struct Damageable {

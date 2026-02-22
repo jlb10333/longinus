@@ -14,6 +14,7 @@ use crate::save::{SaveData, SaveSystem, load_save};
 use crate::system::{Process, System};
 
 mod ability;
+mod balance;
 mod camera;
 mod combat;
 mod controls;

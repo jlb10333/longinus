@@ -90,6 +90,20 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":88,
                  "y":280
+                }, 
+                {
+                 "id":20,
+                 "name":"StatusWeakness",
+                 "template":"templates\/ItemPickup.tx",
+                 "x":144,
+                 "y":280
+                }, 
+                {
+                 "id":21,
+                 "name":"StatusVulnerable",
+                 "template":"templates\/ItemPickup.tx",
+                 "x":168,
+                 "y":256
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -98,7 +112,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":20,
+ "nextobjectid":22,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

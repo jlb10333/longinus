@@ -1,6 +1,8 @@
 # Longinus Master Plan
 ## Gameplay
 - Mechanical prototype v2
+  - Cleanup
+    - Finish replacing all balancing consts with references to BALANCING
   - Bugs
     - Fix bug causing boost to be hard to activate (not consumed by physics)
     - Fix bug causing menu update from item acquisition to not be consumed by physics
@@ -47,8 +49,6 @@
         - 3XPL ExplosionStatus
         - BL3D BleedStatus
         - P4RA ParalyzeStatus
-        - VLNR VulnerableStatus
-        - W3KR WeakerStatus
       - STPT StatusPotency (Increases the amount by which statuses are applied)
       - STDR StatusDuration (Increases duration of applied statuses)
       - B1GR Bigger (Increases size of projectiles)

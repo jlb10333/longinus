@@ -1091,6 +1091,8 @@ fn debug_module_symbol(module_kind: WeaponModuleKind) -> &'static str {
     WeaponModuleKind::MirrorSlot => "RVSL",
     WeaponModuleKind::ManaCost => "M4NC",
     WeaponModuleKind::StatusDeteriorate => "DETR",
+    WeaponModuleKind::StatusVulnerable => "VLNR",
+    WeaponModuleKind::StatusWeakness => "W3KR",
   }
 }
 
@@ -1131,6 +1133,18 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
       vec![
         "modifier; applies the DETERIORATE status which causes enemies to be",
         "damaged over time",
+      ]
+    }
+    WeaponModuleKind::StatusVulnerable => {
+      vec![
+        "modifier; applies the VULNERABLE status which causes enemies to",
+        "receive more damage",
+      ]
+    }
+    WeaponModuleKind::StatusWeakness => {
+      vec![
+        "modifier; applies the WEAKNESS status which causes enemies to deal",
+        "less damage",
       ]
     }
   }
