@@ -607,7 +607,7 @@ impl EnemyAranea {
             }),
             movement_force: self_rigid_body.linvel()
               * -1.0
-              * BALANCING.enemies.aranea.stopping_force,
+              * BALANCING.enemies.aranea.stopping_force(),
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -620,7 +620,7 @@ impl EnemyAranea {
             }),
             movement_force: self_rigid_body.linvel()
               * -1.0
-              * BALANCING.enemies.aranea.stopping_force,
+              * BALANCING.enemies.aranea.stopping_force(),
             enemies_to_spawn: vec![],
             projectiles: vec![],
           }
@@ -697,6 +697,7 @@ pub struct EnemyDefender {
   state: EnemyDefenderState,
 }
 
+const DEFENDER_AGGRO_RANGE: f32 = 20.0;
 const DEFENDER_HOLD_FORCE: f32 = 0.2;
 const DEFENDER_COOLDOWN_INITIAL_FRAMES: i32 = 35;
 const DEFENDER_EASE_PERIOD: f32 = 15.0;
@@ -729,7 +730,7 @@ impl EnemyDefender {
 
         if let Some((reached_handle, _)) = query_pipeline.cast_ray(
           &Ray::new((*self_translation).into(), direction_to_player),
-          BALANCING.enemies.defender.aggro_range,
+          DEFENDER_AGGRO_RANGE,
           true,
         ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
           && reached_parent_handle == player_handle
