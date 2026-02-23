@@ -507,11 +507,6 @@ pub struct EnemyAranea {
   egg_handle: ColliderHandle,
 }
 
-const ENEMY_ARANEA_COOLDOWN_INITIAL_FRAMES: i32 = 35;
-const ENEMY_ARANEA_SHOOTING_FORCE: f32 = 0.65;
-const ENEMY_ARANEA_PROJECTILE_DAMAGE: f32 = 10.0;
-const ENEMY_ARANEA_HOLD_FORCE: f32 = 0.3;
-
 impl EnemyAranea {
   pub fn new(egg_handle: ColliderHandle) -> Self {
     Self {
@@ -530,7 +525,7 @@ impl EnemyAranea {
     narrow_phase: &NarrowPhase,
   ) -> EnemyDecision {
     let self_rigid_body = &rigid_body_set[handle];
-    let movement_force = stop_linvel(ENEMY_ARANEA_HOLD_FORCE, self_rigid_body);
+    let movement_force = stop_linvel(BALANCING.enemies.aranea.hold_force, self_rigid_body);
     match self.state {
       EnemyAraneaState::Idle => {
         if narrow_phase
@@ -616,7 +611,7 @@ impl EnemyAranea {
             handle,
             enemy: Enemy::Aranea(Self {
               egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Cooldown(ENEMY_ARANEA_COOLDOWN_INITIAL_FRAMES),
+              state: EnemyAraneaState::Cooldown(BALANCING.enemies.aranea.cooldown_initial_frames),
             }),
             movement_force: self_rigid_body.linvel()
               * -1.0
@@ -656,13 +651,13 @@ impl EnemyAranea {
 
         let vector_to_player = player_translation - self_translation;
 
-        let shooting_force = vector_to_player.normalize() * ENEMY_ARANEA_SHOOTING_FORCE;
+        let shooting_force = vector_to_player.normalize() * BALANCING.enemies.aranea.shooting_force;
 
         let projectile = Projectile {
           collider: ColliderBuilder::ball(0.2)
             .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
             .build(),
-          damage: ENEMY_ARANEA_PROJECTILE_DAMAGE,
+          damage: BALANCING.enemies.aranea.projectile_damage,
           initial_impulse: PhysicsVector::from_vec(shooting_force),
           offset: PhysicsVector::zero(),
           force_mod: 0.0,
@@ -674,7 +669,7 @@ impl EnemyAranea {
           handle,
           enemy: Enemy::Aranea(Self {
             egg_handle: self.egg_handle,
-            state: EnemyAraneaState::Cooldown(ENEMY_ARANEA_COOLDOWN_INITIAL_FRAMES),
+            state: EnemyAraneaState::Cooldown(BALANCING.enemies.aranea.cooldown_initial_frames),
           }),
           projectiles: vec![projectile],
           movement_force: vec_zero(),
@@ -697,11 +692,6 @@ pub struct EnemyDefender {
   state: EnemyDefenderState,
 }
 
-const DEFENDER_AGGRO_RANGE: f32 = 20.0;
-const DEFENDER_HOLD_FORCE: f32 = 0.2;
-const DEFENDER_COOLDOWN_INITIAL_FRAMES: i32 = 35;
-const DEFENDER_EASE_PERIOD: f32 = 15.0;
-
 impl EnemyDefender {
   pub fn new() -> EnemyDefender {
     Self {
@@ -720,7 +710,7 @@ impl EnemyDefender {
   ) -> EnemyDecision {
     let self_rigid_body = &rigid_body_set[handle];
 
-    let movement_force = stop_linvel(DEFENDER_HOLD_FORCE, self_rigid_body);
+    let movement_force = stop_linvel(BALANCING.enemies.defender.hold_force, self_rigid_body);
 
     match self.state {
       EnemyDefenderState::Idle => {
@@ -730,7 +720,7 @@ impl EnemyDefender {
 
         if let Some((reached_handle, _)) = query_pipeline.cast_ray(
           &Ray::new((*self_translation).into(), direction_to_player),
-          DEFENDER_AGGRO_RANGE,
+          BALANCING.enemies.defender.aggro_range,
           true,
         ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
           && reached_parent_handle == player_handle
@@ -759,7 +749,7 @@ impl EnemyDefender {
       EnemyDefenderState::Shooting(count) => {
         let ease = easing::ease_in_out_sine() * 2.0 * PI;
 
-        let x = count as f32 / DEFENDER_EASE_PERIOD;
+        let x = count as f32 / BALANCING.enemies.defender.ease_period;
 
         let angle = ease.at(x);
 
@@ -785,7 +775,10 @@ impl EnemyDefender {
             projectile(PI + (PI / 2.0)),
           ],
           enemy: Enemy::Defender(EnemyDefender {
-            state: EnemyDefenderState::Cooldown(count, DEFENDER_COOLDOWN_INITIAL_FRAMES),
+            state: EnemyDefenderState::Cooldown(
+              count,
+              BALANCING.enemies.defender.cooldown_initial_frames,
+            ),
           }),
           enemies_to_spawn: vec![],
         }
@@ -805,7 +798,9 @@ impl EnemyDefender {
           EnemyDecision {
             handle,
             enemy: Enemy::Defender(EnemyDefender {
-              state: EnemyDefenderState::Shooting((count + 1) % DEFENDER_EASE_PERIOD as i32),
+              state: EnemyDefenderState::Shooting(
+                (count + 1) % BALANCING.enemies.defender.ease_period as i32,
+              ),
             }),
             movement_force,
             projectiles: vec![],
@@ -819,9 +814,6 @@ impl EnemyDefender {
 
 #[derive(Clone)]
 pub struct EnemySeeker;
-
-const SEEKER_SPEED_CAP: f32 = 5.0;
-const SEEKER_SPEED: f32 = 0.3;
 
 impl EnemySeeker {
   pub fn behavior(
@@ -839,11 +831,11 @@ impl EnemySeeker {
 
       let velocity_away_from_player = self_rigid_body.linvel() - velocity_towards_player;
 
-      (if velocity_towards_player.magnitude() >= SEEKER_SPEED_CAP {
+      (if velocity_towards_player.magnitude() >= BALANCING.enemies.seeker.speed_cap {
         vec_zero()
       } else {
-        direction_to_player.normalize() * SEEKER_SPEED
-      }) - velocity_away_from_player.normalize() * SEEKER_SPEED * 0.3
+        direction_to_player.normalize() * BALANCING.enemies.seeker.speed
+      }) - velocity_away_from_player.normalize() * BALANCING.enemies.seeker.speed * 0.3
     };
     EnemyDecision {
       movement_force,
@@ -860,9 +852,6 @@ pub struct EnemySeekerGenerator {
   pub cooldown: i32,
 }
 
-const SEEKER_GENERATOR_INITIAL_FORCE: f32 = 5.0;
-const SEEKER_SPAWN_COOLDOWN: i32 = 120;
-
 impl EnemySeekerGenerator {
   pub fn behavior(
     &self,
@@ -870,7 +859,7 @@ impl EnemySeekerGenerator {
     player_translation: &Vector2<f32>,
     physics_rigid_bodies: &RigidBodySet,
   ) -> EnemyDecision {
-    let should_spawn_enemy = self.cooldown % SEEKER_SPAWN_COOLDOWN == 0;
+    let should_spawn_enemy = self.cooldown % BALANCING.enemies.seeker_generator.spawn_cooldown == 0;
     EnemyDecision {
       movement_force: vec_zero(),
       handle,
@@ -881,7 +870,8 @@ impl EnemySeekerGenerator {
       enemies_to_spawn: if should_spawn_enemy {
         let self_rigid_body = &physics_rigid_bodies[handle];
         let direction_to_player = player_translation - self_rigid_body.translation();
-        let initial_force = direction_to_player.normalize() * SEEKER_GENERATOR_INITIAL_FORCE;
+        let initial_force =
+          direction_to_player.normalize() * BALANCING.enemies.seeker_generator.initial_force;
         vec![EnemyDecisionEnemySpawn {
           initial_force,
           enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Seeker, *self_rigid_body.translation()),

@@ -1,0 +1,63 @@
+>{
+    "status_effects": {
+        "bleed": {
+            "steps": 1
+        },
+        "deteriorate": {
+            "steps": 600
+        },
+        "explosion": {
+            "steps": 1
+        },
+        "paralyze": {
+            "steps": 300
+        },
+        "vulnerable": {
+            "steps": 1000
+        },
+        "weakness": {
+            "steps": 1000
+        }
+    },
+    "enemies": {
+        "goblin": {
+            "aggro_range": 20,
+            "lunge_force": 9,
+            "max_lunge_distance": 4,
+            "slowing_frames": 70,
+            "recovering_frames": 50
+        },
+        "imp": {
+            "aggro_range": 20,
+            "moving_initial_frames": 90,
+            "shooting_cooldown_initial_frames": 50,
+            "move_force": 0.2,
+            "move_distance": 4,
+            "projectile_speed": 0.7,
+            "projectile_damage": 5.0
+        },
+        "aranea": {
+            "launch_force": 5,
+            "stopping_frames": 5,
+            "cooldown_initial_frames": 35,
+            "shooting_force": 0.65,
+            "projectile_damage": 10,
+            "hold_force": 0.3
+        },
+        "defender": {
+            "aggro_range": 20,
+            "hold_force": 0.2,
+            "cooldown_initial_frames": 35,
+            "ease_period": 15
+        },
+        "seeker": {
+            "speed_cap": 5,
+            "speed": 0.3
+        },
+        "seeker_generator": {
+            "initial_force": 5,
+            "spawn_cooldown": 120
+        }
+    }
+}
+

@@ -173,7 +173,7 @@ pub trait Component: Any {}
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 #[record(
   StatusEffectBalancing,
-  AllStatusEffectBalancing,
+  StatusEffectsBalancing,
   "#[derive(Deserialize)] pub"
 )]
 pub enum StatusEffect {
