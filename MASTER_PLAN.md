@@ -1,26 +1,37 @@
 # Longinus Master Plan
 ## Gameplay
 - Mechanical prototype v2
+  - Core elements
+    - Rechargeable/unrechargeable mana bars
+    - Persistent enemy death for boss/field boss
+    - Actual first boss
+    - 2nd boss
+  - Full blocking
+    - Add level layout leading to 2nd boss, accessible via chain
+    - Settle on distribution and selection of upgrade modules/mana bars/health bars
+  - Polish
+    - Bugs
+      - Fix bug causing chain to not activate
+      - Fix bug causing boost to be hard to activate (not consumed by physics)
+      - Fix bug causing menu update from item acquisition to not be consumed by physics
+      - Fix player movement (normalize diagonal)
+      - Make map transitions solid for enemies
+    - Visual explainability
+      - Show all health tank and mana tanks in inventory
+      - Get rid of hitstop (or better yet, make it configurable)
+    - Audio explainability
+      - Enemy hit sfx
+      - Enemy death sfx
+      - Player hit sfx
+  - Testing
+    - Test at different frame rates
+  
+- Mechanical prototype v3
   - Cleanup
     - Finish replacing all balancing consts with references to BALANCING
-  - Bugs
-    - Fix bug causing boost to be hard to activate (not consumed by physics)
-    - Fix bug causing menu update from item acquisition to not be consumed by physics
-    - Fix player movement (normalize diagonal)
-  - Visual explainability
-    - Show all health tank and mana tanks in inventory
-  - Audio explainability
-    - Enemy hit sfx
-    - Enemy death sfx
-    - Player hit sfx
   - Enemies
-    - Make map transitions solid for enemies
-    - Persistent enemy death
-    - Activation trigger as a result of enemy death
     - Time slow effect on killing an enemy
   - First boss
-  - Mana
-    - Both rechargeable and unrechargeable bars can be found in environment
   - Ability
     - Ability that stops all momentum and reflects any objects in range
       - Costs mana proportional to the total MOMENTUM of objects reflected with a baseline 

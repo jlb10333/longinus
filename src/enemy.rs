@@ -874,7 +874,11 @@ impl EnemySeekerGenerator {
           direction_to_player.normalize() * BALANCING.enemies.seeker_generator.initial_force;
         vec![EnemyDecisionEnemySpawn {
           initial_force,
-          enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Seeker, *self_rigid_body.translation()),
+          enemy_spawn: EnemySpawn::new(
+            EnemySpawnEnemy::Seeker,
+            *self_rigid_body.translation(),
+            None,
+          ),
         }]
       } else {
         vec![]
@@ -1088,7 +1092,7 @@ impl EnemySniperGenerator {
               .into_vec();
               vec![EnemyDecisionEnemySpawn {
                 initial_force,
-                enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Sniper, *self_translation),
+                enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Sniper, *self_translation, None),
               }]
             } else {
               vec![]

@@ -96,7 +96,7 @@ impl MapEnemySpawn {
         MapEnemyName::SniperGenerator => EnemySpawnEnemy::SniperGenerator,
       },
       translation.into_vec(),
-      Id { id: self.id },
+      Some(Id { id: self.id }),
     )
   }
 }
@@ -564,6 +564,33 @@ struct MapGate {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapEnemyIdClass {
+  EnemyId,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapEnemyId {
+  #[serde(rename = "name")]
+  _name: MapEnemyIdClass,
+  value: i32,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapEnemyGateClass {
+  EnemyGate,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapEnemyGate {
+  id: i32,
+  x: f32,
+  y: f32,
+  properties: (MapEnemyId,),
+  #[serde(rename = "type")]
+  _class: MapEnemyGateClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 enum MapNotClass {
   Not,
 }
@@ -687,6 +714,7 @@ enum Object {
   Or(MapOr),
   And(MapAnd),
   Gate(MapGate),
+  EnemyGate(MapEnemyGate),
   Not(MapNot),
   Locomotor(MapLocomotor),
   Glue(MapGlue),
@@ -837,11 +865,11 @@ pub struct EnemySpawn {
   pub hitboxes: Vec<Collider>,
   pub hurtboxes: Vec<Collider>,
   pub rigid_body: RigidBody,
-  pub id: Id,
+  pub id: Option<Id>,
 }
 
 impl EnemySpawn {
-  pub fn new(name: EnemySpawnEnemy, translation: Vector2<f32>, id: Id) -> Self {
+  pub fn new(name: EnemySpawnEnemy, translation: Vector2<f32>, id: Option<Id>) -> Self {
     let hitboxes = hitboxes_from_enemy_name(&name);
     let hurtboxes = hurtboxes_from_enemy_name(&name);
     let mut rigid_body = RigidBodyBuilder::dynamic().translation(translation).build();
@@ -1126,6 +1154,13 @@ pub struct Gate {
 }
 
 #[derive(Clone)]
+pub struct EnemyGate {
+  pub rigid_body: RigidBody,
+  pub id: Id,
+  pub enemy_id: Id,
+}
+
+#[derive(Clone)]
 pub struct Not {
   pub rigid_body: RigidBody,
   pub id: i32,
@@ -1237,6 +1272,7 @@ pub enum MapComponent {
   Or(Or),
   And(And),
   Gate(Gate),
+  EnemyGate(EnemyGate),
   Not(Not),
   Locomotor(Locomotor),
   Glue(Glue),
@@ -1514,6 +1550,22 @@ impl Object {
         rigid_body: RigidBodyBuilder::dynamic()
           .translation(physics_translation_from_map(
             gate.x, gate.y, 0.0, 0.0, map_height,
+          ))
+          .build(),
+      }),
+
+      Object::EnemyGate(enemy_gate) => MapComponent::EnemyGate(EnemyGate {
+        id: Id { id: enemy_gate.id },
+        enemy_id: Id {
+          id: enemy_gate.properties.0.value,
+        },
+        rigid_body: RigidBodyBuilder::dynamic()
+          .translation(physics_translation_from_map(
+            enemy_gate.x,
+            enemy_gate.y,
+            0.0,
+            0.0,
+            map_height,
           ))
           .build(),
       }),
@@ -1804,6 +1856,7 @@ pub struct Map {
   pub ands: Vec<And>,
   pub ors: Vec<Or>,
   pub gates: Vec<Gate>,
+  pub enemy_gates: Vec<EnemyGate>,
   pub nots: Vec<Not>,
   pub locomotors: Vec<Locomotor>,
   pub glues: Vec<Glue>,
@@ -1996,6 +2049,18 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let enemy_gates = converted_entities
+      .iter()
+      .filter_map(|object| {
+        if let MapComponent::EnemyGate(enemy_gate) = object {
+          Some(enemy_gate)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     let nots = converted_entities
       .iter()
       .flat_map(|object| {
@@ -2087,6 +2152,7 @@ impl RawMap {
       ands,
       ors,
       gates,
+      enemy_gates,
       nots,
       locomotors,
       glues,

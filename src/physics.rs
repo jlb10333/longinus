@@ -13,8 +13,8 @@ use crate::{
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
     Activator, And, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
-    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, Engine, Entity,
-    EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision,
+    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, EnemyGate, Engine,
+    Entity, EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision,
     GivesItemOnCollision, GravitySource, HealOnCollision, Id, IncreaseMaxHealthOnCollision,
     Locomotor, MapTransitionOnCollision, Not, Or, SaveMenuOnCollision, SimpleActivatable,
     StatusEffect, Switch, Terminal, TouchSensor,
@@ -161,15 +161,22 @@ fn load_new_map(
         EnemySpawnEnemy::SniperGenerator => Enemy::SniperGenerator(EnemySniperGenerator::new()),
       };
 
+      let base_components = enemy_spawn
+        .into_entity_components(EnemySpawnColliderHandles {
+          hitboxes,
+          hurtboxes,
+        })
+        .insert(enemy);
+
+      let components = if let Some(id) = enemy_spawn.id {
+        base_components.insert(id)
+      } else {
+        base_components
+      };
+
       Entity {
         handle: EntityHandle::RigidBody(handle),
-        components: enemy_spawn
-          .into_entity_components(EnemySpawnColliderHandles {
-            hitboxes,
-            hurtboxes,
-          })
-          .insert(enemy)
-          .insert(enemy_spawn.id),
+        components,
         label: "enemy".to_string(),
       }
     })
@@ -504,6 +511,26 @@ fn load_new_map(
     })
     .collect::<Vec<_>>();
 
+  /* MARK: Spawn enemy gates. */
+  let enemy_gates = map
+    .enemy_gates
+    .iter()
+    .map(|enemy_gate| {
+      let handle = rigid_body_set.insert(enemy_gate.rigid_body.clone());
+
+      Entity {
+        handle: EntityHandle::RigidBody(handle),
+        components: ComponentSet::new()
+          .insert(EnemyGate {
+            enemy_id: enemy_gate.enemy_id,
+          })
+          .insert(enemy_gate.id),
+        label: "enemy_gate".to_string(),
+      }
+    })
+    .collect::<Vec<_>>();
+
+  /* MARK: Spawn nots. */
   let nots = map
     .nots
     .iter()
@@ -671,6 +698,7 @@ fn load_new_map(
     .chain(ands)
     .chain(ors)
     .chain(gates)
+    .chain(enemy_gates)
     .chain(nots)
     .chain(engines)
     .chain(terminals)
@@ -2044,11 +2072,38 @@ impl System for PhysicsSystem {
             Rc::new(Entity {
               handle,
               label: format!("gate {}", activation),
-
               components: entity.components.with(Activator { activation }).with(Gate {
                 activator_id: gate.activator_id,
                 highest_historical_activation: activation,
               }),
+            }),
+          )
+        } else {
+          (handle, Rc::clone(entity))
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
+
+    /* MARK: Calculate Enemy Gate activation */
+    let entities = entities
+      .iter()
+      .map(|(&handle, entity)| {
+        if let Some(enemy_gate) = entity.components.get::<EnemyGate>() {
+          let enemy_exists = entities.iter().any(|(_, entity)| {
+            entity
+              .components
+              .get::<Id>()
+              .map(|id| *id == enemy_gate.enemy_id)
+              .unwrap_or(false)
+          });
+
+          let activation = if enemy_exists { 0.0 } else { 1.0 };
+          (
+            handle,
+            Rc::new(Entity {
+              handle,
+              label: format!("gate {}", activation),
+              components: entity.components.with(Activator { activation }),
             }),
           )
         } else {

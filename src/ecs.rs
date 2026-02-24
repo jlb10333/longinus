@@ -374,6 +374,11 @@ pub struct Gate {
 }
 impl Component for Gate {}
 
+pub struct EnemyGate {
+  pub enemy_id: Id,
+}
+impl Component for EnemyGate {}
+
 pub struct Not {
   pub activator_id: i32,
 }
