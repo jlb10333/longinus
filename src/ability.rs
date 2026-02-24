@@ -4,6 +4,7 @@ use rapier2d::{na::Vector2, prelude::RigidBodyHandle};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+  balance::BALANCING,
   combat::CombatSystem,
   controls::ControlsSystem,
   load_map::MapAbilityType,
@@ -14,12 +15,6 @@ use crate::{
   units::{PhysicsVector, UnitConvert, UnitConvert2},
 };
 
-const MANA_TANK_CAPACITY: f32 = 3.0;
-const MANA_TANK_RECHARGE_RATE: f32 = 1.0 / 60.0;
-const BOOST_MOD: f32 = 10.0;
-const BOOST_MANA_USE: f32 = 3.0;
-const BOOST_MAX_COOLDOWN: f32 = 10.0;
-
 #[derive(Serialize, Deserialize, Clone, Copy, Default)]
 pub struct ManaTanksCapacityInfo {
   pub auto_recharge_mana_tanks: i32,
@@ -28,11 +23,11 @@ pub struct ManaTanksCapacityInfo {
 
 impl ManaTanksCapacityInfo {
   pub fn max_non_rechargeable_mana_level(&self) -> f32 {
-    self.non_recharge_mana_tanks as f32 * MANA_TANK_CAPACITY
+    self.non_recharge_mana_tanks as f32 * BALANCING.abilities.mana_tanks.capacity
   }
 
   pub fn max_rechargeable_mana_level(&self) -> f32 {
-    self.auto_recharge_mana_tanks as f32 * MANA_TANK_CAPACITY
+    self.auto_recharge_mana_tanks as f32 * BALANCING.abilities.mana_tanks.capacity
   }
 
   pub fn total_capacity(&self) -> f32 {
@@ -58,7 +53,8 @@ impl ManaTanksActiveInfo {
 
   pub fn recharge(&self) -> Self {
     Self {
-      rechargeable_mana_level: (self.rechargeable_mana_level + MANA_TANK_RECHARGE_RATE)
+      rechargeable_mana_level: (self.rechargeable_mana_level
+        + BALANCING.abilities.mana_tanks.recharge_rate)
         .min(self.capacity.max_rechargeable_mana_level()),
       ..*self
     }
@@ -128,8 +124,8 @@ impl System for AbilitySystem {
       acquired_boost: ctx.input.acquired_boost,
       acquired_chain: ctx.input.acquired_chain,
       boost_force: None,
-      current_boost_cooldown: BOOST_MAX_COOLDOWN,
-      max_boost_cooldown: BOOST_MAX_COOLDOWN,
+      current_boost_cooldown: BALANCING.abilities.boost.max_cooldown,
+      max_boost_cooldown: BALANCING.abilities.boost.max_cooldown,
       chain_to_mount_point: None,
       chain_activated: false,
       kill_chain: false,
@@ -169,10 +165,12 @@ impl System for AbilitySystem {
       && controls_system.left_stick != PhysicsVector::zero()
       && self.acquired_boost
       && self.current_boost_cooldown == 0.0
-      && let Some(mana_tanks) = self.mana_tanks.without(BOOST_MANA_USE)
+      && let Some(mana_tanks) = self.mana_tanks.without(BALANCING.abilities.boost.mana_use)
     {
       (
-        Some(controls_system.left_stick.into_vec().normalize() * BOOST_MOD),
+        Some(
+          controls_system.left_stick.into_vec().normalize() * BALANCING.abilities.boost.force_mod,
+        ),
         self.max_boost_cooldown,
         mana_tanks,
       )

@@ -71,6 +71,17 @@
             "cooldown_initial_frames": 450,
             "generating_initial_force": 25
         }
+    },
+    "abilities": {
+        "mana_tanks": {
+            "capacity": 3,
+            "recharge_rate": 0.1778
+        },
+        "boost": {
+            "force_mod": 10,
+            "mana_use": 3,
+            "max_cooldown": 10
+        }
     }
 }
 

@@ -79,19 +79,19 @@ pub struct SeekerGeneratorBalancing {
 
 #[derive(Deserialize)]
 pub struct SniperBalancing {
-  pub aggro_range: f32,             // 40
-  pub cooldown_initial_frames: i32, // 200
-  pub projectile_damage: f32,       // 20
-  pub shooting_force: f32,          // 15
-  pub hold_force: f32,              // 0.2
+  pub aggro_range: f32,
+  pub cooldown_initial_frames: i32,
+  pub projectile_damage: f32,
+  pub shooting_force: f32,
+  pub hold_force: f32,
 }
 
 #[derive(Deserialize)]
 pub struct SniperGeneratorBalancing {
-  pub generating_initial_frames: i32, // 60
-  pub num_snipers_generated: i32,     // 3
-  pub cooldown_initial_frames: i32,   // 450
-  pub generating_initial_force: f32,  // 25
+  pub generating_initial_frames: i32,
+  pub num_snipers_generated: i32,
+  pub cooldown_initial_frames: i32,
+  pub generating_initial_force: f32,
 }
 
 impl SniperGeneratorBalancing {
@@ -113,9 +113,29 @@ pub struct EnemyBalancing {
 }
 
 #[derive(Deserialize)]
+pub struct ManaTankBalancing {
+  pub capacity: f32,
+  pub recharge_rate: f32,
+}
+
+#[derive(Deserialize)]
+pub struct BoostBalancing {
+  pub force_mod: f32,
+  pub mana_use: f32,
+  pub max_cooldown: f32,
+}
+
+#[derive(Deserialize)]
+pub struct AbilityBalancing {
+  pub mana_tanks: ManaTankBalancing,
+  pub boost: BoostBalancing,
+}
+
+#[derive(Deserialize)]
 pub struct Balancing {
   pub status_effects: StatusEffectsBalancing,
   pub enemies: EnemyBalancing,
+  pub abilities: AbilityBalancing,
 }
 
 const BALANCING_PATH: &str = "assets/balancing.json";
