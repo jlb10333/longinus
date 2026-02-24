@@ -57,6 +57,19 @@
         "seeker_generator": {
             "initial_force": 5,
             "spawn_cooldown": 120
+        },
+        "sniper": {
+            "aggro_range": 40,
+            "cooldown_initial_frames": 200,
+            "projectile_damage": 20,
+            "shooting_force": 15,
+            "hold_force": 0.2
+        },
+        "sniper_generator": {
+            "generating_initial_frames": 60,
+            "num_snipers_generated": 3,
+            "cooldown_initial_frames": 450,
+            "generating_initial_force": 25
         }
     }
 }

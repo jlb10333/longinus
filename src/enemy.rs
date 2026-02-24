@@ -895,12 +895,6 @@ pub struct EnemySniper {
   pub state: EnemySniperState,
 }
 
-const SNIPER_AGGRO_RANGE: f32 = 40.0;
-const SNIPER_COOLDOWN_INITIAL_FRAMES: i32 = 200;
-const SNIPER_PROJECTILE_DAMAGE: f32 = 20.0;
-const SNIPER_SHOOTING_FORCE: f32 = 15.0;
-const SNIPER_HOLD_FORCE: f32 = 0.2;
-
 impl EnemySniper {
   pub fn new() -> Self {
     Self {
@@ -921,13 +915,13 @@ impl EnemySniper {
     let self_rigid_body = &rigid_body_set[handle];
     let self_translation = self_rigid_body.translation();
     let direction_to_player = player_translation - self_translation;
-    let movement_force = stop_linvel(SNIPER_HOLD_FORCE, self_rigid_body);
+    let movement_force = stop_linvel(BALANCING.enemies.sniper.hold_force, self_rigid_body);
 
     match self.state {
       EnemySniperState::Idle => {
         if let Some((reached_handle, _)) = query_pipeline.cast_ray(
           &Ray::new((*self_translation).into(), direction_to_player),
-          SNIPER_AGGRO_RANGE,
+          BALANCING.enemies.sniper.aggro_range,
           true,
         ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
           && reached_parent_handle == player_handle
@@ -935,7 +929,7 @@ impl EnemySniper {
           EnemyDecision {
             handle,
             enemy: Enemy::Sniper(Self {
-              state: EnemySniperState::Cooldown(SNIPER_COOLDOWN_INITIAL_FRAMES),
+              state: EnemySniperState::Cooldown(BALANCING.enemies.sniper.cooldown_initial_frames),
             }),
             movement_force,
             enemies_to_spawn: vec![],
@@ -956,7 +950,7 @@ impl EnemySniper {
       EnemySniperState::Shooting => EnemyDecision {
         handle,
         enemy: Enemy::Sniper(Self {
-          state: EnemySniperState::Cooldown(SNIPER_COOLDOWN_INITIAL_FRAMES),
+          state: EnemySniperState::Cooldown(BALANCING.enemies.sniper.cooldown_initial_frames),
         }),
         movement_force,
         enemies_to_spawn: vec![],
@@ -971,12 +965,14 @@ impl EnemySniper {
           if let Some(lead_direction) = calculate_lead_direction(
             direction_to_player,
             player_relative_velocity,
-            SNIPER_SHOOTING_FORCE / collider.mass(),
+            BALANCING.enemies.sniper.shooting_force / collider.mass(),
           ) {
             vec![Projectile {
               collider,
-              damage: SNIPER_PROJECTILE_DAMAGE,
-              initial_impulse: PhysicsVector::from_vec(lead_direction * SNIPER_SHOOTING_FORCE),
+              damage: BALANCING.enemies.sniper.projectile_damage,
+              initial_impulse: PhysicsVector::from_vec(
+                lead_direction * BALANCING.enemies.sniper.shooting_force,
+              ),
               offset: PhysicsVector::zero(),
               force_mod: 0.0,
               component_set: ComponentSet::new(),
@@ -1026,13 +1022,6 @@ pub struct EnemySniperGenerator {
   state: EnemySniperGeneratorState,
 }
 
-const SNIPER_GENERATOR_GENERATING_INITIAL_FRAMES: i32 = 60;
-const SNIPER_GENERATOR_NUM_SNIPERS_GENERATED: i32 = 3;
-const SNIPER_GENERATOR_GENERATING_INTERVAL: i32 =
-  SNIPER_GENERATOR_GENERATING_INITIAL_FRAMES / SNIPER_GENERATOR_NUM_SNIPERS_GENERATED;
-const SNIPER_GENERATOR_COOLDOWN_INITIAL_FRAMES: i32 = 450;
-const SNIPER_GENERATOR_GENERATING_INITIAL_FORCE: f32 = 25.0;
-
 impl EnemySniperGenerator {
   pub fn new() -> Self {
     Self {
@@ -1059,7 +1048,7 @@ impl EnemySniperGenerator {
       EnemySniperGeneratorState::Idle => {
         if let Some((reached_handle, _)) = query_pipeline.cast_ray(
           &Ray::new((*self_translation).into(), direction_to_player),
-          SNIPER_AGGRO_RANGE,
+          BALANCING.enemies.sniper.aggro_range,
           true,
         ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
           && reached_parent_handle == player_handle
@@ -1068,7 +1057,7 @@ impl EnemySniperGenerator {
             handle,
             enemy: Enemy::SniperGenerator(Self {
               state: EnemySniperGeneratorState::Generating(
-                SNIPER_GENERATOR_GENERATING_INITIAL_FRAMES,
+                BALANCING.enemies.sniper_generator.generating_initial_frames,
               ),
             }),
             movement_force: vec_zero(),
@@ -1089,18 +1078,21 @@ impl EnemySniperGenerator {
       }
       EnemySniperGeneratorState::Generating(frames_left) => {
         if frames_left > 0 {
-          let enemies_to_spawn = if frames_left % SNIPER_GENERATOR_GENERATING_INTERVAL == 0 {
-            let rng_angle = rng.gen_range(0.0, 2.0 * PI);
-            let initial_force =
-              distance_projection_physics(rng_angle, SNIPER_GENERATOR_GENERATING_INITIAL_FORCE)
-                .into_vec();
-            vec![EnemyDecisionEnemySpawn {
-              initial_force,
-              enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Sniper, *self_translation),
-            }]
-          } else {
-            vec![]
-          };
+          let enemies_to_spawn =
+            if frames_left % BALANCING.enemies.sniper_generator.generating_interval() == 0 {
+              let rng_angle = rng.gen_range(0.0, 2.0 * PI);
+              let initial_force = distance_projection_physics(
+                rng_angle,
+                BALANCING.enemies.sniper_generator.generating_initial_force,
+              )
+              .into_vec();
+              vec![EnemyDecisionEnemySpawn {
+                initial_force,
+                enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Sniper, *self_translation),
+              }]
+            } else {
+              vec![]
+            };
           EnemyDecision {
             enemy: Enemy::SniperGenerator(Self {
               state: EnemySniperGeneratorState::Generating(frames_left - 1),
@@ -1113,7 +1105,9 @@ impl EnemySniperGenerator {
         } else {
           EnemyDecision {
             enemy: Enemy::SniperGenerator(Self {
-              state: EnemySniperGeneratorState::Cooldown(SNIPER_GENERATOR_COOLDOWN_INITIAL_FRAMES),
+              state: EnemySniperGeneratorState::Cooldown(
+                BALANCING.enemies.sniper_generator.cooldown_initial_frames,
+              ),
             }),
             handle,
             movement_force: vec_zero(),
