@@ -68,6 +68,7 @@ struct MapEnemySpawnAraneaEggId {
 
 #[derive(Clone, Debug, Deserialize)]
 struct MapEnemySpawn {
+  id: i32,
   x: f32,
   y: f32,
   name: MapEnemyName,
@@ -95,6 +96,7 @@ impl MapEnemySpawn {
         MapEnemyName::SniperGenerator => EnemySpawnEnemy::SniperGenerator,
       },
       translation.into_vec(),
+      Id { id: self.id },
     )
   }
 }
@@ -835,10 +837,11 @@ pub struct EnemySpawn {
   pub hitboxes: Vec<Collider>,
   pub hurtboxes: Vec<Collider>,
   pub rigid_body: RigidBody,
+  pub id: Id,
 }
 
 impl EnemySpawn {
-  pub fn new(name: EnemySpawnEnemy, translation: Vector2<f32>) -> Self {
+  pub fn new(name: EnemySpawnEnemy, translation: Vector2<f32>, id: Id) -> Self {
     let hitboxes = hitboxes_from_enemy_name(&name);
     let hurtboxes = hurtboxes_from_enemy_name(&name);
     let mut rigid_body = RigidBodyBuilder::dynamic().translation(translation).build();
@@ -848,6 +851,7 @@ impl EnemySpawn {
       hitboxes,
       hurtboxes,
       rigid_body,
+      id,
     }
   }
 

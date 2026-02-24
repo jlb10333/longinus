@@ -168,7 +168,8 @@ fn load_new_map(
             hitboxes,
             hurtboxes,
           })
-          .insert(enemy),
+          .insert(enemy)
+          .insert(enemy_spawn.id),
         label: "enemy".to_string(),
       }
     })
