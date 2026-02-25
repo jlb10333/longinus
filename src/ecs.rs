@@ -256,8 +256,10 @@ pub enum Enemy {
   Sniper(EnemySniper),
   SniperGenerator(EnemySniperGenerator),
 }
-
 impl Component for Enemy {}
+
+pub struct PersistDestruction;
+impl Component for PersistDestruction {}
 
 pub struct GivesItemOnCollision {
   pub weapon_module_kind: WeaponModuleKind,

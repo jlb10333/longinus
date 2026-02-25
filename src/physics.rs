@@ -4,7 +4,7 @@ use rapier2d::{
   na::{Isometry2, OPoint},
   prelude::*,
 };
-use rpds::{HashTrieMap, List, ht_map, list};
+use rpds::{HashTrieMap, HashTrieSet, List, ht_map, list};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
@@ -77,7 +77,7 @@ const PLAYER_MAX_HITSTUN: f32 = 100.0;
 fn load_new_map(
   map: &Map,
   map_name: &str,
-  acquired_items: &[(String, i32)],
+  entities_to_omit: &HashTrieSet<(String, i32)>,
   target_player_spawn_id: i32,
   player_health: f32,
   player_max_health: f32,
@@ -186,7 +186,6 @@ fn load_new_map(
   let item_pickups = map
     .item_pickups
     .iter()
-    .filter(|item_pickup| !acquired_items.contains(&(map_name.to_string(), item_pickup.id)))
     .map(|item_pickup| {
       let handle = collider_set.insert(item_pickup.collider.clone());
       Entity {
@@ -205,7 +204,6 @@ fn load_new_map(
   let health_tanks = map
     .health_tanks
     .iter()
-    .filter(|health_tank| !acquired_items.contains(&(map_name.to_string(), health_tank.id)))
     .map(|health_tank| {
       let handle = collider_set.insert(health_tank.collider.clone());
       Entity {
@@ -702,6 +700,15 @@ fn load_new_map(
     .chain(nots)
     .chain(engines)
     .chain(terminals)
+    .filter(|entity| {
+      if let Some(id) = entity.components.get::<Id>()
+        && entities_to_omit.contains(&(map_name.to_string(), id.id))
+      {
+        false
+      } else {
+        true
+      }
+    })
     .map(|entity| (entity.handle, Rc::new(entity)))
     .collect::<HashTrieMap<_, _>>();
 
@@ -806,7 +813,7 @@ impl System for PhysicsSystem {
     load_new_map(
       map,
       &map_system.current_map_name,
-      &combat_system.acquired_items,
+      &combat_system.exhausted_entities,
       map_system.target_player_spawn_id,
       ctx.input.player_health,
       ctx.input.player_max_health,
@@ -844,7 +851,7 @@ impl System for PhysicsSystem {
       return load_new_map(
         map,
         &map_system.current_map_name,
-        &combat_system.acquired_items,
+        &combat_system.exhausted_entities,
         map_system.target_player_spawn_id,
         player_damageable.health,
         player_damageable.max_health,
@@ -1920,12 +1927,10 @@ impl System for PhysicsSystem {
             } else {
               (activator.activation + activation_change, true)
             }
+          } else if activator.activation <= 0.0 {
+            (activator.activation + activation_change, true)
           } else {
-            if activator.activation <= 0.0 {
-              (activator.activation + activation_change, true)
-            } else {
-              (activator.activation - activation_change, false)
-            }
+            (activator.activation - activation_change, false)
           };
 
           (
@@ -2335,9 +2340,7 @@ fn fold_damageable_damage_taken(
     let (hitstop_frames, entity) = {
       let damageable = entity.components.get::<Damageable>();
 
-      if damageable.is_none() {
-        (0, Rc::clone(entity))
-      } else {
+      if damageable.is_some() {
         let damageable = damageable.unwrap();
 
         if damageable.current_hitstun > 0.0 {
@@ -2474,6 +2477,8 @@ fn fold_damageable_damage_taken(
             )
           }
         }
+      } else {
+        (0, Rc::clone(entity))
       }
     };
     let new_entities = temp_entities.insert(*handle, entity);

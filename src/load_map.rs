@@ -72,7 +72,8 @@ struct MapEnemySpawn {
   x: f32,
   y: f32,
   name: MapEnemyName,
-  template: EnemySpawnTemplate,
+  #[serde(rename = "template")]
+  _template: EnemySpawnTemplate,
   properties: Option<(MapEnemySpawnAraneaEggId,)>,
 }
 
@@ -115,7 +116,8 @@ struct MapAraneaEgg {
   id: i32,
   x: f32,
   y: f32,
-  template: MapAraneaEggTemplate,
+  #[serde(rename = "template")]
+  _template: MapAraneaEggTemplate,
 }
 
 lit_str!(PlayerSpawnTemplatePath, "templates/Player Spawn.tx");

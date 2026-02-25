@@ -7,7 +7,7 @@ use std::{
 use crate::{
   ability::{AbilitySystem, ManaTanksActiveInfo},
   controls::{ControlsSystem, angle_from_vec},
-  ecs::{ComponentSet, ExplodeOnCollision, StatusEffect},
+  ecs::{ComponentSet, ExplodeOnCollision, Id, PersistDestruction, StatusEffect},
   load_map::{MapSystem, PLAYER_PROJECTILE_INTERACTION_GROUPS},
   menu::MenuSystem,
   physics::PhysicsSystem,
@@ -664,7 +664,7 @@ pub struct CombatSystem {
   pub equipped_modules: EquippedModules,
   pub current_weapons: Vec<Weapon>,
   pub new_projectiles: Vec<Projectile>,
-  pub acquired_items: Vec<(String, i32)>,
+  pub exhausted_entities: HashTrieSet<(String, i32)>,
   pub reticle_angle: f32,
   pub total_mana_cost: f32,
 }
@@ -687,7 +687,7 @@ impl System for CombatSystem {
       current_weapons: build_weapons(equipped_modules),
       new_projectiles: vec![],
       reticle_angle: 0.0,
-      acquired_items: save_data.acquired_items,
+      exhausted_entities: save_data.exhausted_entities,
       total_mana_cost: 0.0,
     })
   }
@@ -705,7 +705,7 @@ impl System for CombatSystem {
         current_weapons: build_weapons(inventory_update.equipped_modules),
         new_projectiles: Vec::new(),
         reticle_angle: self.reticle_angle,
-        acquired_items: self.acquired_items.clone(),
+        exhausted_entities: self.exhausted_entities.clone(),
         total_mana_cost: 0.0,
       });
     }
@@ -719,6 +719,7 @@ impl System for CombatSystem {
   ) -> Rc<dyn System<Input = Self::Input>> {
     /* Add new unequipped modules from item pickups */
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+    let map_system = ctx.get::<MapSystem>().unwrap();
 
     let unequipped_modules = self
       .unequipped_modules
@@ -732,11 +733,9 @@ impl System for CombatSystem {
       .cloned()
       .collect();
 
-    /* Mark new item pickups as acquired */
-    let map_system = ctx.get::<MapSystem>().unwrap();
-
-    let acquired_items = self
-      .acquired_items
+    /* Mark newly exhausted entities as exhausted */
+    let exhausted_entities = self
+      .exhausted_entities
       .iter()
       .cloned()
       .chain(
@@ -750,6 +749,20 @@ impl System for CombatSystem {
           .acquired_health_tanks
           .iter()
           .map(|id| (map_system.current_map_name.clone(), *id)),
+      )
+      .chain(
+        physics_system
+          .destroyed_entities
+          .iter()
+          .filter_map(|(_, entity)| {
+            if entity.components.get::<PersistDestruction>().is_some()
+              && let Some(id) = entity.components.get::<Id>()
+            {
+              Some((map_system.current_map_name.clone(), id.id))
+            } else {
+              None
+            }
+          }),
       )
       .collect();
 
@@ -806,7 +819,7 @@ impl System for CombatSystem {
       current_weapons: new_weapons,
       new_projectiles,
       reticle_angle,
-      acquired_items,
+      exhausted_entities,
       total_mana_cost,
     })
   }

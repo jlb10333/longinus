@@ -1,6 +1,7 @@
 use std::{env::current_dir, fs, marker::PhantomData, path::Path, rc::Rc, time};
 
 use chrono::{DateTime, Utc};
+use rpds::HashTrieSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -22,7 +23,7 @@ pub struct SaveData {
   pub unequipped_modules: UnequippedModules,
   pub equipped_modules:
     [[Option<WeaponModuleKind>; EQUIP_SLOTS_HEIGHT as usize]; EQUIP_SLOTS_WIDTH as usize],
-  pub acquired_items: Vec<(String, i32)>,
+  pub exhausted_entities: HashTrieSet<(String, i32)>,
   pub player_health: f32,
   pub player_max_health: f32,
   pub acquired_boost: bool,
@@ -123,7 +124,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
           map_name: map_system.current_map_name.clone(),
           unequipped_modules: combat_system.unequipped_modules.clone(),
           equipped_modules: combat_system.equipped_modules.data.0,
-          acquired_items: combat_system.acquired_items.clone(),
+          exhausted_entities: combat_system.exhausted_entities.clone(),
           player_health: player_damageable.health,
           player_max_health: player_damageable.max_health,
           acquired_boost: ability_system.acquired_boost,
