@@ -3,7 +3,6 @@
 - Mechanical prototype v2
   - Core elements
     - Rechargeable/unrechargeable mana bars
-    - Persistent enemy death for boss/field boss
     - Actual first boss
     - 2nd boss
   - Full blocking

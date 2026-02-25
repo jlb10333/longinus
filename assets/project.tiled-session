@@ -96,11 +96,11 @@
             }
         },
         "maps/generated/MP1.json": {
-            "scale": 0.75,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 1159.3333333333333,
-                "y": 306
+                "x": 521.6666666666666,
+                "y": 309.6666666666667
             }
         },
         "maps/generated/MP11.json": {
@@ -144,11 +144,11 @@
             }
         },
         "maps/generated/MP2.json": {
-            "scale": 1.5,
+            "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 328.33333333333337,
-                "y": 481
+                "x": 77.5,
+                "y": 411.5
             }
         },
         "maps/generated/MP20.json": {
@@ -184,11 +184,11 @@
             }
         },
         "maps/generated/MP25.json": {
-            "scale": 2,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 1041.75,
-                "y": -769.25
+                "x": 761.6666666666666,
+                "y": -10.333333333333314
             }
         },
         "maps/generated/MP26.json": {
@@ -216,27 +216,27 @@
             }
         },
         "maps/generated/MP5.json": {
-            "scale": 0.75,
+            "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": -170,
-                "y": 415.99999999999994
+                "x": 395.5,
+                "y": 22.166666666666686
             }
         },
         "maps/generated/MP6.json": {
-            "scale": 0.33,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": -1013.636363636364,
-                "y": -56.06060606060623
+                "x": -198.33333333333337,
+                "y": 991.6666666666665
             }
         },
         "maps/generated/MP7.json": {
-            "scale": 0.75,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 204.66666666666674,
-                "y": 206
+                "x": -358.33333333333337,
+                "y": 103.66666666666669
             }
         },
         "maps/generated/MP9.json": {
@@ -248,11 +248,11 @@
             }
         },
         "maps/generated/boost.json": {
-            "scale": 0.75,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": -444.66666666666674,
-                "y": -295.33333333333326
+                "x": 281.66666666666663,
+                "y": 309.6666666666667
             }
         },
         "maps/generated/boss1.json": {
@@ -402,7 +402,7 @@
         "maps/generated/MP11.json"
     ],
     "project": "project.tiled-project",
-    "property.type": "object",
+    "property.type": "bool",
     "recentFiles": [
         "maps/old/map3.json",
         "maps/generated/boost.json",

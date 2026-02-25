@@ -1,7 +1,7 @@
 {
   "player_spawn_id": 8,
   "map_name": "start",
-    "unequipped_modules": [],
+  "unequipped_modules": [],
   "equipped_modules": [
     [
       null,
@@ -28,7 +28,7 @@
       null
     ]
   ],
-  "acquired_items": [],
+  "exhausted_entities": [],
   "player_health": 100.0,
   "player_max_health": 100.0,
   "visited_maps": ["start"],

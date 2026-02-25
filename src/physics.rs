@@ -16,8 +16,8 @@ use crate::{
     DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, EnemyGate, Engine,
     Entity, EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision,
     GivesItemOnCollision, GravitySource, HealOnCollision, Id, IncreaseMaxHealthOnCollision,
-    Locomotor, MapTransitionOnCollision, Not, Or, SaveMenuOnCollision, SimpleActivatable,
-    StatusEffect, Switch, Terminal, TouchSensor,
+    Locomotor, MapTransitionOnCollision, Not, Or, PersistDestruction, SaveMenuOnCollision,
+    SimpleActivatable, StatusEffect, Switch, Terminal, TouchSensor,
   },
   enemy::{
     EnemyAranea, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState,
@@ -77,7 +77,7 @@ const PLAYER_MAX_HITSTUN: f32 = 100.0;
 fn load_new_map(
   map: &Map,
   map_name: &str,
-  entities_to_omit: &HashTrieSet<(String, i32)>,
+  exhausted_entities: &HashTrieSet<(String, i32)>,
   target_player_spawn_id: i32,
   player_health: f32,
   player_max_health: f32,
@@ -123,6 +123,12 @@ fn load_new_map(
   let enemies = map
     .enemy_spawns
     .iter()
+    .filter(|enemy_spawn| {
+      !exhausted_entities.contains(&(
+        map_name.to_string(),
+        enemy_spawn.persist.as_ref().unwrap().id.id,
+      ))
+    })
     .map(|enemy_spawn| {
       let handle = rigid_body_set.insert(enemy_spawn.rigid_body.clone());
       let hitboxes = enemy_spawn
@@ -161,15 +167,18 @@ fn load_new_map(
         EnemySpawnEnemy::SniperGenerator => Enemy::SniperGenerator(EnemySniperGenerator::new()),
       };
 
+      let enemy_spawn_persist = enemy_spawn.persist.as_ref().unwrap();
+
       let base_components = enemy_spawn
         .into_entity_components(EnemySpawnColliderHandles {
           hitboxes,
           hurtboxes,
         })
-        .insert(enemy);
+        .insert(enemy)
+        .insert(enemy_spawn_persist.id);
 
-      let components = if let Some(id) = enemy_spawn.id {
-        base_components.insert(id)
+      let components = if enemy_spawn_persist.persist_destruction {
+        base_components.insert(PersistDestruction)
       } else {
         base_components
       };
@@ -186,6 +195,7 @@ fn load_new_map(
   let item_pickups = map
     .item_pickups
     .iter()
+    .filter(|item_pickup| !exhausted_entities.contains(&(map_name.to_string(), item_pickup.id)))
     .map(|item_pickup| {
       let handle = collider_set.insert(item_pickup.collider.clone());
       Entity {
@@ -204,6 +214,7 @@ fn load_new_map(
   let health_tanks = map
     .health_tanks
     .iter()
+    .filter(|health_tank| !exhausted_entities.contains(&(map_name.to_string(), health_tank.id)))
     .map(|health_tank| {
       let handle = collider_set.insert(health_tank.collider.clone());
       Entity {
@@ -700,15 +711,6 @@ fn load_new_map(
     .chain(nots)
     .chain(engines)
     .chain(terminals)
-    .filter(|entity| {
-      if let Some(id) = entity.components.get::<Id>()
-        && entities_to_omit.contains(&(map_name.to_string(), id.id))
-      {
-        false
-      } else {
-        true
-      }
-    })
     .map(|entity| (entity.handle, Rc::new(entity)))
     .collect::<HashTrieMap<_, _>>();
 

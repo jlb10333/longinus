@@ -67,6 +67,24 @@ struct MapEnemySpawnAraneaEggId {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapEnemySpawnPersistDestructionClass {
+  PersistDestruction,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapEnemySpawnPersistDestruction {
+  #[serde(rename = "name")]
+  _name: MapEnemySpawnPersistDestructionClass,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum MapEnemySpawnProperties {
+  AraneaEggId(MapEnemySpawnAraneaEggId),
+  PersistDestruction(MapEnemySpawnPersistDestruction),
+}
+
+#[derive(Clone, Debug, Deserialize)]
 struct MapEnemySpawn {
   id: i32,
   x: f32,
@@ -74,7 +92,7 @@ struct MapEnemySpawn {
   name: MapEnemyName,
   #[serde(rename = "template")]
   _template: EnemySpawnTemplate,
-  properties: Option<(MapEnemySpawnAraneaEggId,)>,
+  properties: Option<Vec<MapEnemySpawnProperties>>,
 }
 
 impl MapEnemySpawn {
@@ -88,7 +106,19 @@ impl MapEnemySpawn {
         MapEnemyName::Goblin => EnemySpawnEnemy::Goblin,
         MapEnemyName::Imp => EnemySpawnEnemy::Imp,
         MapEnemyName::Aranea => EnemySpawnEnemy::Aranea(Id {
-          id: self.properties.as_ref().unwrap().0.value,
+          id: self
+            .properties
+            .as_ref()
+            .and_then(|properties| {
+              properties.iter().find_map(|property| {
+                if let MapEnemySpawnProperties::AraneaEggId(egg_id) = property {
+                  Some(egg_id.value)
+                } else {
+                  None
+                }
+              })
+            })
+            .unwrap(),
         }),
         MapEnemyName::Defender => EnemySpawnEnemy::Defender,
         MapEnemyName::Seeker => EnemySpawnEnemy::Seeker,
@@ -97,7 +127,22 @@ impl MapEnemySpawn {
         MapEnemyName::SniperGenerator => EnemySpawnEnemy::SniperGenerator,
       },
       translation.into_vec(),
-      Some(Id { id: self.id }),
+      Some(EnemySpawnPersist {
+        id: Id { id: self.id },
+        persist_destruction: self
+          .properties
+          .as_ref()
+          .map(|properties| {
+            properties.iter().any(|property| {
+              if let MapEnemySpawnProperties::PersistDestruction(_) = property {
+                true
+              } else {
+                false
+              }
+            })
+          })
+          .unwrap_or(false),
+      }),
     )
   }
 }
@@ -862,16 +907,26 @@ pub enum EnemySpawnEnemy {
 }
 
 #[derive(Clone)]
+pub struct EnemySpawnPersist {
+  pub id: Id,
+  pub persist_destruction: bool,
+}
+
+#[derive(Clone)]
 pub struct EnemySpawn {
   pub name: EnemySpawnEnemy,
   pub hitboxes: Vec<Collider>,
   pub hurtboxes: Vec<Collider>,
   pub rigid_body: RigidBody,
-  pub id: Option<Id>,
+  pub persist: Option<EnemySpawnPersist>,
 }
 
 impl EnemySpawn {
-  pub fn new(name: EnemySpawnEnemy, translation: Vector2<f32>, id: Option<Id>) -> Self {
+  pub fn new(
+    name: EnemySpawnEnemy,
+    translation: Vector2<f32>,
+    persist: Option<EnemySpawnPersist>,
+  ) -> Self {
     let hitboxes = hitboxes_from_enemy_name(&name);
     let hurtboxes = hurtboxes_from_enemy_name(&name);
     let mut rigid_body = RigidBodyBuilder::dynamic().translation(translation).build();
@@ -881,7 +936,7 @@ impl EnemySpawn {
       hitboxes,
       hurtboxes,
       rigid_body,
-      id,
+      persist,
     }
   }
 
