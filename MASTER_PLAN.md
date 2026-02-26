@@ -10,7 +10,6 @@
     - Settle on distribution and selection of upgrade modules/mana bars/health bars
   - Polish
     - Bugs
-      - Fix bug causing chain to not activate
       - Fix bug causing boost to be hard to activate (not consumed by physics)
       - Fix bug causing menu update from item acquisition to not be consumed by physics
       - Fix player movement (normalize diagonal)

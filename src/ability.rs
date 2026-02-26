@@ -29,10 +29,6 @@ impl ManaTanksCapacityInfo {
   pub fn max_rechargeable_mana_level(&self) -> f32 {
     self.auto_recharge_mana_tanks as f32 * BALANCING.abilities.mana_tanks.capacity
   }
-
-  pub fn total_capacity(&self) -> f32 {
-    self.max_non_rechargeable_mana_level() + self.max_rechargeable_mana_level()
-  }
 }
 
 #[derive(Clone, Copy)]
@@ -76,10 +72,6 @@ impl ManaTanksActiveInfo {
 
   pub fn total_mana_level(&self) -> f32 {
     self.non_rechargeable_mana_level + self.rechargeable_mana_level
-  }
-
-  pub fn total_capacity(&self) -> f32 {
-    self.capacity.total_capacity()
   }
 
   pub fn without(&self, amount: f32) -> Option<Self> {
@@ -236,9 +228,13 @@ impl System for AbilitySystem {
     let chain_activated =
       (self.chain_activated || chain_to_mount_point.is_some()) && !self.kill_chain;
 
+    // println!("{chain_activated} activated");
+
     let kill_chain = self.chain_activated
       && controls_system.chain
       && !controls_system.last_frame.as_ref().unwrap().chain;
+
+    // println!("{kill_chain} kill");
 
     Rc::new(AbilitySystem {
       acquired_boost,
@@ -246,7 +242,7 @@ impl System for AbilitySystem {
       boost_force,
       current_boost_cooldown,
       max_boost_cooldown: self.max_boost_cooldown,
-      chain_to_mount_point: self.chain_to_mount_point,
+      chain_to_mount_point,
       chain_activated,
       kill_chain,
       mana_tanks,

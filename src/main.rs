@@ -79,11 +79,11 @@ async fn main() {
           .add_system(CombatSystem::start)
           .add_system(MapSystem::start)
           .add_system(CameraSystem::start)
+          .add_system(AbilitySystem::start)
           .add_system(PhysicsSystem::start)
           .add_system(ControlsSystem::start)
           .add_system(MenuSystem::start)
           .add_system(EnemySystem::start)
-          .add_system(AbilitySystem::start)
           .add_system(GraphicsSystem::start)
           .start(Some(ProcessContextOptions {
             should_freeze_fixed: Some(|ctx| {

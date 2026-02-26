@@ -88,19 +88,19 @@
             }
         },
         "maps/generated/MISL.json": {
-            "scale": 2,
-            "selectedLayer": 1,
-            "viewCenter": {
-                "x": -6.25,
-                "y": -117.25
-            }
-        },
-        "maps/generated/MP1.json": {
             "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 521.6666666666666,
-                "y": 309.6666666666667
+                "x": 230.33333333333337,
+                "y": 212.3333333333333
+            }
+        },
+        "maps/generated/MP1.json": {
+            "scale": 0.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": -357,
+                "y": -43
             }
         },
         "maps/generated/MP11.json": {
@@ -257,10 +257,10 @@
         },
         "maps/generated/boss1.json": {
             "scale": 1.5,
-            "selectedLayer": 0,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": -283.66666666666663,
-                "y": 273.6666666666667
+                "x": 70.33333333333337,
+                "y": 212.3333333333333
             }
         },
         "maps/generated/start.json": {
@@ -402,7 +402,7 @@
         "maps/generated/MP11.json"
     ],
     "project": "project.tiled-project",
-    "property.type": "bool",
+    "property.type": "int",
     "recentFiles": [
         "maps/old/map3.json",
         "maps/generated/boost.json",

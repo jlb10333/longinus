@@ -64,6 +64,12 @@
                 {
                  "id":5,
                  "name":"SniperGenerator",
+                 "properties":[
+                        {
+                         "name":"PersistDestruction",
+                         "type":"int",
+                         "value":0
+                        }],
                  "template":"templates\/EnemySpawn.tx",
                  "x":104,
                  "y":96
@@ -71,6 +77,12 @@
                 {
                  "id":6,
                  "name":"SniperGenerator",
+                 "properties":[
+                        {
+                         "name":"PersistDestruction",
+                         "type":"int",
+                         "value":0
+                        }],
                  "template":"templates\/EnemySpawn.tx",
                  "x":104,
                  "y":224

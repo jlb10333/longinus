@@ -1640,6 +1640,8 @@ impl System for PhysicsSystem {
 
     /* MARK: Initiate chain on selected mount point */
     let chain_entities = ability_system.chain_to_mount_point.map(|mount_point| {
+      println!("chaining {}", self.frame_count);
+
       let player_translation = *rigid_body_set[self.player_handle].translation();
 
       let vector_to_mount_point = rigid_body_set[mount_point].translation() - player_translation;
