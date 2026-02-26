@@ -510,7 +510,7 @@
                          "type":"float",
                          "value":0
                         }],
-                 "rotation":180,
+                 "rotation":0,
                  "type":"ChainSwitch",
                  "visible":true,
                  "width":0,

@@ -104,27 +104,27 @@
             }
         },
         "maps/generated/MP11.json": {
-            "scale": 0.33,
+            "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 1007.5757575757575,
-                "y": 501.5151515151513
+                "x": 339.5,
+                "y": 1047.5
             }
         },
         "maps/generated/MP14.json": {
-            "scale": 4,
+            "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 242.375,
-                "y": 462.625
+                "x": 488.5,
+                "y": 1035.5
             }
         },
         "maps/generated/MP15.json": {
             "scale": 0.75,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": -50,
-                "y": -70
+                "x": 1375.3333333333333,
+                "y": 906
             }
         },
         "maps/generated/MP17.json": {
@@ -144,11 +144,11 @@
             }
         },
         "maps/generated/MP2.json": {
-            "scale": 1,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 77.5,
-                "y": 411.5
+                "x": 398.3333333333333,
+                "y": 175
             }
         },
         "maps/generated/MP20.json": {
@@ -200,27 +200,27 @@
             }
         },
         "maps/generated/MP3.json": {
-            "scale": 2,
-            "selectedLayer": 0,
-            "viewCenter": {
-                "x": 283.25,
-                "y": 1311.25
-            }
-        },
-        "maps/generated/MP4.json": {
             "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": -400.5,
-                "y": 156.5
+                "x": 1176.5,
+                "y": -506.5
+            }
+        },
+        "maps/generated/MP4.json": {
+            "scale": 0.75,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 575.3333333333333,
+                "y": 295.33333333333337
             }
         },
         "maps/generated/MP5.json": {
-            "scale": 3,
+            "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 395.5,
-                "y": 22.166666666666686
+                "x": 78.33333333333337,
+                "y": 15
             }
         },
         "maps/generated/MP6.json": {
@@ -240,27 +240,27 @@
             }
         },
         "maps/generated/MP9.json": {
-            "scale": 1.5,
-            "selectedLayer": 0,
+            "scale": 3,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 82.33333333333337,
-                "y": 147.66666666666669
+                "x": -22.833333333333314,
+                "y": 325.16666666666663
             }
         },
         "maps/generated/boost.json": {
             "scale": 1.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 281.66666666666663,
-                "y": 309.6666666666667
+                "x": 238.33333333333337,
+                "y": -145
             }
         },
         "maps/generated/boss1.json": {
-            "scale": 1.5,
+            "scale": 1,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 70.33333333333337,
-                "y": 212.3333333333333
+                "x": 112.5,
+                "y": 132.5
             }
         },
         "maps/generated/start.json": {
