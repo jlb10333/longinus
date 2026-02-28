@@ -231,6 +231,37 @@ struct MapHealthTank {
   y: f32,
 }
 
+lit_str!(MapManaTankTemplatePath, "templates/Mana Tank.tx");
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum MapManaTankTemplate {
+  #[serde(with = "MapManaTankTemplatePath")]
+  Path,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapManaTankRechargeableClass {
+  Rechargeable,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapManaTankCapacity {
+  #[serde(rename = "name")]
+  _name: MapManaTankRechargeableClass,
+  value: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapManaTank {
+  #[serde(rename = "template")]
+  _template: MapManaTankTemplate,
+  properties: (MapManaTankCapacity,),
+  id: i32,
+  x: f32,
+  y: f32,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 enum MapMapTransitionTargetClass {
   TargetPlayerSpawn,
@@ -768,6 +799,7 @@ enum Object {
   Engine(MapEngine),
   Terminal(MapTerminal),
   HealthTank(MapHealthTank),
+  ManaTank(MapManaTank),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -1262,6 +1294,13 @@ pub struct HealthTank {
 }
 
 #[derive(Clone)]
+pub struct ManaTank {
+  pub id: i32,
+  pub collider: Collider,
+  pub rechargeable: bool,
+}
+
+#[derive(Clone)]
 pub struct Wall {
   pub collider: Collider,
   pub damaging: Option<f32>,
@@ -1336,6 +1375,7 @@ pub enum MapComponent {
   Engine(Engine),
   Terminal(Terminal),
   HealthTank(HealthTank),
+  ManaTank(ManaTank),
 }
 
 fn map_scalar_to_physics(scalar: f32) -> PhysicsScalar {
@@ -1774,6 +1814,21 @@ impl Object {
           .build(),
         capacity: health_tank.properties.0.value,
       }),
+      Object::ManaTank(mana_tank) => MapComponent::ManaTank(ManaTank {
+        id: mana_tank.id,
+        collider: ColliderBuilder::ball(1.0)
+          .sensor(true)
+          .collision_groups(PLAYER_INTERACTIBLE_GROUPS)
+          .translation(physics_translation_from_map(
+            mana_tank.x,
+            mana_tank.y,
+            0.0,
+            0.0,
+            map_height,
+          ))
+          .build(),
+        rechargeable: mana_tank.properties.0.value,
+      }),
     }
   }
 }
@@ -1920,6 +1975,7 @@ pub struct Map {
   pub engines: Vec<Engine>,
   pub terminals: Vec<Terminal>,
   pub health_tanks: Vec<HealthTank>,
+  pub mana_tanks: Vec<ManaTank>,
 }
 
 impl RawMap {
@@ -2190,6 +2246,18 @@ impl RawMap {
       .cloned()
       .collect::<Vec<_>>();
 
+    let mana_tanks = converted_entities
+      .iter()
+      .flat_map(|object| {
+        if let MapComponent::ManaTank(mana_tank) = object {
+          Some(mana_tank)
+        } else {
+          None
+        }
+      })
+      .cloned()
+      .collect::<Vec<_>>();
+
     Map {
       top_left: physics_translation_from_map(0.0, 0.0, 0.0, 0.0, map_height),
       bottom_right: physics_translation_from_map(map_width, map_height, 0.0, 0.0, map_height),
@@ -2216,6 +2284,7 @@ impl RawMap {
       engines,
       terminals,
       health_tanks,
+      mana_tanks,
     }
   }
 }

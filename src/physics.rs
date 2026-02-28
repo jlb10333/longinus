@@ -12,12 +12,12 @@ use crate::{
   combat::{CombatSystem, WeaponModuleKind},
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
-    Activator, And, ChainMountArea, ChainSegment, ComponentSet, Damageable, Damager,
-    DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, EnemyGate, Engine,
-    Entity, EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision, GiveManaOnCollision,
-    GivesItemOnCollision, GravitySource, HealOnCollision, Id, IncreaseMaxHealthOnCollision,
-    Locomotor, MapTransitionOnCollision, Not, Or, PersistDestruction, SaveMenuOnCollision,
-    SimpleActivatable, StatusEffect, Switch, Terminal, TouchSensor,
+    Activator, AddManaTankOnCollision, And, ChainMountArea, ChainSegment, ComponentSet, Damageable,
+    Damager, DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, EnemyGate,
+    Engine, Entity, EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision,
+    GiveManaOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision, Id,
+    IncreaseMaxHealthOnCollision, Locomotor, MapTransitionOnCollision, Not, Or, PersistDestruction,
+    SaveMenuOnCollision, SimpleActivatable, StatusEffect, Switch, Terminal, TouchSensor,
   },
   enemy::{
     EnemyAranea, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState,
@@ -59,6 +59,7 @@ pub struct PhysicsSystem {
   pub player_handle: RigidBodyHandle,
   pub entities: HashTrieMap<EntityHandle, Rc<Entity>>,
   pub destroyed_entities: HashTrieMap<EntityHandle, Rc<Entity>>,
+  pub new_mana_tanks: List<(i32, Rc<AddManaTankOnCollision>)>,
   pub new_weapon_modules: List<(i32, WeaponModuleKind)>,
   pub new_abilities: List<MapAbilityType>,
   pub acquired_health_tanks: List<i32>,
@@ -226,6 +227,26 @@ fn load_new_map(
           .insert(Id { id: health_tank.id })
           .insert(DestroyOnCollision),
         label: "health_tank".to_string(),
+      }
+    })
+    .collect::<Vec<_>>();
+
+  let mana_tanks = map
+    .mana_tanks
+    .iter()
+    .filter(|mana_tank| !exhausted_entities.contains(&(map_name.to_string(), mana_tank.id)))
+    .map(|mana_tank| {
+      let handle = collider_set.insert(mana_tank.collider.clone());
+      Entity {
+        handle: EntityHandle::Collider(handle),
+        components: ComponentSet::new()
+          .insert(AddManaTankOnCollision {
+            rechargeable: mana_tank.rechargeable,
+          })
+          .insert(Id { id: mana_tank.id })
+          .insert(PersistDestruction)
+          .insert(DestroyOnCollision),
+        label: "mana_tank".to_string(),
       }
     })
     .collect::<Vec<_>>();
@@ -696,6 +717,7 @@ fn load_new_map(
     .chain(blocks)
     .chain(item_pickups)
     .chain(health_tanks)
+    .chain(mana_tanks)
     .chain(ability_pickups)
     .chain(map_transitions)
     .chain(save_points)
@@ -787,6 +809,7 @@ fn load_new_map(
     entities,
     destroyed_entities: ht_map![],
     frame_count: 0,
+    new_mana_tanks: list![],
     new_weapon_modules: list![],
     new_abilities: list![],
     load_new_map: None,
@@ -1452,6 +1475,30 @@ impl System for PhysicsSystem {
         }
       },
     );
+
+    /* MARK: Give mana tank on collision */
+    let new_mana_tanks = entities.iter().fold(list![], |acc, (handle, entity)| {
+      if let Some(gives_mana_tank) = entity.components.get::<AddManaTankOnCollision>()
+        && let Some(id) = entity.components.get::<Id>()
+        && handle
+          .colliders(rigid_body_set)
+          .iter()
+          .any(|&entity_collider_handle| {
+            rigid_body_set[self.player_handle]
+              .colliders()
+              .iter()
+              .any(|player_collider| {
+                narrow_phase
+                  .intersection_pair(*entity_collider_handle, *player_collider)
+                  .unwrap_or(false)
+              })
+          })
+      {
+        acc.push_front((id.id, gives_mana_tank))
+      } else {
+        acc
+      }
+    });
 
     /* MARK: Give items on collision */
     let new_weapon_modules = entities.iter().fold(list![], |acc, (handle, entity)| {
@@ -2267,6 +2314,7 @@ impl System for PhysicsSystem {
       player_handle: self.player_handle,
       entities,
       destroyed_entities,
+      new_mana_tanks,
       new_weapon_modules,
       new_abilities,
       frame_count: self.frame_count + 1,

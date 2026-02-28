@@ -271,6 +271,11 @@ pub struct IncreaseMaxHealthOnCollision {
 }
 impl Component for IncreaseMaxHealthOnCollision {}
 
+pub struct AddManaTankOnCollision {
+  pub rechargeable: bool,
+}
+impl Component for AddManaTankOnCollision {}
+
 pub struct MapTransitionOnCollision {
   pub map_name: String,
   pub target_player_spawn_id: i32,

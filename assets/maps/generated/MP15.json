@@ -97,11 +97,9 @@
                  "y":176
                 }, 
                 {
-                 "height":0,
                  "id":12,
                  "name":"Sniper",
                  "template":"templates\/EnemySpawn.tx",
-                 "width":0,
                  "x":264,
                  "y":216
                 }, 
@@ -268,13 +266,6 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":192,
                  "y":424
-                }, 
-                {
-                 "id":22,
-                 "name":"Front2Slot",
-                 "template":"templates\/ItemPickup.tx",
-                 "x":256,
-                 "y":512
                 }, 
                 {
                  "height":16,
@@ -541,6 +532,18 @@
                  "width":8,
                  "x":0,
                  "y":344
+                }, 
+                {
+                 "id":44,
+                 "properties":[
+                        {
+                         "name":"Capacity",
+                         "type":"float",
+                         "value":30
+                        }],
+                 "template":"templates\/Health Tank.tx",
+                 "x":256,
+                 "y":512
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -549,7 +552,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":44,
+ "nextobjectid":45,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

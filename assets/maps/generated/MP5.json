@@ -698,6 +698,18 @@
                  "width":0,
                  "x":224,
                  "y":128
+                }, 
+                {
+                 "id":30,
+                 "properties":[
+                        {
+                         "name":"Rechargeable",
+                         "type":"bool",
+                         "value":true
+                        }],
+                 "template":"templates\/Mana Tank.tx",
+                 "x":104,
+                 "y":96
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -706,7 +718,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":30,
+ "nextobjectid":31,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

@@ -29,6 +29,20 @@ impl ManaTanksCapacityInfo {
   pub fn max_rechargeable_mana_level(&self) -> f32 {
     self.auto_recharge_mana_tanks as f32 * BALANCING.abilities.mana_tanks.capacity
   }
+
+  pub fn with_rechargeable_tank(&self) -> Self {
+    Self {
+      auto_recharge_mana_tanks: self.auto_recharge_mana_tanks + 1,
+      non_recharge_mana_tanks: self.non_recharge_mana_tanks,
+    }
+  }
+
+  pub fn with_non_rechargeable_tank(&self) -> Self {
+    Self {
+      auto_recharge_mana_tanks: self.auto_recharge_mana_tanks,
+      non_recharge_mana_tanks: self.non_recharge_mana_tanks + 1,
+    }
+  }
 }
 
 #[derive(Clone, Copy)]
@@ -86,6 +100,20 @@ impl ManaTanksActiveInfo {
         non_rechargeable_mana_level: self.non_rechargeable_mana_level + non_rechargeable_difference,
         ..*self
       })
+    }
+  }
+
+  pub fn with_rechargeable_tank(&self) -> Self {
+    Self {
+      capacity: self.capacity.with_rechargeable_tank(),
+      ..*self
+    }
+  }
+
+  pub fn with_non_rechargeable_tank(&self) -> Self {
+    Self {
+      capacity: self.capacity.with_non_rechargeable_tank(),
+      ..*self
     }
   }
 }
@@ -173,6 +201,18 @@ impl System for AbilitySystem {
         self.mana_tanks,
       )
     };
+
+    let mana_tanks =
+      physics_system
+        .new_mana_tanks
+        .iter()
+        .fold(mana_tanks, |mana_tanks, (_, new_tank)| {
+          if new_tank.rechargeable {
+            mana_tanks.with_rechargeable_tank()
+          } else {
+            mana_tanks.with_non_rechargeable_tank()
+          }
+        });
 
     let mana_tanks = if menu_system.active_menus.is_empty() {
       mana_tanks.recharge().with(physics_system.incoming_mana)

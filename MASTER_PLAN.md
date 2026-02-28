@@ -2,7 +2,6 @@
 ## Gameplay
 - Mechanical prototype v2
   - Core elements
-    - Rechargeable/unrechargeable mana bars
     - Actual first boss
     - 2nd boss
   - Full blocking
