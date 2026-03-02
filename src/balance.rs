@@ -53,10 +53,11 @@ pub struct AraneaBalancing {
 
 #[derive(Deserialize)]
 pub struct DefenderBalancing {
-  pub aggro_range: f32,             // 20
-  pub hold_force: f32,              // 0.2
-  pub cooldown_initial_frames: i32, // 35
-  pub ease_period: f32,             // 15
+  pub damage: f32,
+  pub aggro_range: f32,
+  pub hold_force: f32,
+  pub cooldown_initial_frames: i32,
+  pub ease_period: f32,
 }
 
 impl AraneaBalancing {
@@ -101,6 +102,14 @@ impl SniperGeneratorBalancing {
 }
 
 #[derive(Deserialize)]
+pub struct LaserGateBalancing {
+  pub health: f32,
+  pub damage: f32,
+  pub deteriorate_apply_amount: f32,
+  pub beam_thickness: f32,
+}
+
+#[derive(Deserialize)]
 pub struct EnemyBalancing {
   pub goblin: GoblinBalancing,
   pub imp: ImpBalancing,
@@ -110,6 +119,7 @@ pub struct EnemyBalancing {
   pub seeker_generator: SeekerGeneratorBalancing,
   pub sniper: SniperBalancing,
   pub sniper_generator: SniperGeneratorBalancing,
+  pub laser_gate: LaserGateBalancing,
 }
 
 #[derive(Deserialize)]

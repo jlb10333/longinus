@@ -45,6 +45,7 @@
             "hold_force": 0.3
         },
         "defender": {
+            "damage": 5,
             "aggro_range": 20,
             "hold_force": 0.2,
             "cooldown_initial_frames": 35,
@@ -70,6 +71,12 @@
             "num_snipers_generated": 3,
             "cooldown_initial_frames": 450,
             "generating_initial_force": 25
+        },
+        "laser_gate": {
+            "health": 30,
+            "damage": 10,
+            "deteriorate_apply_amount": 60,
+            "beam_thickness": 0.1
         }
     },
     "abilities": {

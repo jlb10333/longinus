@@ -710,6 +710,16 @@
                  "template":"templates\/Mana Tank.tx",
                  "x":104,
                  "y":96
+                }, 
+                {
+                 "height":0,
+                 "id":31,
+                 "name":"LaserGate",
+                 "rotation":90,
+                 "template":"templates\/EnemySpawn.tx",
+                 "width":88,
+                 "x":336,
+                 "y":19
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -718,7 +728,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":31,
+ "nextobjectid":34,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

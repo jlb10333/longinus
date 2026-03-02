@@ -646,8 +646,8 @@
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
-                 "width":72,
-                 "x":168,
+                 "width":64,
+                 "x":176,
                  "y":81
                 }, 
                 {
@@ -660,7 +660,7 @@
                          "y":0
                         }, 
                         {
-                         "x":84,
+                         "x":52,
                          "y":0
                         }],
                  "properties":[
@@ -678,7 +678,7 @@
                  "type":"Locomotor",
                  "visible":true,
                  "width":0,
-                 "x":128,
+                 "x":160,
                  "y":84
                 }, 
                 {
@@ -795,6 +795,26 @@
                  "width":16,
                  "x":204,
                  "y":56
+                }, 
+                {
+                 "height":0,
+                 "id":48,
+                 "name":"LaserGate",
+                 "rotation":90,
+                 "template":"templates\/EnemySpawn.tx",
+                 "width":37,
+                 "x":176,
+                 "y":99
+                }, 
+                {
+                 "height":0,
+                 "id":49,
+                 "name":"LaserGate",
+                 "rotation":90,
+                 "template":"templates\/EnemySpawn.tx",
+                 "width":37,
+                 "x":184,
+                 "y":96
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -803,7 +823,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":48,
+ "nextobjectid":50,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

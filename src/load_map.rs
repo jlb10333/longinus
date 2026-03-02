@@ -1,7 +1,7 @@
 use std::{env::current_dir, f32::consts::PI, fs, path::Path, rc::Rc};
 
 use rapier2d::{
-  na::{Unit, Vector2},
+  na::{Point2, Unit, Vector2},
   prelude::*,
 };
 use rpds::HashTrieMap;
@@ -9,6 +9,7 @@ use serde::Deserialize;
 use serde_literals::lit_str;
 
 use crate::{
+  balance::BALANCING,
   combat::{WeaponModuleKind, distance_projection_physics},
   ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Id},
   f::MonadTranslate,
@@ -52,6 +53,7 @@ pub enum MapEnemyName {
   SeekerGenerator,
   Sniper,
   SniperGenerator,
+  LaserGate,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -89,6 +91,7 @@ struct MapEnemySpawn {
   id: i32,
   x: f32,
   y: f32,
+  rotation: Option<f32>,
   name: MapEnemyName,
   #[serde(rename = "template")]
   _template: EnemySpawnTemplate,
@@ -125,8 +128,10 @@ impl MapEnemySpawn {
         MapEnemyName::SeekerGenerator => EnemySpawnEnemy::SeekerGenerator,
         MapEnemyName::Sniper => EnemySpawnEnemy::Sniper,
         MapEnemyName::SniperGenerator => EnemySpawnEnemy::SniperGenerator,
+        MapEnemyName::LaserGate => EnemySpawnEnemy::LaserGate,
       },
       translation.into_vec(),
+      -self.rotation.unwrap_or(0.0) * PI / 180.0,
       Some(EnemySpawnPersist {
         id: Id { id: self.id },
         persist_destruction: self
@@ -402,6 +407,17 @@ struct MapObject2LocalY {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapAllowRotationClass {
+  AllowRotation,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapAllowRotation {
+  name: MapAllowRotationClass,
+  value: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 enum MapGlueClass {
   Glue,
 }
@@ -423,8 +439,15 @@ enum MapGlueMapObjects {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum MapGlueMapProperties {
+  WithRotations(MapAllowRotation, MapGlueMapObjects),
+  WithoutRotations(MapGlueMapObjects),
+}
+
+#[derive(Clone, Debug, Deserialize)]
 struct MapGlue {
-  properties: MapGlueMapObjects,
+  properties: MapGlueMapProperties,
   #[serde(rename = "type")]
   _class: MapGlueClass,
 }
@@ -936,6 +959,7 @@ pub enum EnemySpawnEnemy {
   SeekerGenerator,
   Sniper,
   SniperGenerator,
+  LaserGate,
 }
 
 #[derive(Clone)]
@@ -957,11 +981,16 @@ impl EnemySpawn {
   pub fn new(
     name: EnemySpawnEnemy,
     translation: Vector2<f32>,
+    rotation: f32,
     persist: Option<EnemySpawnPersist>,
   ) -> Self {
     let hitboxes = hitboxes_from_enemy_name(&name);
     let hurtboxes = hurtboxes_from_enemy_name(&name);
-    let mut rigid_body = RigidBodyBuilder::dynamic().translation(translation).build();
+    let mut rigid_body = RigidBodyBuilder::dynamic()
+      .translation(translation)
+      .rotation(rotation)
+      .additional_mass_properties(MassProperties::new(Point2::origin(), 0.0, 1.0))
+      .build();
     rigid_body.wake_up(true);
     EnemySpawn {
       name,
@@ -1138,6 +1167,21 @@ impl EnemySpawn {
         .insert(DropOnDestroy {
           health_amount: 35.0,
           chance_health: 0.3,
+          mana_amount: 2.0,
+          chance_mana: 0.2,
+        }),
+      EnemySpawnEnemy::LaserGate => ComponentSet::new()
+        .insert(Damageable {
+          status_effect_threshold: 10.0,
+          hurtboxes,
+          health: BALANCING.enemies.laser_gate.health,
+          max_health: BALANCING.enemies.laser_gate.health,
+          destroy_on_zero_health: true,
+          ..Default::default()
+        })
+        .insert(DropOnDestroy {
+          health_amount: 5.0,
+          chance_health: 0.3,
           mana_amount: 1.0,
           chance_mana: 0.2,
         }),
@@ -1269,6 +1313,7 @@ pub struct Locomotor {
 #[derive(Clone)]
 pub struct Glue {
   pub attachments: ((i32, Vector2<f32>), (Option<i32>, Vector2<f32>)),
+  pub allow_rotation: bool,
 }
 
 #[derive(Clone)]
@@ -1317,6 +1362,7 @@ fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
     EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
     EnemySpawnEnemy::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     EnemySpawnEnemy::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7).mass(50.0)],
+    EnemySpawnEnemy::LaserGate => vec![ColliderBuilder::cuboid(0.1, 0.1)],
   };
 
   collider_builders
@@ -1339,6 +1385,7 @@ fn hitboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
     EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
     EnemySpawnEnemy::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     EnemySpawnEnemy::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
+    EnemySpawnEnemy::LaserGate => vec![],
   };
 
   collider_builders
@@ -1719,8 +1766,8 @@ impl Object {
         })
       }
 
-      Object::Glue(glue) => MapComponent::Glue(Glue {
-        attachments: match &glue.properties {
+      Object::Glue(glue) => {
+        let attachments = |objects: &MapGlueMapObjects| match objects {
           MapGlueMapObjects::MultiObject((
             object_1_id,
             object_1_x,
@@ -1772,8 +1819,19 @@ impl Object {
               ),
             ),
           ),
-        },
-      }),
+        };
+
+        MapComponent::Glue(match &glue.properties {
+          MapGlueMapProperties::WithRotations(allow_rotation, objects) => Glue {
+            attachments: attachments(objects),
+            allow_rotation: allow_rotation.value,
+          },
+          MapGlueMapProperties::WithoutRotations(objects) => Glue {
+            attachments: attachments(objects),
+            allow_rotation: false,
+          },
+        })
+      }
       Object::Engine(engine) => MapComponent::Engine(Engine {
         id: engine.id,
         activator_id: engine

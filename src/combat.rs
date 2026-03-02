@@ -112,16 +112,55 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
 #[derive(Clone)]
 pub struct Projectile {
   pub collider: Collider,
-  pub offset: PhysicsVector,
   pub initial_impulse: PhysicsVector,
   pub force_mod: f32,
+}
+
+impl Projectile {
+  pub fn default(collider: Collider) -> Self {
+    Self {
+      collider,
+      force_mod: 0.0,
+      initial_impulse: PhysicsVector::zero(),
+    }
+  }
+}
+
+#[derive(Clone)]
+pub struct Beam {
+  pub angle: f32,
+  pub thickness: f32,
+}
+
+#[derive(Clone)]
+pub enum WeaponOutputKind {
+  Projectile(Projectile),
+  Beam(Beam),
+}
+
+#[derive(Clone)]
+pub struct WeaponOutput {
+  pub offset: PhysicsVector,
   pub damage: f32,
   pub component_set: ComponentSet,
   pub status_effects: List<(StatusEffect, f32)>,
+  pub kind: WeaponOutputKind,
+}
+
+impl WeaponOutput {
+  pub fn default(kind: WeaponOutputKind) -> Self {
+    Self {
+      offset: PhysicsVector::zero(),
+      damage: 0.0,
+      component_set: ComponentSet::new(),
+      status_effects: list![],
+      kind,
+    }
+  }
 }
 
 #[derive(Clone, Copy)]
-enum ProjectileType {
+enum WeaponOutputType {
   Plasma,
   Missile,
   Laser,
@@ -129,7 +168,7 @@ enum ProjectileType {
 
 #[derive(Clone)]
 pub struct Weapon {
-  projectile_type: ProjectileType,
+  output_type: WeaponOutputType,
   slot_positions: HashTrieSet<SlotPosition>,
   damage_mod: f32,
   velocity_mod: f32,
@@ -158,7 +197,7 @@ impl Weapon {
     &self,
     available_slots: ProjectileSlots,
     mana_tanks_info: ManaTanksActiveInfo,
-  ) -> (Self, Vec<Projectile>, f32) {
+  ) -> (Self, Vec<WeaponOutput>, f32) {
     if self.current_cooldown > 0.0 {
       return (self.clone(), Vec::new(), 0.0);
     }
@@ -191,23 +230,29 @@ impl Weapon {
       slot_positions
         .iter()
         .map(|slot_position| {
-          let base_projectile = base_projectile_from_weapon_type(self.projectile_type);
+          let base_weapon_output = base_output_from_weapon_type(self.output_type);
 
           let slot = available_slots.get(slot_position).unwrap();
 
-          let initial_impulse = distance_projection_physics(
-            slot.angle,
-            base_speed_from_projectile_type(self.projectile_type) * self.velocity_mod,
-          );
-
-          Projectile {
-            collider: base_projectile.collider,
-            damage: base_projectile.damage * self.damage_mod,
-            offset: slot.offset,
-            component_set: base_projectile.component_set,
-            initial_impulse,
-            force_mod: base_projectile.force_mod,
-            status_effects: self.status_effects.clone(),
+          match base_weapon_output.kind {
+            WeaponOutputKind::Projectile(base_projectile) => {
+              let initial_impulse = distance_projection_physics(
+                slot.angle,
+                base_speed_from_projectile_type(self.output_type) * self.velocity_mod,
+              );
+              WeaponOutput {
+                kind: WeaponOutputKind::Projectile(Projectile {
+                  collider: base_projectile.collider,
+                  initial_impulse,
+                  force_mod: base_projectile.force_mod,
+                }),
+                damage: base_weapon_output.damage * self.damage_mod,
+                offset: slot.offset,
+                component_set: base_weapon_output.component_set,
+                status_effects: self.status_effects.clone(),
+              }
+            }
+            WeaponOutputKind::Beam(_) => todo!(),
           }
         })
         .collect(),
@@ -216,50 +261,54 @@ impl Weapon {
   }
 }
 
-fn base_projectile_from_weapon_type(projectile_type: ProjectileType) -> Projectile {
-  match projectile_type {
-    ProjectileType::Plasma => Projectile {
-      collider: ColliderBuilder::ball(0.15)
-        .collision_groups(PLAYER_PROJECTILE_INTERACTION_GROUPS)
-        .build(),
+fn base_output_from_weapon_type(weapon_output_type: WeaponOutputType) -> WeaponOutput {
+  match weapon_output_type {
+    WeaponOutputType::Plasma => WeaponOutput {
       damage: 10.0,
-      force_mod: 0.0,
       component_set: ComponentSet::new(),
-      initial_impulse: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
       status_effects: list![],
+      kind: WeaponOutputKind::Projectile(Projectile {
+        collider: ColliderBuilder::ball(0.15)
+          .collision_groups(PLAYER_PROJECTILE_INTERACTION_GROUPS)
+          .build(),
+        force_mod: 0.0,
+        initial_impulse: PhysicsVector::zero(),
+      }),
     },
-    ProjectileType::Missile => Projectile {
-      collider: ColliderBuilder::cuboid(0.3, 0.3)
-        .collision_groups(PLAYER_PROJECTILE_INTERACTION_GROUPS)
-        .build(),
+    WeaponOutputType::Missile => WeaponOutput {
       damage: 20.0,
-      force_mod: 2.0,
       component_set: ComponentSet::new().insert(ExplodeOnCollision {
         radius: 1.5,
         strength: -3.5,
         damage: 5.0,
         interaction_groups: PLAYER_PROJECTILE_INTERACTION_GROUPS,
       }),
-      initial_impulse: PhysicsVector::zero(),
       offset: PhysicsVector::zero(),
       status_effects: list![],
+      kind: WeaponOutputKind::Projectile(Projectile {
+        collider: ColliderBuilder::cuboid(0.3, 0.3)
+          .collision_groups(PLAYER_PROJECTILE_INTERACTION_GROUPS)
+          .build(),
+        force_mod: 2.0,
+        initial_impulse: PhysicsVector::zero(),
+      }),
     },
-    ProjectileType::Laser => todo!(),
+    WeaponOutputType::Laser => todo!(),
   }
 }
 
-fn base_speed_from_projectile_type(projectile_type: ProjectileType) -> f32 {
+fn base_speed_from_projectile_type(projectile_type: WeaponOutputType) -> f32 {
   match projectile_type {
-    ProjectileType::Plasma => 1.0,
-    ProjectileType::Missile => 0.01,
-    ProjectileType::Laser => 1.0,
+    WeaponOutputType::Plasma => 1.0,
+    WeaponOutputType::Missile => 0.01,
+    WeaponOutputType::Laser => 1.0,
   }
 }
 
-fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> Weapon {
+fn weapon_with_defaults(projectile_type: WeaponOutputType, max_cooldown: f32) -> Weapon {
   Weapon {
-    projectile_type,
+    output_type: projectile_type,
     max_cooldown,
     slot_positions: ht_set![],
     current_cooldown: max_cooldown,
@@ -275,12 +324,12 @@ fn weapon_with_defaults(projectile_type: ProjectileType, max_cooldown: f32) -> W
 
 // PLSM
 fn plasma() -> Weapon {
-  weapon_with_defaults(ProjectileType::Plasma, 30.0)
+  weapon_with_defaults(WeaponOutputType::Plasma, 30.0)
 }
 
 // MSLE
 fn missile() -> Weapon {
-  weapon_with_defaults(ProjectileType::Missile, 75.0)
+  weapon_with_defaults(WeaponOutputType::Missile, 75.0)
 }
 
 // F2SL
@@ -663,7 +712,7 @@ pub struct CombatSystem {
   pub unequipped_modules: UnequippedModules,
   pub equipped_modules: EquippedModules,
   pub current_weapons: Vec<Weapon>,
-  pub new_projectiles: Vec<Projectile>,
+  pub weapon_outputs: Vec<WeaponOutput>,
   pub exhausted_entities: HashTrieSet<(String, i32)>,
   pub reticle_angle: f32,
   pub total_mana_cost: f32,
@@ -685,7 +734,7 @@ impl System for CombatSystem {
       unequipped_modules: save_data.unequipped_modules,
       equipped_modules,
       current_weapons: build_weapons(equipped_modules),
-      new_projectiles: vec![],
+      weapon_outputs: vec![],
       reticle_angle: 0.0,
       exhausted_entities: save_data.exhausted_entities,
       total_mana_cost: 0.0,
@@ -703,7 +752,7 @@ impl System for CombatSystem {
         unequipped_modules: inventory_update.unequipped_modules.clone(),
         equipped_modules: inventory_update.equipped_modules,
         current_weapons: build_weapons(inventory_update.equipped_modules),
-        new_projectiles: Vec::new(),
+        weapon_outputs: Vec::new(),
         reticle_angle: self.reticle_angle,
         exhausted_entities: self.exhausted_entities.clone(),
         total_mana_cost: 0.0,
@@ -802,7 +851,7 @@ impl System for CombatSystem {
       .map(|(weapon, _, _)| weapon.clone())
       .collect();
 
-    let new_projectiles = weapons_firing
+    let weapon_outputs = weapons_firing
       .iter()
       .flat_map(|(_, projectiles, _)| projectiles.clone())
       .collect();
@@ -817,7 +866,7 @@ impl System for CombatSystem {
       unequipped_modules,
       equipped_modules: self.equipped_modules,
       current_weapons: new_weapons,
-      new_projectiles,
+      weapon_outputs,
       reticle_angle,
       exhausted_entities,
       total_mana_cost,

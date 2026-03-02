@@ -64,7 +64,7 @@
       - G4TL Gatling (Increases frequency of weapon drastically but makes it less accurate)
       - MDET MutualDeterioration (Applies deterioration status, selfinflict deterioration)
       - S31V Seive (Increases frequency if weapon has selfinflict)
-      - NBL3 Nimble (Increases damage drastically if it is manafree)
+      - H4MR Hammer (Increases damage drastically if it is manafree)
     - Shield 
   - Non-combat modules
     - All mana bars are rechargeable, but recharge speed is reduced

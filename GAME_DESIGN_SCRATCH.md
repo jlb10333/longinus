@@ -1,5 +1,11 @@
 ## GAME DESIGN:
 
+### Boss 2
+
+- Center core with rotating shield that covers a sector of the core
+  - Shield always attempts to face the player, but rotates at constant angular velocity
+- Laser generators spawned and moving along the walls, casting lasers horizontally and vertically across the battlefield
+
 ### MDA
 - Module pickup
   - Dynamic: Build customization

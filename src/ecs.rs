@@ -15,8 +15,8 @@ use crate::{
   balance::{BALANCING, StatusEffectBalancing},
   combat::WeaponModuleKind,
   enemy::{
-    EnemyAranea, EnemyDefender, EnemyGoblin, EnemyImp, EnemySeeker, EnemySeekerGenerator,
-    EnemySniper, EnemySniperGenerator,
+    EnemyAranea, EnemyDefender, EnemyGoblin, EnemyImp, EnemyLaserGate, EnemySeeker,
+    EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
   },
   load_map::MapAbilityType,
 };
@@ -255,6 +255,7 @@ pub enum Enemy {
   SeekerGenerator(EnemySeekerGenerator),
   Sniper(EnemySniper),
   SniperGenerator(EnemySniperGenerator),
+  LaserGate(EnemyLaserGate),
 }
 impl Component for Enemy {}
 

@@ -6,17 +6,17 @@ use rpds::{List, list};
 
 use crate::{
   balance::BALANCING,
-  combat::{Projectile, distance_projection_physics},
+  combat::{Beam, Projectile, WeaponOutput, WeaponOutputKind, distance_projection_physics},
   controls::angle_from_vec,
   easing,
-  ecs::{ComponentSet, Damageable, Enemy, Entity, EntityHandle},
+  ecs::{Damageable, Enemy, Entity, EntityHandle, StatusEffect},
   load_map::{
     ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, EnemySpawnEnemy, RAYCAST_INTERACTION_GROUPS,
   },
   physics::PhysicsSystem,
   save::SaveData,
   system::System,
-  units::{PhysicsVector, UnitConvert, UnitConvert2, vec_zero},
+  units::{PhysicsVector, UnitConvert2, vec_zero},
 };
 
 #[derive(Clone)]
@@ -28,10 +28,24 @@ pub struct EnemyDecisionEnemySpawn {
 #[derive(Clone)]
 pub struct EnemyDecision {
   pub handle: RigidBodyHandle,
-  pub projectiles: Vec<Projectile>,
+  pub weapon_outputs: Vec<WeaponOutput>,
   pub movement_force: Vector2<f32>,
+  pub angular_force: f32,
   pub enemy: Enemy,
   pub enemies_to_spawn: Vec<EnemyDecisionEnemySpawn>,
+}
+
+impl EnemyDecision {
+  pub fn default(handle: RigidBodyHandle, enemy: Enemy) -> Self {
+    Self {
+      handle,
+      enemy,
+      angular_force: 0.0,
+      enemies_to_spawn: vec![],
+      movement_force: vec_zero(),
+      weapon_outputs: vec![],
+    }
+  }
 }
 
 #[derive(Clone)]
@@ -163,6 +177,7 @@ fn enemy_behavior_generator(
             query_pipeline,
             rng,
           ),
+          Enemy::LaserGate(laser_gate) => laser_gate.behavior(handle, rigid_body_set),
         })
     } else {
       None
@@ -228,46 +243,43 @@ impl EnemyGoblin {
             * 60.0) as i32;
 
           EnemyDecision {
-            handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Lunging(lunge_frames),
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Goblin(Self {
+                state: EnemyGoblinState::Lunging(lunge_frames),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Idle,
-            }),
-            handle,
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Goblin(Self {
+                state: EnemyGoblinState::Idle,
+              }),
+            )
           }
         }
       }
       EnemyGoblinState::Lunging(remaining_frames) => {
         if remaining_frames > 0 {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Lunging(remaining_frames - 1),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Goblin(Self {
+                state: EnemyGoblinState::Lunging(remaining_frames - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Slowing(BALANCING.enemies.goblin.slowing_frames),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Goblin(Self {
+                state: EnemyGoblinState::Slowing(BALANCING.enemies.goblin.slowing_frames),
+              }),
+            )
           }
         }
       }
@@ -276,46 +288,43 @@ impl EnemyGoblin {
 
         if remaining_frames > 0 && linvel.magnitude() > 0.0 {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Slowing(remaining_frames - 1),
-            }),
             movement_force: -linvel.normalize() * BALANCING.enemies.goblin.slowing_force(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Goblin(Self {
+                state: EnemyGoblinState::Slowing(remaining_frames - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Recovering(BALANCING.enemies.goblin.recovering_frames),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Goblin(Self {
+                state: EnemyGoblinState::Recovering(BALANCING.enemies.goblin.recovering_frames),
+              }),
+            )
           }
         }
       }
       EnemyGoblinState::Recovering(remaining_frames) => {
         if remaining_frames > 0 {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Recovering(remaining_frames - 1),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Goblin(Self {
+                state: EnemyGoblinState::Recovering(remaining_frames - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Goblin(Self {
-              state: EnemyGoblinState::Idle,
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Goblin(Self {
+                state: EnemyGoblinState::Idle,
+              }),
+            )
           }
         }
       }
@@ -369,48 +378,28 @@ impl EnemyImp {
           && reached_parent_handle == player_handle
         {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Shooting,
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Imp(Self {
+                state: EnemyImpState::Shooting,
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Idle,
-            }),
-            handle,
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Imp(Self {
+                state: EnemyImpState::Idle,
+              }),
+            )
           }
         }
       }
       EnemyImpState::Shooting => EnemyDecision {
-        handle,
-        enemy: Enemy::Imp(Self {
-          state: EnemyImpState::ShootingCooldown(
-            BALANCING.enemies.imp.shooting_cooldown_initial_frames,
-          ),
-        }),
-        movement_force: vec_zero(),
-        enemies_to_spawn: vec![],
-        projectiles: {
-          let base_projectile = Projectile {
-            collider: ColliderBuilder::ball(0.2)
-              .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
-              .build(),
-            damage: BALANCING.enemies.imp.projectile_damage,
-            initial_impulse: PhysicsVector::zero(),
-            offset: PhysicsVector::zero(),
-            force_mod: 0.0,
-            component_set: ComponentSet::new(),
-            status_effects: list![],
-          };
-
+        weapon_outputs: {
           let base_impulse_angle = angle_from_vec(PhysicsVector::from_vec(
             player_translation - rigid_body_set[handle].translation(),
           ));
@@ -423,40 +412,55 @@ impl EnemyImp {
 
           impulses
             .iter()
-            .map(|&angle| Projectile {
-              initial_impulse: distance_projection_physics(
-                angle,
-                BALANCING.enemies.imp.projectile_speed,
-              ),
-              ..base_projectile.clone()
+            .map(|&angle| WeaponOutput {
+              damage: BALANCING.enemies.imp.projectile_damage,
+              ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
+                initial_impulse: distance_projection_physics(
+                  angle,
+                  BALANCING.enemies.imp.projectile_speed,
+                ),
+                ..Projectile::default(
+                  ColliderBuilder::ball(0.2)
+                    .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
+                    .build(),
+                )
+              }))
             })
             .collect()
         },
+        ..EnemyDecision::default(
+          handle,
+          Enemy::Imp(Self {
+            state: EnemyImpState::ShootingCooldown(
+              BALANCING.enemies.imp.shooting_cooldown_initial_frames,
+            ),
+          }),
+        )
       },
       EnemyImpState::ShootingCooldown(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::ShootingCooldown(frames_left - 1),
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Imp(Self {
+                state: EnemyImpState::ShootingCooldown(frames_left - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Moving(
-                BALANCING.enemies.imp.moving_initial_frames,
-                vector![rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0)].normalize()
-                  * BALANCING.enemies.imp.move_distance,
-              ),
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Imp(Self {
+                state: EnemyImpState::Moving(
+                  BALANCING.enemies.imp.moving_initial_frames,
+                  vector![rng.gen_range(-1.0, 1.0), rng.gen_range(-1.0, 1.0)].normalize()
+                    * BALANCING.enemies.imp.move_distance,
+                ),
+              }),
+            )
           }
         }
       }
@@ -468,23 +472,23 @@ impl EnemyImp {
           let movement_force = ease.at(x);
 
           EnemyDecision {
-            handle,
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Moving(frames_left - 1, direction),
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Imp(Self {
+                state: EnemyImpState::Moving(frames_left - 1, direction),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Imp(Self {
-              state: EnemyImpState::Idle,
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Imp(Self {
+                state: EnemyImpState::Idle,
+              }),
+            )
           }
         }
       }
@@ -545,104 +549,102 @@ impl EnemyAranea {
             * 60.0) as i32;
 
           EnemyDecision {
-            handle,
-            enemy: Enemy::Aranea(Self {
-              egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Launching(launch_frames),
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Launching(launch_frames),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Aranea(Self {
-              egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Idle,
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Idle,
+              }),
+            )
           }
         }
       }
       EnemyAraneaState::Launching(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Aranea(Self {
-              egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Launching(frames_left - 1),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Launching(frames_left - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Aranea(Self {
-              egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Stopping(BALANCING.enemies.aranea.stopping_frames),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Stopping(BALANCING.enemies.aranea.stopping_frames),
+              }),
+            )
           }
         }
       }
       EnemyAraneaState::Stopping(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Aranea(Self {
-              egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Stopping(frames_left - 1),
-            }),
             movement_force: self_rigid_body.linvel()
               * -1.0
               * BALANCING.enemies.aranea.stopping_force(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Stopping(frames_left - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Aranea(Self {
-              egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Cooldown(BALANCING.enemies.aranea.cooldown_initial_frames),
-            }),
             movement_force: self_rigid_body.linvel()
               * -1.0
               * BALANCING.enemies.aranea.stopping_force(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Cooldown(BALANCING.enemies.aranea.cooldown_initial_frames),
+              }),
+            )
           }
         }
       }
       EnemyAraneaState::Cooldown(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Aranea(Self {
-              egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Cooldown(frames_left - 1),
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Cooldown(frames_left - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Aranea(Self {
-              egg_handle: self.egg_handle,
-              state: EnemyAraneaState::Shooting,
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Shooting,
+              }),
+            )
           }
         }
       }
@@ -653,27 +655,27 @@ impl EnemyAranea {
 
         let shooting_force = vector_to_player.normalize() * BALANCING.enemies.aranea.shooting_force;
 
-        let projectile = Projectile {
-          collider: ColliderBuilder::ball(0.2)
-            .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
-            .build(),
+        let weapon_output = WeaponOutput {
           damage: BALANCING.enemies.aranea.projectile_damage,
-          initial_impulse: PhysicsVector::from_vec(shooting_force),
-          offset: PhysicsVector::zero(),
-          force_mod: 0.0,
-          component_set: ComponentSet::new(),
-          status_effects: list![],
+          ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
+            initial_impulse: PhysicsVector::from_vec(shooting_force),
+            ..Projectile::default(
+              ColliderBuilder::ball(0.2)
+                .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
+                .build(),
+            )
+          }))
         };
 
         EnemyDecision {
-          handle,
-          enemy: Enemy::Aranea(Self {
-            egg_handle: self.egg_handle,
-            state: EnemyAraneaState::Cooldown(BALANCING.enemies.aranea.cooldown_initial_frames),
-          }),
-          projectiles: vec![projectile],
-          movement_force: vec_zero(),
-          enemies_to_spawn: vec![],
+          weapon_outputs: vec![weapon_output],
+          ..EnemyDecision::default(
+            handle,
+            Enemy::Aranea(Self {
+              egg_handle: self.egg_handle,
+              state: EnemyAraneaState::Cooldown(BALANCING.enemies.aranea.cooldown_initial_frames),
+            }),
+          )
         }
       }
     }
@@ -726,23 +728,23 @@ impl EnemyDefender {
           && reached_parent_handle == player_handle
         {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Defender(Self {
-              state: EnemyDefenderState::Shooting(0),
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Defender(Self {
+                state: EnemyDefenderState::Shooting(0),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            enemy: Enemy::Defender(Self {
-              state: EnemyDefenderState::Idle,
-            }),
-            handle,
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Defender(Self {
+                state: EnemyDefenderState::Idle,
+              }),
+            )
           }
         }
       }
@@ -753,58 +755,59 @@ impl EnemyDefender {
 
         let angle = ease.at(x);
 
-        let projectile = |offset: f32| Projectile {
-          collider: ColliderBuilder::ball(0.2)
-            .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
-            .build(),
-          damage: 5.0,
-          initial_impulse: distance_projection_physics(offset + angle, 0.7),
-          offset: PhysicsVector::zero(),
-          component_set: ComponentSet::new(),
-          force_mod: 0.0,
-          status_effects: list![],
+        let weapon_output = |offset: f32| WeaponOutput {
+          damage: BALANCING.enemies.defender.damage,
+          ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
+            initial_impulse: distance_projection_physics(offset + angle, 0.7),
+            ..Projectile::default(
+              ColliderBuilder::ball(0.2)
+                .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
+                .build(),
+            )
+          }))
         };
 
         EnemyDecision {
-          handle,
           movement_force,
-          projectiles: vec![
-            projectile(0.0),
-            projectile(PI / 2.0),
-            projectile(PI),
-            projectile(PI + (PI / 2.0)),
+          weapon_outputs: vec![
+            weapon_output(0.0),
+            weapon_output(PI / 2.0),
+            weapon_output(PI),
+            weapon_output(PI + (PI / 2.0)),
           ],
-          enemy: Enemy::Defender(EnemyDefender {
-            state: EnemyDefenderState::Cooldown(
-              count,
-              BALANCING.enemies.defender.cooldown_initial_frames,
-            ),
-          }),
-          enemies_to_spawn: vec![],
+          ..EnemyDecision::default(
+            handle,
+            Enemy::Defender(EnemyDefender {
+              state: EnemyDefenderState::Cooldown(
+                count,
+                BALANCING.enemies.defender.cooldown_initial_frames,
+              ),
+            }),
+          )
         }
       }
       EnemyDefenderState::Cooldown(count, frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Defender(EnemyDefender {
-              state: EnemyDefenderState::Cooldown(count, frames_left - 1),
-            }),
             movement_force,
-            projectiles: vec![],
-            enemies_to_spawn: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Defender(EnemyDefender {
+                state: EnemyDefenderState::Cooldown(count, frames_left - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Defender(EnemyDefender {
-              state: EnemyDefenderState::Shooting(
-                (count + 1) % BALANCING.enemies.defender.ease_period as i32,
-              ),
-            }),
             movement_force,
-            projectiles: vec![],
-            enemies_to_spawn: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Defender(EnemyDefender {
+                state: EnemyDefenderState::Shooting(
+                  (count + 1) % BALANCING.enemies.defender.ease_period as i32,
+                ),
+              }),
+            )
           }
         }
       }
@@ -839,10 +842,7 @@ impl EnemySeeker {
     };
     EnemyDecision {
       movement_force,
-      handle,
-      projectiles: vec![],
-      enemies_to_spawn: vec![],
-      enemy: Enemy::Seeker(Self),
+      ..EnemyDecision::default(handle, Enemy::Seeker(Self))
     }
   }
 }
@@ -861,12 +861,6 @@ impl EnemySeekerGenerator {
   ) -> EnemyDecision {
     let should_spawn_enemy = self.cooldown % BALANCING.enemies.seeker_generator.spawn_cooldown == 0;
     EnemyDecision {
-      movement_force: vec_zero(),
-      handle,
-      projectiles: vec![],
-      enemy: Enemy::SeekerGenerator(Self {
-        cooldown: self.cooldown - 1,
-      }),
       enemies_to_spawn: if should_spawn_enemy {
         let self_rigid_body = &physics_rigid_bodies[handle];
         let direction_to_player = player_translation - self_rigid_body.translation();
@@ -877,12 +871,19 @@ impl EnemySeekerGenerator {
           enemy_spawn: EnemySpawn::new(
             EnemySpawnEnemy::Seeker,
             *self_rigid_body.translation(),
+            0.0,
             None,
           ),
         }]
       } else {
         vec![]
       },
+      ..EnemyDecision::default(
+        handle,
+        Enemy::SeekerGenerator(Self {
+          cooldown: self.cooldown - 1,
+        }),
+      )
     }
   }
 }
@@ -931,34 +932,29 @@ impl EnemySniper {
           && reached_parent_handle == player_handle
         {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Sniper(Self {
-              state: EnemySniperState::Cooldown(BALANCING.enemies.sniper.cooldown_initial_frames),
-            }),
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Sniper(Self {
+                state: EnemySniperState::Cooldown(BALANCING.enemies.sniper.cooldown_initial_frames),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            enemy: Enemy::Sniper(Self {
-              state: EnemySniperState::Idle,
-            }),
-            handle,
             movement_force,
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Sniper(Self {
+                state: EnemySniperState::Idle,
+              }),
+            )
           }
         }
       }
       EnemySniperState::Shooting => EnemyDecision {
-        handle,
-        enemy: Enemy::Sniper(Self {
-          state: EnemySniperState::Cooldown(BALANCING.enemies.sniper.cooldown_initial_frames),
-        }),
         movement_force,
-        enemies_to_spawn: vec![],
-        projectiles: {
+        weapon_outputs: {
           let collider = ColliderBuilder::ball(0.08)
             .mass(1.0)
             .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
@@ -971,42 +967,46 @@ impl EnemySniper {
             player_relative_velocity,
             BALANCING.enemies.sniper.shooting_force / collider.mass(),
           ) {
-            vec![Projectile {
-              collider,
+            vec![WeaponOutput {
               damage: BALANCING.enemies.sniper.projectile_damage,
-              initial_impulse: PhysicsVector::from_vec(
-                lead_direction * BALANCING.enemies.sniper.shooting_force,
-              ),
-              offset: PhysicsVector::zero(),
-              force_mod: 0.0,
-              component_set: ComponentSet::new(),
-              status_effects: list![],
+              ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
+                initial_impulse: PhysicsVector::from_vec(
+                  lead_direction * BALANCING.enemies.sniper.shooting_force,
+                ),
+                ..Projectile::default(collider)
+              }))
             }]
           } else {
             vec![]
           }
         },
+        ..EnemyDecision::default(
+          handle,
+          Enemy::Sniper(Self {
+            state: EnemySniperState::Cooldown(BALANCING.enemies.sniper.cooldown_initial_frames),
+          }),
+        )
       },
       EnemySniperState::Cooldown(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Sniper(Self {
-              state: EnemySniperState::Cooldown(frames_left - 1),
-            }),
-            enemies_to_spawn: vec![],
             movement_force,
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Sniper(Self {
+                state: EnemySniperState::Cooldown(frames_left - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            handle,
-            enemy: Enemy::Sniper(Self {
-              state: EnemySniperState::Shooting,
-            }),
-            enemies_to_spawn: vec![],
             movement_force,
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Sniper(Self {
+                state: EnemySniperState::Shooting,
+              }),
+            )
           }
         }
       }
@@ -1058,25 +1058,23 @@ impl EnemySniperGenerator {
           && reached_parent_handle == player_handle
         {
           EnemyDecision {
-            handle,
-            enemy: Enemy::SniperGenerator(Self {
-              state: EnemySniperGeneratorState::Generating(
-                BALANCING.enemies.sniper_generator.generating_initial_frames,
-              ),
-            }),
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::SniperGenerator(Self {
+                state: EnemySniperGeneratorState::Generating(
+                  BALANCING.enemies.sniper_generator.generating_initial_frames,
+                ),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            enemy: Enemy::SniperGenerator(Self {
-              state: EnemySniperGeneratorState::Idle,
-            }),
-            handle,
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::SniperGenerator(Self {
+                state: EnemySniperGeneratorState::Idle,
+              }),
+            )
           }
         }
       }
@@ -1092,57 +1090,82 @@ impl EnemySniperGenerator {
               .into_vec();
               vec![EnemyDecisionEnemySpawn {
                 initial_force,
-                enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Sniper, *self_translation, None),
+                enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Sniper, *self_translation, 0.0, None),
               }]
             } else {
               vec![]
             };
           EnemyDecision {
-            enemy: Enemy::SniperGenerator(Self {
-              state: EnemySniperGeneratorState::Generating(frames_left - 1),
-            }),
-            handle,
-            movement_force: vec_zero(),
             enemies_to_spawn,
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::SniperGenerator(Self {
+                state: EnemySniperGeneratorState::Generating(frames_left - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            enemy: Enemy::SniperGenerator(Self {
-              state: EnemySniperGeneratorState::Cooldown(
-                BALANCING.enemies.sniper_generator.cooldown_initial_frames,
-              ),
-            }),
-            handle,
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::SniperGenerator(Self {
+                state: EnemySniperGeneratorState::Cooldown(
+                  BALANCING.enemies.sniper_generator.cooldown_initial_frames,
+                ),
+              }),
+            )
           }
         }
       }
       EnemySniperGeneratorState::Cooldown(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
-            enemy: Enemy::SniperGenerator(Self {
-              state: EnemySniperGeneratorState::Cooldown(frames_left - 1),
-            }),
-            handle,
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::SniperGenerator(Self {
+                state: EnemySniperGeneratorState::Cooldown(frames_left - 1),
+              }),
+            )
           }
         } else {
           EnemyDecision {
-            enemy: Enemy::SniperGenerator(Self {
-              state: EnemySniperGeneratorState::Idle,
-            }),
-            handle,
-            movement_force: vec_zero(),
-            enemies_to_spawn: vec![],
-            projectiles: vec![],
+            ..EnemyDecision::default(
+              handle,
+              Enemy::SniperGenerator(Self {
+                state: EnemySniperGeneratorState::Idle,
+              }),
+            )
           }
         }
       }
+    }
+  }
+}
+
+#[derive(Clone)]
+pub struct EnemyLaserGate;
+
+impl EnemyLaserGate {
+  pub fn behavior(&self, handle: RigidBodyHandle, rigid_body_set: &RigidBodySet) -> EnemyDecision {
+    let weapon_output = WeaponOutput {
+      damage: BALANCING.enemies.laser_gate.damage,
+      status_effects: list![(
+        StatusEffect::Deteriorate,
+        BALANCING.enemies.laser_gate.deteriorate_apply_amount
+      )],
+      ..WeaponOutput::default(WeaponOutputKind::Beam(Beam {
+        angle: 0.0,
+        thickness: BALANCING.enemies.laser_gate.beam_thickness,
+      }))
+    };
+
+    let rigid_body = &rigid_body_set[handle];
+
+    EnemyDecision {
+      weapon_outputs: vec![weapon_output],
+      movement_force: stop_linvel(100.0, rigid_body) * rigid_body.mass(),
+      angular_force: stop_angvel(0.1, rigid_body) * rigid_body.mass() * 0.1,
+      ..EnemyDecision::default(handle, Enemy::LaserGate(self.clone()))
     }
   }
 }
@@ -1181,5 +1204,14 @@ pub fn stop_linvel(move_speed: f32, rigid_body: &RigidBody) -> Vector2<f32> {
     -rigid_body.linvel().normalize() * move_speed
   } else {
     -rigid_body.linvel()
+  }
+}
+
+pub fn stop_angvel(force_mod: f32, rigid_body: &RigidBody) -> f32 {
+  let angvel = rigid_body.angvel();
+  if angvel.abs() > force_mod {
+    -force_mod * angvel.signum()
+  } else {
+    -angvel
   }
 }

@@ -67,29 +67,6 @@
                  "width":40,
                  "x":88,
                  "y":312
-                }, 
-                {
-                 "height":0,
-                 "id":12,
-                 "name":"Save Point",
-                 "properties":[
-                        {
-                         "name":"PlayerSpawnId",
-                         "type":"object",
-                         "value":13
-                        }],
-                 "rotation":0,
-                 "type":"SavePoint",
-                 "visible":true,
-                 "width":0,
-                 "x":80,
-                 "y":256
-                }, 
-                {
-                 "id":13,
-                 "template":"templates\/Player Spawn.tx",
-                 "x":88,
-                 "y":280
                 }],
          "opacity":1,
          "type":"objectgroup",

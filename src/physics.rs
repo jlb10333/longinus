@@ -1,15 +1,15 @@
 use itertools::Itertools;
 use macroquad::prelude::rand;
 use rapier2d::{
-  na::{Isometry2, OPoint},
+  na::{ComplexField, Isometry2, OPoint},
   prelude::*,
 };
 use rpds::{HashTrieMap, HashTrieSet, List, ht_map, list};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, f32::consts::PI, rc::Rc};
 
 use crate::{
   ability::AbilitySystem,
-  combat::{CombatSystem, WeaponModuleKind},
+  combat::{CombatSystem, WeaponModuleKind, WeaponOutputKind, distance_projection_physics},
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
     Activator, AddManaTankOnCollision, And, ChainMountArea, ChainSegment, ComponentSet, Damageable,
@@ -21,12 +21,14 @@ use crate::{
   },
   enemy::{
     EnemyAranea, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState,
-    EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator, EnemySystem,
+    EnemyLaserGate, EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
+    EnemySystem,
   },
   load_map::{
     COLLISION_GROUP_CHAIN, COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE,
-    COLLISION_GROUP_WALL, EnemySpawnColliderHandles, EnemySpawnEnemy, Map, MapAbilityType,
-    MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
+    COLLISION_GROUP_WALL, ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawnColliderHandles,
+    EnemySpawnEnemy, Map, MapAbilityType, MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
+    RAYCAST_INTERACTION_GROUPS,
   },
   save::SaveData,
   system::System,
@@ -166,6 +168,7 @@ fn load_new_map(
         }
         EnemySpawnEnemy::Sniper => Enemy::Sniper(EnemySniper::new()),
         EnemySpawnEnemy::SniperGenerator => Enemy::SniperGenerator(EnemySniperGenerator::new()),
+        EnemySpawnEnemy::LaserGate => Enemy::LaserGate(EnemyLaserGate),
       };
 
       let enemy_spawn_persist = enemy_spawn.persist.as_ref().unwrap();
@@ -783,15 +786,25 @@ fn load_new_map(
       EntityHandle::RigidBody(rigid_body_handle) => *rigid_body_handle,
     };
 
-    impulse_joint_set.insert(
-      rigid_body_handle_1,
-      rigid_body_handle_2,
-      PrismaticJointBuilder::new(UnitVector::new_normalize(vector![1.0, 0.0]))
-        .local_anchor1(glue.attachments.0.1.into())
-        .local_anchor2(glue.attachments.1.1.into())
-        .limits([0.0, 0.0]),
-      true,
-    );
+    if glue.allow_rotation {
+      impulse_joint_set.insert(
+        rigid_body_handle_1,
+        rigid_body_handle_2,
+        RevoluteJointBuilder::new()
+          .local_anchor1(glue.attachments.0.1.into())
+          .local_anchor2(glue.attachments.1.1.into()),
+        true,
+      );
+    } else {
+      impulse_joint_set.insert(
+        rigid_body_handle_1,
+        rigid_body_handle_2,
+        FixedJointBuilder::new()
+          .local_anchor1(glue.attachments.0.1.into())
+          .local_anchor2(glue.attachments.1.1.into()),
+        true,
+      );
+    }
   });
 
   Rc::new(PhysicsSystem {
@@ -865,6 +878,14 @@ impl System for PhysicsSystem {
 
     let combat_system = ctx.get::<CombatSystem>().unwrap();
     let ability_system = ctx.get::<AbilitySystem>().unwrap();
+    let enemy_system = ctx.get::<EnemySystem>().unwrap();
+
+    let enemy_projectile_query_pipeline = self.broad_phase.as_query_pipeline(
+      self.narrow_phase.query_dispatcher(),
+      &self.rigid_body_set,
+      &self.collider_set,
+      QueryFilter::default().groups(ENEMY_PROJECTILE_INTERACTION_GROUPS),
+    );
 
     if let Some(map) = map_system.map.as_ref() {
       let player_entity = self
@@ -959,51 +980,54 @@ impl System for PhysicsSystem {
       }
     });
 
+    let player_rigid_body = rigid_body_set[self.player_handle].clone();
+
     /* MARK: Fire all weapons */
-    let new_projectiles = combat_system
-      .new_projectiles
+    let new_weapon_outputs = combat_system
+      .weapon_outputs
       .iter()
-      .map(|projectile| {
-        let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
-          *rigid_body_set[self.player_handle].translation() + projectile.offset.into_vec(),
-        ));
-        let collider_handle =
-          collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
+      .map(|weapon_output| match &weapon_output.kind {
+        WeaponOutputKind::Projectile(projectile) => {
+          let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
+            *rigid_body_set[self.player_handle].translation() + weapon_output.offset.into_vec(),
+          ));
+          let collider_handle =
+            collider_set.insert_with_parent(projectile.collider.clone(), handle, rigid_body_set);
 
-        let rbs_clone = rigid_body_set.clone();
-        let player_velocity = rbs_clone[self.player_handle].linvel();
-        rigid_body_set[handle].set_linvel(*player_velocity, true);
+          let player_velocity = player_rigid_body.linvel();
+          rigid_body_set[handle].set_linvel(*player_velocity, true);
 
-        rigid_body_set[handle].apply_impulse(projectile.initial_impulse.into_vec(), true);
-        rigid_body_set[handle].add_force(
-          projectile.initial_impulse.into_vec().normalize() * projectile.force_mod,
-          true,
-        );
+          rigid_body_set[handle].apply_impulse(projectile.initial_impulse.into_vec(), true);
+          rigid_body_set[handle].add_force(
+            projectile.initial_impulse.into_vec().normalize() * projectile.force_mod,
+            true,
+          );
 
-        let handle = EntityHandle::RigidBody(handle);
+          let handle = EntityHandle::RigidBody(handle);
 
-        (
-          handle,
-          Rc::new(Entity {
+          (
             handle,
-            components: projectile
-              .component_set
-              .insert(DestroyOnCollision)
-              .insert(Damager {
-                damage: projectile.damage,
-                hitboxes: vec![collider_handle],
-                status_effects: projectile.status_effects.clone(),
-              }),
-            label: "p".to_string(),
-          }),
-        )
+            Rc::new(Entity {
+              handle,
+              components: weapon_output
+                .component_set
+                .insert(DestroyOnCollision)
+                .insert(Damager {
+                  damage: weapon_output.damage,
+                  hitboxes: vec![collider_handle],
+                  status_effects: weapon_output.status_effects.clone(),
+                }),
+              label: "p".to_string(),
+            }),
+          )
+        }
+        WeaponOutputKind::Beam(_) => todo!(),
       })
       .collect::<HashTrieMap<_, _>>();
 
-    let entities = entities.into_iter().chain(new_projectiles.iter());
+    let entities = entities.into_iter().chain(new_weapon_outputs.iter());
 
     /* MARK: Carry out enemy behavior */
-    let enemy_system = ctx.get::<EnemySystem>().unwrap();
 
     let entities = entities
       .flat_map(|(_, entity)| {
@@ -1016,17 +1040,29 @@ impl System for PhysicsSystem {
         }
         let relevant_decision = relevant_decision.unwrap();
 
-        if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
-          rigid_body_set[rigid_body_handle].apply_impulse(relevant_decision.movement_force, true);
-        }
+        let EntityHandle::RigidBody(rigid_body_handle) = entity.handle else {
+          return vec![(
+            entity.handle,
+            Rc::new(Entity {
+              components: entity.components.with(relevant_decision.enemy.clone()),
+              ..entity.as_ref().clone()
+            }),
+          )];
+        };
 
-        let new_projectiles = if let EntityHandle::RigidBody(rigid_body_handle) = entity.handle {
-          relevant_decision
-            .projectiles
-            .iter()
-            .map(|projectile| {
+        rigid_body_set[rigid_body_handle].apply_impulse(relevant_decision.movement_force, true);
+        rigid_body_set[rigid_body_handle]
+          .apply_torque_impulse(relevant_decision.angular_force, true);
+
+        let rigid_body = rigid_body_set[rigid_body_handle].clone();
+
+        let new_projectiles = relevant_decision
+          .weapon_outputs
+          .iter()
+          .map(|weapon_output| match &weapon_output.kind {
+            WeaponOutputKind::Projectile(projectile) => {
               let handle = rigid_body_set.insert(RigidBodyBuilder::dynamic().translation(
-                *rigid_body_set[rigid_body_handle].translation() + projectile.offset.into_vec(),
+                *rigid_body_set[rigid_body_handle].translation() + weapon_output.offset.into_vec(),
               ));
               let collider_handle = collider_set.insert_with_parent(
                 projectile.collider.clone(),
@@ -1034,8 +1070,7 @@ impl System for PhysicsSystem {
                 rigid_body_set,
               );
 
-              let rbs_clone = rigid_body_set.clone();
-              let enemy_velocity = rbs_clone[rigid_body_handle].linvel();
+              let enemy_velocity = rigid_body.linvel();
               rigid_body_set[handle].set_linvel(*enemy_velocity, true);
 
               rigid_body_set[handle].apply_impulse(projectile.initial_impulse.into_vec(), true);
@@ -1047,18 +1082,68 @@ impl System for PhysicsSystem {
                   components: ComponentSet::new()
                     .insert(DestroyOnCollision)
                     .insert(Damager {
-                      damage: projectile.damage,
+                      damage: weapon_output.damage,
                       hitboxes: vec![collider_handle],
+                      status_effects: weapon_output.status_effects.clone(),
                       ..Default::default()
                     }),
                   label: "ep".to_string(),
                 }),
               )
-            })
-            .collect::<HashMap<_, _>>()
-        } else {
-          HashMap::new()
-        };
+            }
+            WeaponOutputKind::Beam(beam) => {
+              let max_distance = 100.0;
+
+              let origin = rigid_body.translation() + weapon_output.offset.into_vec();
+              let rotation_angle = -rigid_body.rotation().angle() + beam.angle;
+              let rotation_vec = distance_projection_physics(rotation_angle, 1.0).into_vec();
+
+              let raycast = enemy_projectile_query_pipeline.cast_ray(
+                &Ray::new(origin.into(), rotation_vec),
+                max_distance,
+                true,
+              );
+
+              let distance = raycast
+                .map(|(_, distance)| distance)
+                .unwrap_or(max_distance)
+                + 0.05;
+
+              let translation =
+                origin + distance_projection_physics(rotation_angle, distance / 2.0).into_vec();
+
+              let rigid_body_handle = rigid_body_set.insert(
+                RigidBodyBuilder::dynamic()
+                  .translation(translation)
+                  .rotation(-rotation_angle),
+              );
+
+              let collider_handle = collider_set.insert_with_parent(
+                ColliderBuilder::cuboid(distance / 2.0, beam.thickness / 2.0)
+                  .sensor(true)
+                  .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS),
+                rigid_body_handle,
+                rigid_body_set,
+              );
+
+              (
+                EntityHandle::RigidBody(rigid_body_handle),
+                Rc::new(Entity {
+                  handle: EntityHandle::RigidBody(rigid_body_handle),
+                  components: ComponentSet::new()
+                    .insert(Damager {
+                      damage: weapon_output.damage,
+                      hitboxes: vec![collider_handle],
+                      status_effects: weapon_output.status_effects.clone(),
+                      ..Default::default()
+                    })
+                    .insert(DestroyAfterFrames { frames: 2 }),
+                  label: "beam".to_string(),
+                }),
+              )
+            }
+          })
+          .collect::<HashMap<_, _>>();
 
         [(
           entity.handle,
@@ -1112,6 +1197,7 @@ impl System for PhysicsSystem {
                 EnemySpawnEnemy::SniperGenerator => {
                   Enemy::SniperGenerator(EnemySniperGenerator::new())
                 }
+                EnemySpawnEnemy::LaserGate => Enemy::LaserGate(EnemyLaserGate),
               };
 
               (
