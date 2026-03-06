@@ -62,6 +62,14 @@
                  "width":40,
                  "x":56,
                  "y":152
+                }, 
+                {
+                 "id":6,
+                 "name":"LaserGate",
+                 "rotation":-90,
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":48,
+                 "y":72
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -70,7 +78,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":6,
+ "nextobjectid":7,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

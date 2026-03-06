@@ -30,7 +30,7 @@ pub struct EnemyDecision {
   pub handle: RigidBodyHandle,
   pub weapon_outputs: Vec<WeaponOutput>,
   pub movement_force: Vector2<f32>,
-  pub angular_force: f32,
+  pub angvel: Option<f32>,
   pub enemy: Enemy,
   pub enemies_to_spawn: Vec<EnemyDecisionEnemySpawn>,
 }
@@ -40,7 +40,7 @@ impl EnemyDecision {
     Self {
       handle,
       enemy,
-      angular_force: 0.0,
+      angvel: None,
       enemies_to_spawn: vec![],
       movement_force: vec_zero(),
       weapon_outputs: vec![],
@@ -1143,9 +1143,17 @@ impl EnemySniperGenerator {
 }
 
 #[derive(Clone)]
-pub struct EnemyLaserGate;
+pub struct EnemyLaserGate {
+  target_rotation_angle: f32,
+}
 
 impl EnemyLaserGate {
+  pub fn new(rigid_body: &RigidBody) -> Self {
+    Self {
+      target_rotation_angle: rigid_body.rotation().angle(),
+    }
+  }
+
   pub fn behavior(&self, handle: RigidBodyHandle, rigid_body_set: &RigidBodySet) -> EnemyDecision {
     let weapon_output = WeaponOutput {
       damage: BALANCING.enemies.laser_gate.damage,
@@ -1164,7 +1172,11 @@ impl EnemyLaserGate {
     EnemyDecision {
       weapon_outputs: vec![weapon_output],
       movement_force: stop_linvel(100.0, rigid_body) * rigid_body.mass(),
-      angular_force: stop_angvel(0.1, rigid_body) * rigid_body.mass() * 0.1,
+      angvel: Some(rotate_to_target(
+        1.0,
+        rigid_body,
+        self.target_rotation_angle,
+      )),
       ..EnemyDecision::default(handle, Enemy::LaserGate(self.clone()))
     }
   }
@@ -1207,11 +1219,25 @@ pub fn stop_linvel(move_speed: f32, rigid_body: &RigidBody) -> Vector2<f32> {
   }
 }
 
-pub fn stop_angvel(force_mod: f32, rigid_body: &RigidBody) -> f32 {
-  let angvel = rigid_body.angvel();
-  if angvel.abs() > force_mod {
-    -force_mod * angvel.signum()
+pub fn rotate_to_target(force_mod: f32, rigid_body: &RigidBody, target_angle: f32) -> f32 {
+  let target_angle = target_angle % (2.0 * PI);
+  let current_angle = rigid_body.rotation().angle() % (2.0 * PI);
+  let current_angle = if target_angle - current_angle > PI {
+    current_angle + (2.0 * PI)
+  } else if target_angle - current_angle < -PI {
+    current_angle - (2.0 * PI)
   } else {
-    -angvel
+    current_angle
+  };
+
+  let angular_difference = target_angle - current_angle;
+  println!("{angular_difference}");
+
+  if angular_difference.abs() < force_mod / 60.0 {
+    0.0
+  } else if angular_difference < 0.0 {
+    -force_mod
+  } else {
+    force_mod
   }
 }

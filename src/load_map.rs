@@ -424,30 +424,19 @@ enum MapGlueClass {
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
-enum MapGlueMapObjects {
-  MultiObject(
-    (
-      MapObject1Id,
-      MapObject1LocalX,
-      MapObject1LocalY,
-      MapObject2Id,
-      MapObject2LocalX,
-      MapObject2LocalY,
-    ),
-  ),
-  SingleObject((MapObject1Id, MapObject1LocalX, MapObject1LocalY)),
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
 enum MapGlueMapProperties {
-  WithRotations(MapAllowRotation, MapGlueMapObjects),
-  WithoutRotations(MapGlueMapObjects),
+  MapObject1Id(MapObject1Id),
+  MapObject1LocalX(MapObject1LocalX),
+  MapObject1LocalY(MapObject1LocalY),
+  MapObject2Id(MapObject2Id),
+  MapObject2LocalX(MapObject2LocalX),
+  MapObject2LocalY(MapObject2LocalY),
+  MapAllowRotation(MapAllowRotation),
 }
 
 #[derive(Clone, Debug, Deserialize)]
 struct MapGlue {
-  properties: MapGlueMapProperties,
+  properties: Vec<MapGlueMapProperties>,
   #[serde(rename = "type")]
   _class: MapGlueClass,
 }
@@ -989,7 +978,6 @@ impl EnemySpawn {
     let mut rigid_body = RigidBodyBuilder::dynamic()
       .translation(translation)
       .rotation(rotation)
-      .additional_mass_properties(MassProperties::new(Point2::origin(), 0.0, 1.0))
       .build();
     rigid_body.wake_up(true);
     EnemySpawn {
@@ -1362,7 +1350,7 @@ fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
     EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
     EnemySpawnEnemy::Sniper => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     EnemySpawnEnemy::SniperGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7).mass(50.0)],
-    EnemySpawnEnemy::LaserGate => vec![ColliderBuilder::cuboid(0.1, 0.1)],
+    EnemySpawnEnemy::LaserGate => vec![ColliderBuilder::ball(0.1).mass(1.0)],
   };
 
   collider_builders
@@ -1767,69 +1755,112 @@ impl Object {
       }
 
       Object::Glue(glue) => {
-        let attachments = |objects: &MapGlueMapObjects| match objects {
-          MapGlueMapObjects::MultiObject((
-            object_1_id,
-            object_1_x,
-            object_1_y,
-            object_2_id,
-            object_2_x,
-            object_2_y,
-          )) => (
-            (
-              object_1_id.value,
-              physics_translation_from_map(
-                object_1_x.value,
-                object_1_y.value,
-                0.0,
-                0.0,
-                map_height,
-              ),
-            ),
+        let object_1_id = glue
+          .properties
+          .iter()
+          .find_map(|property| {
+            if let MapGlueMapProperties::MapObject1Id(x) = property {
+              Some(x)
+            } else {
+              None
+            }
+          })
+          .unwrap();
+
+        let object_1_x = glue
+          .properties
+          .iter()
+          .find_map(|property| {
+            if let MapGlueMapProperties::MapObject1LocalX(x) = property {
+              Some(x)
+            } else {
+              None
+            }
+          })
+          .unwrap();
+
+        let object_1_y = glue
+          .properties
+          .iter()
+          .find_map(|property| {
+            if let MapGlueMapProperties::MapObject1LocalY(x) = property {
+              Some(x)
+            } else {
+              None
+            }
+          })
+          .unwrap();
+
+        let object_2_id = glue.properties.iter().find_map(|property| {
+          if let MapGlueMapProperties::MapObject2Id(x) = property {
+            Some(x)
+          } else {
+            None
+          }
+        });
+
+        let object_2_x = glue.properties.iter().find_map(|property| {
+          if let MapGlueMapProperties::MapObject2LocalX(x) = property {
+            Some(x)
+          } else {
+            None
+          }
+        });
+
+        let object_2_y = glue.properties.iter().find_map(|property| {
+          if let MapGlueMapProperties::MapObject2LocalY(x) = property {
+            Some(x)
+          } else {
+            None
+          }
+        });
+
+        let allow_rotation = glue
+          .properties
+          .iter()
+          .find_map(|property| {
+            if let MapGlueMapProperties::MapAllowRotation(x) = property {
+              Some(x)
+            } else {
+              None
+            }
+          })
+          .map(|allow_rotation| allow_rotation.value)
+          .unwrap_or(false);
+
+        let attachments = (
+          (
+            object_1_id.value,
+            vector![
+              *map_scalar_to_physics(object_1_x.value),
+              *map_scalar_to_physics(object_1_y.value),
+            ],
+          ),
+          if let Some(object_2_id) = object_2_id
+            && let Some(object_2_x) = object_2_x
+            && let Some(object_2_y) = object_2_y
+          {
             (
               Some(object_2_id.value),
-              physics_translation_from_map(
-                object_2_x.value,
-                object_2_y.value,
-                0.0,
-                0.0,
-                map_height,
-              ),
-            ),
-          ),
-          MapGlueMapObjects::SingleObject((object_1_id, object_1_x, object_1_y)) => (
-            (
-              object_1_id.value,
-              physics_translation_from_map(
-                object_1_x.value,
-                object_1_y.value,
-                0.0,
-                0.0,
-                map_height,
-              ),
-            ),
+              vector![
+                *map_scalar_to_physics(object_2_x.value),
+                *map_scalar_to_physics(object_2_y.value),
+              ],
+            )
+          } else {
             (
               None,
-              physics_translation_from_map(
-                object_1_x.value,
-                object_1_y.value,
-                0.0,
-                0.0,
-                map_height,
-              ),
-            ),
-          ),
-        };
+              vector![
+                *map_scalar_to_physics(object_1_x.value),
+                *map_scalar_to_physics(object_1_y.value),
+              ],
+            )
+          },
+        );
 
-        MapComponent::Glue(match &glue.properties {
-          MapGlueMapProperties::WithRotations(allow_rotation, objects) => Glue {
-            attachments: attachments(objects),
-            allow_rotation: allow_rotation.value,
-          },
-          MapGlueMapProperties::WithoutRotations(objects) => Glue {
-            attachments: attachments(objects),
-            allow_rotation: false,
-          },
+        MapComponent::Glue(Glue {
+          attachments,
+          allow_rotation,
         })
       }
       Object::Engine(engine) => MapComponent::Engine(Engine {

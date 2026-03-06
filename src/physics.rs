@@ -1,11 +1,11 @@
 use itertools::Itertools;
 use macroquad::prelude::rand;
 use rapier2d::{
-  na::{ComplexField, Isometry2, OPoint},
+  na::{Isometry2, OPoint},
   prelude::*,
 };
 use rpds::{HashTrieMap, HashTrieSet, List, ht_map, list};
-use std::{cell::RefCell, collections::HashMap, f32::consts::PI, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
   ability::AbilitySystem,
@@ -28,7 +28,6 @@ use crate::{
     COLLISION_GROUP_CHAIN, COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE,
     COLLISION_GROUP_WALL, ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawnColliderHandles,
     EnemySpawnEnemy, Map, MapAbilityType, MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
-    RAYCAST_INTERACTION_GROUPS,
   },
   save::SaveData,
   system::System,
@@ -168,7 +167,9 @@ fn load_new_map(
         }
         EnemySpawnEnemy::Sniper => Enemy::Sniper(EnemySniper::new()),
         EnemySpawnEnemy::SniperGenerator => Enemy::SniperGenerator(EnemySniperGenerator::new()),
-        EnemySpawnEnemy::LaserGate => Enemy::LaserGate(EnemyLaserGate),
+        EnemySpawnEnemy::LaserGate => {
+          Enemy::LaserGate(EnemyLaserGate::new(&enemy_spawn.rigid_body))
+        }
       };
 
       let enemy_spawn_persist = enemy_spawn.persist.as_ref().unwrap();
@@ -792,7 +793,8 @@ fn load_new_map(
         rigid_body_handle_2,
         RevoluteJointBuilder::new()
           .local_anchor1(glue.attachments.0.1.into())
-          .local_anchor2(glue.attachments.1.1.into()),
+          .local_anchor2(glue.attachments.1.1.into())
+          .contacts_enabled(false),
         true,
       );
     } else {
@@ -1051,8 +1053,9 @@ impl System for PhysicsSystem {
         };
 
         rigid_body_set[rigid_body_handle].apply_impulse(relevant_decision.movement_force, true);
-        rigid_body_set[rigid_body_handle]
-          .apply_torque_impulse(relevant_decision.angular_force, true);
+        if let Some(angvel) = relevant_decision.angvel {
+          rigid_body_set[rigid_body_handle].set_angvel(angvel, true);
+        }
 
         let rigid_body = rigid_body_set[rigid_body_handle].clone();
 
@@ -1085,7 +1088,6 @@ impl System for PhysicsSystem {
                       damage: weapon_output.damage,
                       hitboxes: vec![collider_handle],
                       status_effects: weapon_output.status_effects.clone(),
-                      ..Default::default()
                     }),
                   label: "ep".to_string(),
                 }),
@@ -1135,7 +1137,6 @@ impl System for PhysicsSystem {
                       damage: weapon_output.damage,
                       hitboxes: vec![collider_handle],
                       status_effects: weapon_output.status_effects.clone(),
-                      ..Default::default()
                     })
                     .insert(DestroyAfterFrames { frames: 2 }),
                   label: "beam".to_string(),
@@ -1197,7 +1198,9 @@ impl System for PhysicsSystem {
                 EnemySpawnEnemy::SniperGenerator => {
                   Enemy::SniperGenerator(EnemySniperGenerator::new())
                 }
-                EnemySpawnEnemy::LaserGate => Enemy::LaserGate(EnemyLaserGate),
+                EnemySpawnEnemy::LaserGate => {
+                  Enemy::LaserGate(EnemyLaserGate::new(&enemy_to_spawn.enemy_spawn.rigid_body))
+                }
               };
 
               (
