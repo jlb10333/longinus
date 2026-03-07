@@ -682,6 +682,32 @@ impl EnemyAranea {
   }
 }
 
+pub mod aranea_queen {
+  #[derive(Clone)]
+  pub enum FirstLaunchSubstate {
+    Launching(i32),
+    Stopping(i32),
+    Spraying(i32),
+  }
+
+  #[derive(Clone)]
+  pub enum Phase1Substate {}
+
+  #[derive(Clone)]
+  pub enum State {
+    Idle,
+    FirstLaunch(FirstLaunchSubstate),
+    Phase1(Phase1Substate),
+  }
+
+  #[derive(Clone)]
+  pub struct EnemyAraneaQueen {
+    state: State,
+  }
+
+  impl EnemyAraneaQueen {}
+}
+
 #[derive(Clone)]
 pub enum EnemyDefenderState {
   Idle,
@@ -1145,12 +1171,14 @@ impl EnemySniperGenerator {
 #[derive(Clone)]
 pub struct EnemyLaserGate {
   target_rotation_angle: f32,
+  parent_enemy: Option<Rc<Enemy>>,
 }
 
 impl EnemyLaserGate {
   pub fn new(rigid_body: &RigidBody) -> Self {
     Self {
       target_rotation_angle: rigid_body.rotation().angle(),
+      parent_enemy: None,
     }
   }
 

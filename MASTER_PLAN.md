@@ -47,7 +47,6 @@
   - Crank
   - Min
   - Max
-  - Lasers
   - Saving/loading of activation levels
 - Exploration game loop
   - Combat

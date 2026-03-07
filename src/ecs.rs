@@ -249,6 +249,7 @@ pub enum Enemy {
   Goblin(EnemyGoblin),
   Imp(EnemyImp),
   Aranea(EnemyAranea),
+  AraneaQueen(EnemyAraneaQueen),
   /* Angelic Constructs */
   Defender(EnemyDefender),
   Seeker(EnemySeeker),
