@@ -35,6 +35,9 @@ pub struct EnemyDecision {
   pub enemies_to_spawn: Vec<EnemyDecisionEnemySpawn>,
 }
 
+#[derive(Clone)]
+pub struct FramesLeft(i32);
+
 impl EnemyDecision {
   pub fn default(handle: RigidBodyHandle, enemy: Enemy) -> Self {
     Self {
@@ -683,29 +686,219 @@ impl EnemyAranea {
 }
 
 pub mod aranea_queen {
+  use std::rc::Rc;
+
+  use super::FramesLeft;
+
   #[derive(Clone)]
-  pub enum FirstLaunchSubstate {
-    Launching(i32),
-    Stopping(i32),
-    Spraying(i32),
+  pub enum LaunchSubstate {
+    Launching(FramesLeft),
+    Stopping(FramesLeft),
   }
 
   #[derive(Clone)]
-  pub enum Phase1Substate {}
+  pub enum LaunchToEggSubstate {
+    Launch(LaunchSubstate),
+    Spraying(FramesLeft),
+  }
+
+  #[derive(Clone)]
+  pub enum Phase1Substate {
+    Root,
+    LaunchToPlayer(LaunchSubstate),
+    LaunchToEgg(LaunchToEggSubstate),
+  }
+
+  #[derive(Clone)]
+  pub struct BouncesLeft(i32);
+
+  #[derive(Clone)]
+  pub enum Phase2Substate {
+    LaunchToPlayer(LaunchSubstate),
+    LaunchToEgg(LaunchSubstate),
+    BounceOffWalls(BouncesLeft, LaunchSubstate),
+  }
 
   #[derive(Clone)]
   pub enum State {
     Idle,
-    FirstLaunch(FirstLaunchSubstate),
+    FirstLaunch(LaunchToEggSubstate),
     Phase1(Phase1Substate),
+    Phase2(Phase2Substate),
+    Cooldown(Rc<State>, FramesLeft),
+  }
+}
+
+#[derive(Clone)]
+pub struct EnemyAraneaQueen {
+  state: aranea_queen::State,
+  egg_handle: ColliderHandle,
+}
+
+impl EnemyAraneaQueen {
+  pub fn behavior(
+    &self,
+    handle: RigidBodyHandle,
+    damageable: &Damageable,
+    player_translation: &Vector2<f32>,
+    collider_set: &ColliderSet,
+    rigid_body_set: &RigidBodySet,
+    narrow_phase: &NarrowPhase,
+  ) -> EnemyDecision {
+    let self_rigid_body = &rigid_body_set[handle];
+    let movement_force = stop_linvel(BALANCING.enemies.aranea.hold_force, self_rigid_body);
+    match self.state {
+      aranea_queen::State::Idle => {
+        if narrow_phase
+          .intersection_pairs_with(self.egg_handle)
+          .any(|(_, _, colliding)| colliding)
+          || damageable.health < damageable.max_health
+        {
+          let self_translation = self_rigid_body.translation();
+
+          let egg_translation = collider_set[self.egg_handle].translation();
+          let vector_to_egg = egg_translation - self_translation;
+
+          let movement_force =
+            vector_to_egg.normalize() * BALANCING.enemies.aranea_queen.launch_force;
+
+          let launch_frames = (vector_to_egg.magnitude()
+            / (movement_force.magnitude() / self_rigid_body.mass())
+            * 60.0) as i32;
+
+          EnemyDecision {
+            movement_force,
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: aranea_queen::State::FirstLaunch(aranea_queen::LaunchToEggSubstate::Launch(
+                  aranea_queen::LaunchSubstate::Launching(FramesLeft(launch_frames)),
+                )),
+              }),
+            )
+          }
+        } else {
+          EnemyDecision {
+            movement_force,
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: aranea_queen::State::Idle,
+              }),
+            )
+          }
+        }
+      }
+      aranea_queen::State::FirstLaunch(launch_to_egg_state) => self.launch_to_egg_behavior(
+        handle,
+        self_rigid_body,
+        launch_to_egg_state,
+        |next_launch_to_egg_state| aranea_queen::State::FirstLaunch(next_launch_to_egg_state),
+        FramesLeft(BALANCING.enemies.aranea_queen.first_launch_spraying_frames),
+        aranea_queen::State::Cooldown(
+          Rc::new(aranea_queen::State::Phase1(
+            aranea_queen::Phase1Substate::Root,
+          )),
+          FramesLeft(BALANCING.enemies.aranea_queen.first_launch_cooldown_frames),
+        ),
+      ),
+    }
   }
 
-  #[derive(Clone)]
-  pub struct EnemyAraneaQueen {
-    state: State,
+  fn launch_to_egg_behavior(
+    &self,
+    handle: RigidBodyHandle,
+    self_rigid_body: &RigidBody,
+    launch_to_egg_state: aranea_queen::LaunchToEggSubstate,
+    outer_state: impl Fn(aranea_queen::LaunchToEggSubstate) -> aranea_queen::State,
+    spraying_frames: FramesLeft,
+    next_state: aranea_queen::State,
+  ) -> EnemyDecision {
+    match launch_to_egg_state {
+      aranea_queen::LaunchToEggSubstate::Launch(launch_state) => self.launch_behavior(
+        handle,
+        self_rigid_body,
+        launch_state,
+        |launch_state| outer_state(aranea_queen::LaunchToEggSubstate::Launch(launch_state)),
+        outer_state(aranea_queen::LaunchToEggSubstate::Spraying(spraying_frames)),
+      ),
+      aranea_queen::LaunchToEggSubstate::Spraying(FramesLeft(frames_left)) => {
+        todo!()
+      }
+    }
   }
 
-  impl EnemyAraneaQueen {}
+  fn launch_behavior(
+    &self,
+    handle: RigidBodyHandle,
+    self_rigid_body: &RigidBody,
+    launch_state: aranea_queen::LaunchSubstate,
+    outer_state: impl Fn(aranea_queen::LaunchSubstate) -> aranea_queen::State,
+    next_state: aranea_queen::State,
+  ) -> EnemyDecision {
+    match launch_state {
+      aranea_queen::LaunchSubstate::Launching(FramesLeft(frames_left)) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: outer_state(aranea_queen::LaunchSubstate::Launching(FramesLeft(
+                  frames_left - 1,
+                ))),
+              }),
+            )
+          }
+        } else {
+          EnemyDecision {
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: outer_state(aranea_queen::LaunchSubstate::Stopping(FramesLeft(
+                  BALANCING.enemies.aranea_queen.stopping_frames,
+                ))),
+              }),
+            )
+          }
+        }
+      }
+      aranea_queen::LaunchSubstate::Stopping(FramesLeft(frames_left)) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            movement_force: self_rigid_body.linvel()
+              * -1.0
+              * BALANCING.enemies.aranea.stopping_force(),
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: outer_state(aranea_queen::LaunchSubstate::Stopping(FramesLeft(
+                  frames_left - 1,
+                ))),
+              }),
+            )
+          }
+        } else {
+          EnemyDecision {
+            movement_force: self_rigid_body.linvel()
+              * -1.0
+              * BALANCING.enemies.aranea.stopping_force(),
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: next_state,
+              }),
+            )
+          }
+        }
+      }
+    }
+  }
 }
 
 #[derive(Clone)]

@@ -52,6 +52,14 @@ pub struct AraneaBalancing {
 }
 
 #[derive(Deserialize)]
+pub struct AraneaQueenBalancing {
+  pub launch_force: f32,
+  pub stopping_frames: i32,
+  pub first_launch_spraying_frames: i32,
+  pub first_launch_cooldown_frames: i32,
+}
+
+#[derive(Deserialize)]
 pub struct DefenderBalancing {
   pub damage: f32,
   pub aggro_range: f32,
@@ -114,6 +122,7 @@ pub struct EnemyBalancing {
   pub goblin: GoblinBalancing,
   pub imp: ImpBalancing,
   pub aranea: AraneaBalancing,
+  pub aranea_queen: AraneaQueenBalancing,
   pub defender: DefenderBalancing,
   pub seeker: SeekerBalancing,
   pub seeker_generator: SeekerGeneratorBalancing,
