@@ -55,8 +55,13 @@ pub struct AraneaBalancing {
 pub struct AraneaQueenBalancing {
   pub launch_force: f32,
   pub stopping_frames: i32,
+  pub spraying_speed: f32,
+  pub num_spraying: i32,
+  pub spray_rate: f32,
   pub first_launch_spraying_frames: i32,
   pub first_launch_cooldown_frames: i32,
+  pub phase_1_spraying_frames: i32,
+  pub phase_1_launch_to_egg_cooldown_frames: i32,
 }
 
 #[derive(Deserialize)]

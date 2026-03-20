@@ -715,7 +715,7 @@ pub mod aranea_queen {
   #[derive(Clone)]
   pub enum Phase2Substate {
     LaunchToPlayer(LaunchSubstate),
-    LaunchToEgg(LaunchSubstate),
+    LaunchToEgg(LaunchToEggSubstate),
     BounceOffWalls(BouncesLeft, LaunchSubstate),
   }
 
@@ -804,6 +804,31 @@ impl EnemyAraneaQueen {
           FramesLeft(BALANCING.enemies.aranea_queen.first_launch_cooldown_frames),
         ),
       ),
+      aranea_queen::State::Phase1(phase_1_substate) => match phase_1_substate {
+        aranea_queen::Phase1Substate::LaunchToEgg(launch_to_egg_state) => self
+          .launch_to_egg_behavior(
+            handle,
+            self_rigid_body,
+            launch_to_egg_state,
+            |next_launch_to_egg_state| {
+              aranea_queen::State::Phase1(aranea_queen::Phase1Substate::LaunchToEgg(
+                launch_to_egg_state,
+              ))
+            },
+            FramesLeft(BALANCING.enemies.aranea_queen.phase_1_spraying_frames),
+            aranea_queen::State::Cooldown(
+              Rc::new(aranea_queen::State::Phase1(
+                aranea_queen::Phase1Substate::Root,
+              )),
+              FramesLeft(
+                BALANCING
+                  .enemies
+                  .aranea_queen
+                  .phase_1_launch_to_egg_cooldown_frames,
+              ),
+            ),
+          ),
+      },
     }
   }
 
@@ -825,7 +850,52 @@ impl EnemyAraneaQueen {
         outer_state(aranea_queen::LaunchToEggSubstate::Spraying(spraying_frames)),
       ),
       aranea_queen::LaunchToEggSubstate::Spraying(FramesLeft(frames_left)) => {
-        todo!()
+        if frames_left > 0 {
+          let weapon_outputs = if frames_left % BALANCING.enemies.aranea_queen.spray_rate == 0 {
+            let base_angle = BALANCING.enemies.aranea_queen.spraying_speed * frames_left;
+            let angles = (0..BALANCING.enemies.aranea_queen.num_spraying).map(|count| {
+              base_angle
+                + (count as f32 * 2.0 * PI / BALANCING.enemies.aranea_queen.num_spraying as f32)
+            });
+            angles
+              .map(|angle| WeaponOutput {
+                damage: BALANCING.enemies.defender.damage,
+                ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
+                  initial_impulse: distance_projection_physics(angle, 0.7),
+                  ..Projectile::default(
+                    ColliderBuilder::ball(0.2)
+                      .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
+                      .build(),
+                  )
+                }))
+              })
+              .collect::<Vec<_>>()
+          } else {
+            vec![]
+          };
+          EnemyDecision {
+            weapon_outputs,
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: outer_state(aranea_queen::LaunchToEggSubstate::Spraying(FramesLeft(
+                  frames_left - 1,
+                ))),
+              }),
+            )
+          }
+        } else {
+          EnemyDecision {
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: next_state,
+              }),
+            )
+          }
+        }
       }
     }
   }
