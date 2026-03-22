@@ -20,9 +20,9 @@ use crate::{
     SaveMenuOnCollision, SimpleActivatable, StatusEffect, Switch, Terminal, TouchSensor,
   },
   enemy::{
-    EnemyAranea, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp, EnemyImpState,
-    EnemyLaserGate, EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
-    EnemySystem,
+    EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp,
+    EnemyImpState, EnemyLaserGate, EnemySeeker, EnemySeekerGenerator, EnemySniper,
+    EnemySniperGenerator, EnemySystem,
   },
   load_map::{
     COLLISION_GROUP_CHAIN, COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE,
@@ -159,6 +159,11 @@ fn load_new_map(
           let aranea_egg = map.aranea_eggs.get(&egg_id).unwrap().collider.clone();
           let egg_handle = collider_set.insert(aranea_egg);
           Enemy::Aranea(EnemyAranea::new(egg_handle))
+        }
+        EnemySpawnEnemy::AraneaQueen(egg_id) => {
+          let aranea_egg = map.aranea_eggs.get(&egg_id).unwrap().collider.clone();
+          let egg_handle = collider_set.insert(aranea_egg);
+          Enemy::AraneaQueen(EnemyAraneaQueen::new(egg_handle))
         }
         EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
         EnemySpawnEnemy::Seeker => Enemy::Seeker(EnemySeeker),
@@ -1187,6 +1192,9 @@ impl System for PhysicsSystem {
                   state: EnemyImpState::initial(),
                 }),
                 EnemySpawnEnemy::Aranea(_) => {
+                  panic!("Cannot spawn aranea child")
+                }
+                EnemySpawnEnemy::AraneaQueen(_) => {
                   panic!("Cannot spawn aranea child")
                 }
                 EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
@@ -2459,8 +2467,10 @@ fn max_health_to_hitstop_frames(max_health: f32) -> i32 {
     10
   } else if max_health < 100.0 {
     15
-  } else {
+  } else if max_health < 1000.0 {
     20
+  } else {
+    80
   }
 }
 

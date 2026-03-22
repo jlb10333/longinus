@@ -15,8 +15,8 @@ use crate::{
   balance::{BALANCING, StatusEffectBalancing},
   combat::WeaponModuleKind,
   enemy::{
-    EnemyAranea, EnemyDefender, EnemyGoblin, EnemyImp, EnemyLaserGate, EnemySeeker,
-    EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
+    EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyGoblin, EnemyImp, EnemyLaserGate,
+    EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
   },
   load_map::MapAbilityType,
 };

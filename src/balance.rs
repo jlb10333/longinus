@@ -51,17 +51,41 @@ pub struct AraneaBalancing {
   pub hold_force: f32,
 }
 
+impl AraneaBalancing {
+  pub fn stopping_force(&self) -> f32 {
+    self.launch_force / self.stopping_frames as f32
+  }
+}
+
 #[derive(Deserialize)]
 pub struct AraneaQueenBalancing {
+  pub max_health: f32,
+  pub status_effect_threshold: f32,
+  pub contact_damage: f32,
+  pub colliders_side_length: f32,
   pub launch_force: f32,
   pub stopping_frames: i32,
   pub spraying_speed: f32,
   pub num_spraying: i32,
-  pub spray_rate: f32,
+  pub spray_interval: i32,
   pub first_launch_spraying_frames: i32,
   pub first_launch_cooldown_frames: i32,
+  pub phase_1_chance_of_egg_launch: f32,
   pub phase_1_spraying_frames: i32,
   pub phase_1_launch_to_egg_cooldown_frames: i32,
+  pub phase_1_launch_to_player_cooldown_frames: i32,
+  pub phase_2_chance_of_egg_launch: f32,
+  pub phase_2_spraying_frames: i32,
+  pub phase_2_launch_to_egg_cooldown_frames: i32,
+  pub phase_2_launch_to_player_cooldown_frames: i32,
+  pub phase_2_bounce_cooldown_frames: i32,
+  pub phase_2_max_num_bounces: i32,
+}
+
+impl AraneaQueenBalancing {
+  pub fn stopping_force(&self) -> f32 {
+    self.launch_force / self.stopping_frames as f32
+  }
 }
 
 #[derive(Deserialize)]
@@ -71,12 +95,6 @@ pub struct DefenderBalancing {
   pub hold_force: f32,
   pub cooldown_initial_frames: i32,
   pub ease_period: f32,
-}
-
-impl AraneaBalancing {
-  pub fn stopping_force(&self) -> f32 {
-    self.launch_force / self.stopping_frames as f32
-  }
 }
 
 #[derive(Deserialize)]

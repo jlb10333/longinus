@@ -509,7 +509,7 @@
                 {
                  "id":42,
                  "name":"LaserGate",
-                 "rotation":-90,
+                 "rotation":90,
                  "template":"templates\/EnemySpawn.tx",
                  "x":288,
                  "y":251

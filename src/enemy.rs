@@ -146,11 +146,24 @@ fn enemy_behavior_generator(
             let damageable = entity.components.get::<Damageable>().unwrap();
             aranea.behavior(
               handle,
-              damageable.as_ref(),
+              &damageable,
               player_translation,
               collider_set,
               rigid_body_set,
               narrow_phase,
+            )
+          }
+          Enemy::AraneaQueen(aranea_queen) => {
+            let damageable = entity.components.get::<Damageable>().unwrap();
+            aranea_queen.behavior(
+              handle,
+              &damageable,
+              player_translation,
+              collider_set,
+              rigid_body_set,
+              narrow_phase,
+              rng,
+              query_pipeline,
             )
           }
           Enemy::Defender(defender) => defender.behavior(
@@ -686,20 +699,42 @@ impl EnemyAranea {
 }
 
 pub mod aranea_queen {
-  use std::rc::Rc;
+  use std::{fmt::Debug, rc::Rc};
+
+  use rapier2d::na::Vector2;
 
   use super::FramesLeft;
 
   #[derive(Clone)]
   pub enum LaunchSubstate {
+    Root(Vector2<f32>),
     Launching(FramesLeft),
     Stopping(FramesLeft),
+  }
+
+  impl Debug for LaunchSubstate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      match self {
+        Self::Root(target) => write!(f, "Root({})", *target),
+        Self::Launching(FramesLeft(frames_left)) => write!(f, "Launching({})", frames_left),
+        Self::Stopping(FramesLeft(frames_left)) => write!(f, "Stopping({})", frames_left),
+      }
+    }
   }
 
   #[derive(Clone)]
   pub enum LaunchToEggSubstate {
     Launch(LaunchSubstate),
     Spraying(FramesLeft),
+  }
+
+  impl Debug for LaunchToEggSubstate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      match self {
+        Self::Launch(launch_substate) => write!(f, "Launch({:?})", launch_substate),
+        Self::Spraying(FramesLeft(frames_left)) => write!(f, "Spraying({})", frames_left),
+      }
+    }
   }
 
   #[derive(Clone)]
@@ -709,15 +744,38 @@ pub mod aranea_queen {
     LaunchToEgg(LaunchToEggSubstate),
   }
 
+  impl Debug for Phase1Substate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      match self {
+        Self::Root => write!(f, "Root"),
+        Self::LaunchToPlayer(launch_substate) => write!(f, "LaunchToPlayer({:?})", launch_substate),
+        Self::LaunchToEgg(launch_to_egg_substate) => write!(f, "LaunchToEgg({:?})", launch_to_egg_substate),
+      }
+    }
+  }
+
   #[derive(Clone)]
-  pub struct BouncesLeft(i32);
+  pub struct BouncesLeft(pub i32);
 
   #[derive(Clone)]
   pub enum Phase2Substate {
+    Root,
     LaunchToPlayer(LaunchSubstate),
     LaunchToEgg(LaunchToEggSubstate),
     BounceOffWalls(BouncesLeft, LaunchSubstate),
   }
+
+  impl Debug for Phase2Substate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      match self {
+        Self::Root => write!(f, "Root"),
+        Self::LaunchToPlayer(launch_substate) => write!(f, "LaunchToPlayer({:?})", launch_substate),
+        Self::LaunchToEgg(launch_to_egg_substate) => write!(f, "LaunchToEgg({:?})", launch_to_egg_substate),
+        Self::BounceOffWalls(BouncesLeft(bounces_left), launch_substate) => write!(f, "BounceOffWalls({}, {:?})", bounces_left, launch_substate)
+              }
+    }
+  }
+
 
   #[derive(Clone)]
   pub enum State {
@@ -726,6 +784,18 @@ pub mod aranea_queen {
     Phase1(Phase1Substate),
     Phase2(Phase2Substate),
     Cooldown(Rc<State>, FramesLeft),
+  }
+
+  impl Debug for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      match self {
+        Self::Idle => write!(f, "Idle"),
+        Self::FirstLaunch(launch_to_egg_substate) => write!(f, "FirstLaunch({:?})", launch_to_egg_substate),
+        Self::Phase1(phase_1_substate) => write!(f, "Phase1({:?})", phase_1_substate),
+        Self::Phase2(phase_2_substate) => write!(f, "Phase2({:?})", phase_2_substate),
+        Self::Cooldown(next_state, FramesLeft(frames_left)) => write!(f, "Cooldown({:?}, {})", next_state, frames_left),
+      }
+    }
   }
 }
 
@@ -736,6 +806,13 @@ pub struct EnemyAraneaQueen {
 }
 
 impl EnemyAraneaQueen {
+  pub fn new(egg_handle: ColliderHandle) -> Self {
+    Self {
+      state: aranea_queen::State::Idle,
+      egg_handle,
+    }
+  }
+
   pub fn behavior(
     &self,
     handle: RigidBodyHandle,
@@ -744,28 +821,21 @@ impl EnemyAraneaQueen {
     collider_set: &ColliderSet,
     rigid_body_set: &RigidBodySet,
     narrow_phase: &NarrowPhase,
+    rng: &RandGenerator,
+    query_pipeline: &QueryPipeline,
   ) -> EnemyDecision {
+    println!("{} {:?}", damageable.health, self.state);
+    
     let self_rigid_body = &rigid_body_set[handle];
     let movement_force = stop_linvel(BALANCING.enemies.aranea.hold_force, self_rigid_body);
-    match self.state {
+    match self.state.clone() {
       aranea_queen::State::Idle => {
         if narrow_phase
           .intersection_pairs_with(self.egg_handle)
           .any(|(_, _, colliding)| colliding)
           || damageable.health < damageable.max_health
         {
-          let self_translation = self_rigid_body.translation();
-
           let egg_translation = collider_set[self.egg_handle].translation();
-          let vector_to_egg = egg_translation - self_translation;
-
-          let movement_force =
-            vector_to_egg.normalize() * BALANCING.enemies.aranea_queen.launch_force;
-
-          let launch_frames = (vector_to_egg.magnitude()
-            / (movement_force.magnitude() / self_rigid_body.mass())
-            * 60.0) as i32;
-
           EnemyDecision {
             movement_force,
             ..EnemyDecision::default(
@@ -773,7 +843,7 @@ impl EnemyAraneaQueen {
               Enemy::AraneaQueen(Self {
                 egg_handle: self.egg_handle,
                 state: aranea_queen::State::FirstLaunch(aranea_queen::LaunchToEggSubstate::Launch(
-                  aranea_queen::LaunchSubstate::Launching(FramesLeft(launch_frames)),
+                  aranea_queen::LaunchSubstate::Root(*egg_translation),
                 )),
               }),
             )
@@ -795,7 +865,7 @@ impl EnemyAraneaQueen {
         handle,
         self_rigid_body,
         launch_to_egg_state,
-        |next_launch_to_egg_state| aranea_queen::State::FirstLaunch(next_launch_to_egg_state),
+        aranea_queen::State::FirstLaunch,
         FramesLeft(BALANCING.enemies.aranea_queen.first_launch_spraying_frames),
         aranea_queen::State::Cooldown(
           Rc::new(aranea_queen::State::Phase1(
@@ -805,14 +875,58 @@ impl EnemyAraneaQueen {
         ),
       ),
       aranea_queen::State::Phase1(phase_1_substate) => match phase_1_substate {
+        aranea_queen::Phase1Substate::Root => {
+          if damageable.health / damageable.max_health < 0.5 {
+            EnemyDecision {
+              ..EnemyDecision::default(
+                handle,
+                Enemy::AraneaQueen(Self {
+                  egg_handle: self.egg_handle,
+                  state: aranea_queen::State::Phase2(aranea_queen::Phase2Substate::Root),
+                }),
+              )
+            }
+          } else if rng.gen_range(0.0, 1.0)
+            < BALANCING.enemies.aranea_queen.phase_1_chance_of_egg_launch
+          {
+            let egg_translation = collider_set[self.egg_handle].translation();
+            EnemyDecision {
+              movement_force,
+              ..EnemyDecision::default(
+                handle,
+                Enemy::AraneaQueen(Self {
+                  egg_handle: self.egg_handle,
+                  state: aranea_queen::State::Phase1(aranea_queen::Phase1Substate::LaunchToEgg(
+                    aranea_queen::LaunchToEggSubstate::Launch(aranea_queen::LaunchSubstate::Root(
+                      *egg_translation,
+                    )),
+                  )),
+                }),
+              )
+            }
+          } else {
+            EnemyDecision {
+              movement_force,
+              ..EnemyDecision::default(
+                handle,
+                Enemy::AraneaQueen(Self {
+                  egg_handle: self.egg_handle,
+                  state: aranea_queen::State::Phase1(aranea_queen::Phase1Substate::LaunchToPlayer(
+                    aranea_queen::LaunchSubstate::Root(*player_translation),
+                  )),
+                }),
+              )
+            }
+          }
+        }
         aranea_queen::Phase1Substate::LaunchToEgg(launch_to_egg_state) => self
           .launch_to_egg_behavior(
             handle,
             self_rigid_body,
             launch_to_egg_state,
-            |next_launch_to_egg_state| {
+            |next_state| {
               aranea_queen::State::Phase1(aranea_queen::Phase1Substate::LaunchToEgg(
-                launch_to_egg_state,
+                next_state,
               ))
             },
             FramesLeft(BALANCING.enemies.aranea_queen.phase_1_spraying_frames),
@@ -828,7 +942,182 @@ impl EnemyAraneaQueen {
               ),
             ),
           ),
+        aranea_queen::Phase1Substate::LaunchToPlayer(launch_state) => self.launch_behavior(
+          handle,
+          self_rigid_body,
+          launch_state,
+          |next_launch_state| {
+            aranea_queen::State::Phase1(aranea_queen::Phase1Substate::LaunchToPlayer(
+              next_launch_state,
+            ))
+          },
+          aranea_queen::State::Cooldown(
+            Rc::new(aranea_queen::State::Phase1(
+              aranea_queen::Phase1Substate::Root,
+            )),
+            FramesLeft(
+              BALANCING
+                .enemies
+                .aranea_queen
+                .phase_1_launch_to_player_cooldown_frames,
+            ),
+          ),
+        ),
       },
+      aranea_queen::State::Phase2(phase_2_state) => match phase_2_state {
+        aranea_queen::Phase2Substate::Root => {
+          if rng.gen_range(0.0, 1.0)
+            < BALANCING.enemies.aranea_queen.phase_2_chance_of_egg_launch
+          {
+            let egg_translation = collider_set[self.egg_handle].translation();
+            EnemyDecision {
+              movement_force,
+              ..EnemyDecision::default(
+                handle,
+                Enemy::AraneaQueen(Self {
+                  egg_handle: self.egg_handle,
+                  state: aranea_queen::State::Phase2(aranea_queen::Phase2Substate::LaunchToEgg(
+                    aranea_queen::LaunchToEggSubstate::Launch(aranea_queen::LaunchSubstate::Root(
+                      *egg_translation,
+                    )),
+                  )),
+                }),
+              )
+            }
+          } else {
+            let angle_to_player = (player_translation - self_rigid_body.translation()).angle(&vector![1.0, 0.0]);
+            let random_angle = rng.gen_range(angle_to_player + (0.5 * PI), angle_to_player + (1.5 * PI));
+            let dir_vec = distance_projection_physics(random_angle, 1.0).into_vec().normalize();
+            let (_, distance) = query_pipeline.cast_ray(&Ray::new((*self_rigid_body.translation()).into(), dir_vec), 200.0, true).expect("Hit max query distance when attempting to bounce aranea queen; did you accidentally allow it to access an unconstrained space?");
+            let target_translation = self_rigid_body.translation() + (dir_vec * distance);
+            let num_bounces = aranea_queen::BouncesLeft(rng.gen_range(1, BALANCING.enemies.aranea_queen.phase_2_max_num_bounces));
+            EnemyDecision {
+              movement_force,
+              ..EnemyDecision::default(
+                handle,
+                Enemy::AraneaQueen(Self {
+                  egg_handle: self.egg_handle,
+                  state: aranea_queen::State::Phase2(aranea_queen::Phase2Substate::BounceOffWalls(
+                    num_bounces,
+                    aranea_queen::LaunchSubstate::Root(target_translation),
+                  )),
+                }),
+              )
+            }
+          }
+          
+        }
+        aranea_queen::Phase2Substate::LaunchToEgg(launch_to_egg_state) => self
+          .launch_to_egg_behavior(
+            handle,
+            self_rigid_body,
+            launch_to_egg_state,
+            |next_state| {
+              aranea_queen::State::Phase2(aranea_queen::Phase2Substate::LaunchToEgg(next_state))
+            },
+            FramesLeft(BALANCING.enemies.aranea_queen.phase_2_spraying_frames),
+            aranea_queen::State::Cooldown(
+              Rc::new(aranea_queen::State::Phase2(
+                aranea_queen::Phase2Substate::Root,
+              )),
+              FramesLeft(
+                BALANCING
+                  .enemies
+                  .aranea_queen
+                  .phase_2_launch_to_egg_cooldown_frames,
+              ),
+            ),
+          ),
+        aranea_queen::Phase2Substate::LaunchToPlayer(launch_state) => self.launch_behavior(
+          handle,
+          self_rigid_body,
+          launch_state,
+          |next_state| {
+            aranea_queen::State::Phase2(aranea_queen::Phase2Substate::LaunchToPlayer(next_state))
+          },
+          aranea_queen::State::Cooldown(
+            Rc::new(aranea_queen::State::Phase2(
+              aranea_queen::Phase2Substate::Root,
+            )),
+            FramesLeft(
+              BALANCING
+                .enemies
+                .aranea_queen
+                .phase_2_launch_to_player_cooldown_frames,
+            ),
+          ),
+        ),
+        aranea_queen::Phase2Substate::BounceOffWalls(
+          aranea_queen::BouncesLeft(bounces_left),
+          launch_state,
+        ) => self.launch_behavior(
+          handle,
+          self_rigid_body,
+          launch_state,
+          |next_state| {
+            aranea_queen::State::Phase2(aranea_queen::Phase2Substate::BounceOffWalls(aranea_queen::BouncesLeft(bounces_left), next_state))
+          },
+          if bounces_left > 0 {
+            let random_angle = rng.gen_range(0.0, 2.0 * PI);
+            let dir_vec = distance_projection_physics(random_angle, 1.0).into_vec().normalize();
+            let (_, distance) = query_pipeline.cast_ray(&Ray::new((*self_rigid_body.translation()).into(), dir_vec), 200.0, true).expect("Hit max query distance when attempting to bounce aranea queen; did you accidentally allow it to access an unconstrained space?");
+            let target_translation = self_rigid_body.translation() + (dir_vec * distance);            
+            aranea_queen::State::Cooldown(
+              Rc::new(aranea_queen::State::Phase2(
+                aranea_queen::Phase2Substate::BounceOffWalls(
+                  aranea_queen::BouncesLeft(bounces_left - 1),
+                  aranea_queen::LaunchSubstate::Root(target_translation),
+                ),
+              )),
+              FramesLeft(
+                BALANCING
+                  .enemies
+                  .aranea_queen
+                  .phase_2_bounce_cooldown_frames,
+              ),
+            )
+          } else {
+            aranea_queen::State::Cooldown(
+              Rc::new(aranea_queen::State::Phase2(
+                aranea_queen::Phase2Substate::LaunchToPlayer(aranea_queen::LaunchSubstate::Root(*player_translation)),
+              )),
+              FramesLeft(
+                BALANCING
+                  .enemies
+                  .aranea_queen
+                  .phase_2_bounce_cooldown_frames,
+              ),
+            )
+          },
+        ),
+      },
+      aranea_queen::State::Cooldown(next_state, FramesLeft(frames_left)) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            movement_force: stop_linvel(BALANCING.enemies.aranea_queen.launch_force, self_rigid_body),
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: aranea_queen::State::Cooldown(
+                  Rc::clone(&next_state),
+                  FramesLeft(frames_left - 1),
+                ),
+              }),
+            )
+          }
+        } else {
+          EnemyDecision {
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: next_state.as_ref().clone(),
+              }),
+            )
+          }
+        }
+      }
     }
   }
 
@@ -851,8 +1140,8 @@ impl EnemyAraneaQueen {
       ),
       aranea_queen::LaunchToEggSubstate::Spraying(FramesLeft(frames_left)) => {
         if frames_left > 0 {
-          let weapon_outputs = if frames_left % BALANCING.enemies.aranea_queen.spray_rate == 0 {
-            let base_angle = BALANCING.enemies.aranea_queen.spraying_speed * frames_left;
+          let weapon_outputs = if frames_left % BALANCING.enemies.aranea_queen.spray_interval == 0 {
+            let base_angle = BALANCING.enemies.aranea_queen.spraying_speed * frames_left as f32;
             let angles = (0..BALANCING.enemies.aranea_queen.num_spraying).map(|count| {
               base_angle
                 + (count as f32 * 2.0 * PI / BALANCING.enemies.aranea_queen.num_spraying as f32)
@@ -875,6 +1164,7 @@ impl EnemyAraneaQueen {
           };
           EnemyDecision {
             weapon_outputs,
+            movement_force: stop_linvel(BALANCING.enemies.aranea_queen.launch_force, self_rigid_body),
             ..EnemyDecision::default(
               handle,
               Enemy::AraneaQueen(Self {
@@ -909,6 +1199,31 @@ impl EnemyAraneaQueen {
     next_state: aranea_queen::State,
   ) -> EnemyDecision {
     match launch_state {
+      aranea_queen::LaunchSubstate::Root(target_translation) => {
+        let self_translation = self_rigid_body.translation();
+
+        let vector_to_target = target_translation - self_translation;
+
+        let movement_force =
+          vector_to_target.normalize() * BALANCING.enemies.aranea_queen.launch_force;
+
+        let launch_frames = (vector_to_target.magnitude()
+          / (movement_force.magnitude() / self_rigid_body.mass())
+          * 60.0) as i32;
+
+        EnemyDecision {
+          movement_force,
+          ..EnemyDecision::default(
+            handle,
+            Enemy::AraneaQueen(Self {
+              egg_handle: self.egg_handle,
+              state: outer_state(aranea_queen::LaunchSubstate::Launching(FramesLeft(
+                launch_frames,
+              ))),
+            }),
+          )
+        }
+      }
       aranea_queen::LaunchSubstate::Launching(FramesLeft(frames_left)) => {
         if frames_left > 0 {
           EnemyDecision {
@@ -941,7 +1256,7 @@ impl EnemyAraneaQueen {
           EnemyDecision {
             movement_force: self_rigid_body.linvel()
               * -1.0
-              * BALANCING.enemies.aranea.stopping_force(),
+              * BALANCING.enemies.aranea_queen.stopping_force(),
             ..EnemyDecision::default(
               handle,
               Enemy::AraneaQueen(Self {

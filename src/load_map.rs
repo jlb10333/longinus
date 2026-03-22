@@ -47,6 +47,7 @@ pub enum MapEnemyName {
   Goblin,
   Imp,
   Aranea,
+  AraneaQueen,
   /* Angelic Constructs */
   Defender,
   Seeker,
@@ -109,6 +110,21 @@ impl MapEnemySpawn {
         MapEnemyName::Goblin => EnemySpawnEnemy::Goblin,
         MapEnemyName::Imp => EnemySpawnEnemy::Imp,
         MapEnemyName::Aranea => EnemySpawnEnemy::Aranea(Id {
+          id: self
+            .properties
+            .as_ref()
+            .and_then(|properties| {
+              properties.iter().find_map(|property| {
+                if let MapEnemySpawnProperties::AraneaEggId(egg_id) = property {
+                  Some(egg_id.value)
+                } else {
+                  None
+                }
+              })
+            })
+            .unwrap(),
+        }),
+        MapEnemyName::AraneaQueen => EnemySpawnEnemy::AraneaQueen(Id {
           id: self
             .properties
             .as_ref()
@@ -942,6 +958,7 @@ pub enum EnemySpawnEnemy {
   Goblin,
   Imp,
   Aranea(Id),
+  AraneaQueen(Id),
   /* Angelic Constructs */
   Defender,
   Seeker,
@@ -1057,6 +1074,26 @@ impl EnemySpawn {
           chance_health: 0.3,
           mana_amount: 1.0,
           chance_mana: 0.2,
+        }),
+      EnemySpawnEnemy::AraneaQueen(_) => ComponentSet::new()
+        .insert(Damageable {
+          status_effect_threshold: BALANCING.enemies.aranea_queen.status_effect_threshold,
+          hurtboxes,
+          health: BALANCING.enemies.aranea_queen.max_health,
+          max_health: BALANCING.enemies.aranea_queen.max_health,
+          destroy_on_zero_health: true,
+          ..Default::default()
+        })
+        .insert(Damager {
+          hitboxes,
+          damage: BALANCING.enemies.aranea_queen.contact_damage,
+          ..Default::default()
+        })
+        .insert(DropOnDestroy {
+          health_amount: 40.0,
+          chance_health: 1.0,
+          mana_amount: 0.0,
+          chance_mana: 0.0,
         }),
       EnemySpawnEnemy::Defender => ComponentSet::new()
         .insert(Damageable {
@@ -1345,6 +1382,10 @@ fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
     EnemySpawnEnemy::Goblin => vec![ColliderBuilder::cuboid(0.4, 0.4)],
     EnemySpawnEnemy::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
     EnemySpawnEnemy::Aranea(_) => vec![ColliderBuilder::cuboid(0.3, 0.3)],
+    EnemySpawnEnemy::AraneaQueen(_) => vec![ColliderBuilder::cuboid(
+      BALANCING.enemies.aranea_queen.colliders_side_length,
+      BALANCING.enemies.aranea_queen.colliders_side_length,
+    )],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
@@ -1368,6 +1409,10 @@ fn hitboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
     EnemySpawnEnemy::Goblin => vec![ColliderBuilder::cuboid(0.4, 0.4)],
     EnemySpawnEnemy::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
     EnemySpawnEnemy::Aranea(_) => vec![ColliderBuilder::cuboid(0.3, 0.3)],
+    EnemySpawnEnemy::AraneaQueen(_) => vec![ColliderBuilder::cuboid(
+      BALANCING.enemies.aranea_queen.colliders_side_length,
+      BALANCING.enemies.aranea_queen.colliders_side_length,
+    )],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],

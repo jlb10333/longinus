@@ -2,24 +2,18 @@
 ## Gameplay
 - Mechanical prototype v2
   - Core elements
-    - Actual first boss
     - 2nd boss
   - Full blocking
     - Add level layout leading to 2nd boss, accessible via chain
     - Settle on distribution and selection of upgrade modules/mana bars/health bars
   - Polish
     - Bugs
-      - Fix bug causing boost to be hard to activate (not consumed by physics)
       - Fix bug causing menu update from item acquisition to not be consumed by physics
       - Fix player movement (normalize diagonal)
       - Make map transitions solid for enemies
     - Visual explainability
       - Show all health tank and mana tanks in inventory
       - Get rid of hitstop (or better yet, make it configurable)
-    - Audio explainability
-      - Enemy hit sfx
-      - Enemy death sfx
-      - Player hit sfx
   - Testing
     - Test at different frame rates
   
