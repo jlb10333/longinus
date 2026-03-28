@@ -277,7 +277,7 @@ fn base_output_from_weapon_type(weapon_output_type: WeaponOutputType) -> WeaponO
       }),
     },
     WeaponOutputType::Missile => WeaponOutput {
-      damage: 20.0,
+      damage: 15.0,
       component_set: ComponentSet::new().insert(ExplodeOnCollision {
         radius: 1.5,
         strength: -3.5,
@@ -376,8 +376,8 @@ fn mirror_slot(weapon: &Weapon) -> Weapon {
 // D75F
 fn double_damage_75_freq(weapon: &Weapon) -> Weapon {
   Weapon {
-    damage_mod: weapon.damage_mod * 2.0,
-    max_cooldown: weapon.max_cooldown * 1.5,
+    damage_mod: weapon.damage_mod * 1.3,
+    max_cooldown: weapon.max_cooldown * 1.1,
     ..weapon.clone()
   }
 }
@@ -385,8 +385,8 @@ fn double_damage_75_freq(weapon: &Weapon) -> Weapon {
 // F75D
 fn double_freq_75_damage(weapon: &Weapon) -> Weapon {
   Weapon {
-    max_cooldown: weapon.max_cooldown * 0.5,
-    damage_mod: weapon.damage_mod * 0.75,
+    max_cooldown: weapon.max_cooldown * 0.7,
+    damage_mod: weapon.damage_mod * 0.9,
     ..weapon.clone()
   }
 }
@@ -394,7 +394,7 @@ fn double_freq_75_damage(weapon: &Weapon) -> Weapon {
 // M4NC
 fn mana_cost(weapon: &Weapon) -> Weapon {
   Weapon {
-    damage_mod: weapon.damage_mod * 2.0,
+    damage_mod: weapon.damage_mod * 1.3,
     mana_cost: weapon.mana_cost + 0.2,
     ..weapon.clone()
   }

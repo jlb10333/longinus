@@ -504,19 +504,24 @@ struct MapGravitySourceStrength {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+enum MapGravitySourceProperty {
+  ActivatorId(MapActivatorId),
+  Radius(MapGravitySourceRadius),
+  Strength(MapGravitySourceStrength),
+}
+
+#[derive(Clone, Debug, Deserialize)]
 enum MapGravitySourceClass {
   GravitySource,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 struct MapGravitySource {
+  id: i32,
   x: f32,
   y: f32,
-  properties: (
-    Option<MapActivatorId>,
-    MapGravitySourceRadius,
-    MapGravitySourceStrength,
-  ),
+  properties: Vec<MapGravitySourceProperty>,
   #[serde(rename = "type")]
   _class: MapGravitySourceClass,
 }
@@ -1590,25 +1595,65 @@ impl Object {
         id: touch_sensor.id,
       }),
 
-      Object::GravitySource(gravity_source) => MapComponent::GravitySource(GravitySource {
-        collider: ColliderBuilder::ball(gravity_source.properties.1.value)
-          .translation(physics_translation_from_map(
-            gravity_source.x,
-            gravity_source.y,
-            0.0,
-            0.0,
-            map_height,
-          ))
-          .sensor(true)
-          .collision_groups(GRAVITY_INTERACTION_GROUPS)
-          .build(),
-        strength: gravity_source.properties.2.value,
-        activator_id: gravity_source
+      Object::GravitySource(gravity_source) => {
+        let radius = gravity_source
           .properties
-          .0
-          .as_ref()
-          .map(|activator_id| activator_id.value),
-      }),
+          .iter()
+          .find_map(|property| {
+            if let MapGravitySourceProperty::Radius(radius) = property {
+              Some(radius.value)
+            } else {
+              None
+            }
+          })
+          .unwrap_or_else(|| {
+            panic!(
+              "Gravity source {} provided with no radius",
+              gravity_source.id
+            )
+          });
+
+        let strength = gravity_source
+          .properties
+          .iter()
+          .find_map(|property| {
+            if let MapGravitySourceProperty::Strength(strength) = property {
+              Some(strength.value)
+            } else {
+              None
+            }
+          })
+          .unwrap_or_else(|| {
+            panic!(
+              "Gravity source {} strength provided with no strength",
+              gravity_source.id
+            )
+          });
+
+        let maybe_activator_id = gravity_source.properties.iter().find_map(|property| {
+          if let MapGravitySourceProperty::ActivatorId(activator_id) = property {
+            Some(activator_id.value)
+          } else {
+            None
+          }
+        });
+
+        MapComponent::GravitySource(GravitySource {
+          collider: ColliderBuilder::ball(radius)
+            .translation(physics_translation_from_map(
+              gravity_source.x,
+              gravity_source.y,
+              0.0,
+              0.0,
+              map_height,
+            ))
+            .sensor(true)
+            .collision_groups(GRAVITY_INTERACTION_GROUPS)
+            .build(),
+          strength,
+          activator_id: maybe_activator_id,
+        })
+      }
 
       Object::AbilityPickup(ability_pickup) => MapComponent::AbilityPickup(AbilityPickup {
         ability_type: ability_pickup.name,

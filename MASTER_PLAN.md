@@ -22,7 +22,6 @@
     - Finish replacing all balancing consts with references to BALANCING
   - Enemies
     - Time slow effect on killing an enemy
-  - First boss
   - Ability
     - Ability that stops all momentum and reflects any objects in range
       - Costs mana proportional to the total MOMENTUM of objects reflected with a baseline 
