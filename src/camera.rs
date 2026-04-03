@@ -130,10 +130,18 @@ impl System for CameraSystem {
       self.translation + get_camera_translation_change(player_translation) + map_bounds_offset;
 
     let rounded_translation = vector![
-      ((new_translation.x) * BALANCING.graphics_config.rounding_factor * 50.0).round()
-        / (BALANCING.graphics_config.rounding_factor * 50.0),
-      ((new_translation.y) * BALANCING.graphics_config.rounding_factor * 50.0).round()
-        / (BALANCING.graphics_config.rounding_factor * 50.0)
+      ((new_translation.x)
+        * BALANCING.graphics_config.rounding_factor
+        * BALANCING.graphics_config.adjusted_scaling())
+      .round()
+        / (BALANCING.graphics_config.rounding_factor
+          * BALANCING.graphics_config.adjusted_scaling()),
+      ((new_translation.y)
+        * BALANCING.graphics_config.rounding_factor
+        * BALANCING.graphics_config.adjusted_scaling())
+      .round()
+        / (BALANCING.graphics_config.rounding_factor
+          * BALANCING.graphics_config.adjusted_scaling())
     ];
 
     Rc::new(Self {

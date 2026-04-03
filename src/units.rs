@@ -44,7 +44,7 @@ impl UnitConvert<PhysicsScalar> for ScreenScalar {
     return Self(0.0);
   }
   fn convert(self) -> PhysicsScalar {
-    return PhysicsScalar(*self / (50.0 * BALANCING.graphics_config.scaling_factor));
+    return PhysicsScalar(*self / (BALANCING.graphics_config.adjusted_scaling()));
   }
 }
 
@@ -65,7 +65,7 @@ impl UnitConvert<ScreenScalar> for PhysicsScalar {
     return Self(0.0);
   }
   fn convert(self) -> ScreenScalar {
-    return ScreenScalar(*self * 50.0 * BALANCING.graphics_config.scaling_factor);
+    return ScreenScalar(*self * BALANCING.graphics_config.adjusted_scaling());
   }
 }
 
@@ -78,7 +78,10 @@ impl UnitConvert<PhysicsVector> for ScreenVector {
     return vector![ScreenScalar::zero(), ScreenScalar::zero()];
   }
   fn convert(self) -> PhysicsVector {
-    return PhysicsVector::from_vec(vector![self.into_vec().x, -self.into_vec().y].scale(0.02));
+    return PhysicsVector::from_vec(
+      vector![self.into_vec().x, -self.into_vec().y]
+        .scale(1.0 / BALANCING.graphics_config.adjusted_scaling()),
+    );
   }
 }
 
@@ -92,7 +95,9 @@ impl UnitConvert2<PhysicsVector> for ScreenVector {
   }
   fn into_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
     return PhysicsVector::from_vec(
-      vector![self.into_vec().x, screen_height() - self.into_vec().y].scale(0.02) + camera_position,
+      vector![self.into_vec().x, screen_height() - self.into_vec().y]
+        .scale(1.0 / BALANCING.graphics_config.adjusted_scaling())
+        + camera_position,
     );
   }
 }
@@ -110,7 +115,7 @@ impl UnitConvert<ScreenVector> for PhysicsVector {
         -(self.y() / BALANCING.graphics_config.rounding_factor).round()
           * BALANCING.graphics_config.rounding_factor
       ]
-      .scale(50.0 * BALANCING.graphics_config.scaling_factor),
+      .scale(BALANCING.graphics_config.adjusted_scaling()),
     )
   }
   fn zero() -> Self {
@@ -131,11 +136,12 @@ impl UnitConvert2<ScreenVector> for PhysicsVector {
       vector![
         (self.into_vec().x / BALANCING.graphics_config.rounding_factor).round()
           * BALANCING.graphics_config.rounding_factor,
-        ((screen_height() * 0.02) - self.into_vec().y / BALANCING.graphics_config.rounding_factor)
+        ((screen_height() / BALANCING.graphics_config.adjusted_scaling())
+          - self.into_vec().y / BALANCING.graphics_config.rounding_factor)
           .round()
           * BALANCING.graphics_config.rounding_factor
       ]
-      .scale(50.0 * BALANCING.graphics_config.scaling_factor)
+      .scale(BALANCING.graphics_config.adjusted_scaling())
         - camera_position,
     )
   }

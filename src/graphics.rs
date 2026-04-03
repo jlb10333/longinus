@@ -1,5 +1,6 @@
-use std::{marker::PhantomData, rc::Rc};
+use std::{cmp::Ordering, marker::PhantomData, rc::Rc};
 
+use itertools::Itertools;
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
 
@@ -88,9 +89,34 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       let map_system = ctx.get::<MapSystem>().unwrap();
       let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
+      let sorted_entities = physics_system
+        .entities
+        .iter()
+        .sorted_by(
+          |(handle_a, _), (handle_b, _)| match (*handle_a, *handle_b) {
+            (EntityHandle::Collider(_), EntityHandle::RigidBody(_)) => Ordering::Less,
+            (EntityHandle::RigidBody(_), EntityHandle::Collider(_)) => Ordering::Greater,
+            (EntityHandle::Collider(handle_a), EntityHandle::Collider(handle_b)) => {
+              if handle_a.0 < handle_b.0 {
+                Ordering::Less
+              } else {
+                Ordering::Greater
+              }
+            }
+            (EntityHandle::RigidBody(handle_a), EntityHandle::RigidBody(handle_b)) => {
+              if handle_a.0 < handle_b.0 {
+                Ordering::Less
+              } else {
+                Ordering::Greater
+              }
+            }
+          },
+        )
+        .collect::<Vec<_>>();
+
       /* Debug */
       if SHOW_COLLIDERS {
-        physics_system.entities.iter().for_each(|(handle, entity)| {
+        sorted_entities.iter().for_each(|(handle, entity)| {
           if let Some(damageable) = entity.components.get::<Damageable>()
             && damageable.damaged
           {
@@ -182,12 +208,12 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             && let Enemy::Sniper(sniper) = enemy.as_ref()
             && let EnemySniperState::Cooldown(frames_left) = sniper.state
           {
-            let color_diff = COLOR_4.to_vec() - COLOR_2.to_vec();
-            let color_ease = easing::ease_out_sine()
-              * BALANCING.enemies.sniper.cooldown_initial_frames as f32
-              * color_diff;
+            let color_diff = COLOR_2.to_vec() - COLOR_4.to_vec();
+            let color_ease = easing::ease_out_cubic() * color_diff;
 
-            let current_color = COLOR_2.to_vec() + color_ease.at(frames_left as f32);
+            let current_color = COLOR_4.to_vec()
+              + color_ease
+                .at(frames_left as f32 / BALANCING.enemies.sniper.cooldown_initial_frames as f32);
 
             Some(Color::from_vec(current_color))
           } else if entity.components.get::<Damager>().is_some() {
@@ -234,6 +260,13 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         physics_system
           .collider_set
           .iter()
+          .sorted_by(|(handle_a, _), (handle_b, _)| {
+            if handle_a.0 > handle_b.0 {
+              Ordering::Greater
+            } else {
+              Ordering::Less
+            }
+          })
           .filter(|(handle, _)| {
             !physics_system
               .entities
@@ -363,7 +396,8 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       draw_text(
         &format!(
           "HP {}/{}",
-          player_damageable.health, player_damageable.max_health
+          player_damageable.health.round(),
+          player_damageable.max_health.round()
         ),
         screen_width() * 0.01,
         screen_height() * 0.8,

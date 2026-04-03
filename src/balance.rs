@@ -180,6 +180,12 @@ pub struct GraphicsConfig {
   pub scaling_factor: f32,
 }
 
+impl GraphicsConfig {
+  pub fn adjusted_scaling(&self) -> f32 {
+    self.scaling_factor * 50.0
+  }
+}
+
 #[derive(Deserialize)]
 pub struct Balancing {
   pub status_effects: StatusEffectsBalancing,

@@ -68,7 +68,7 @@
             "phase_2_max_num_bounces": 7
         },
         "defender": {
-            "damage": 5,
+            "damage": 15,
             "aggro_range": 20,
             "hold_force": 0.2,
             "cooldown_initial_frames": 35,
@@ -116,7 +116,7 @@
     "graphics_config": {
         "rounding_factor": 0.08,
         "hitstop_enabled": false,
-        "scaling_factor": 2.0
+        "scaling_factor": 1.5
     }
 }
 
