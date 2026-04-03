@@ -174,10 +174,18 @@ pub struct AbilityBalancing {
 }
 
 #[derive(Deserialize)]
+pub struct GraphicsConfig {
+  pub hitstop_enabled: bool,
+  pub rounding_factor: f32,
+  pub scaling_factor: f32,
+}
+
+#[derive(Deserialize)]
 pub struct Balancing {
   pub status_effects: StatusEffectsBalancing,
   pub enemies: EnemyBalancing,
   pub abilities: AbilityBalancing,
+  pub graphics_config: GraphicsConfig,
 }
 
 const BALANCING_PATH: &str = "assets/balancing.json";

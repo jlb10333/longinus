@@ -112,6 +112,11 @@
             "mana_use": 3,
             "max_cooldown": 10
         }
+    },
+    "graphics_config": {
+        "rounding_factor": 0.08,
+        "hitstop_enabled": false,
+        "scaling_factor": 2.0
     }
 }
 

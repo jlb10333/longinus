@@ -7,6 +7,7 @@ use macroquad::{
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
+  balance::BALANCING,
   load_map::MapSystem,
   physics::PhysicsSystem,
   save::SaveData,
@@ -125,10 +126,18 @@ impl System for CameraSystem {
       map_bounds_offset_top + map_bounds_offset_bottom,
     ];
 
+    let new_translation =
+      self.translation + get_camera_translation_change(player_translation) + map_bounds_offset;
+
+    let rounded_translation = vector![
+      ((new_translation.x) * BALANCING.graphics_config.rounding_factor * 50.0).round()
+        / (BALANCING.graphics_config.rounding_factor * 50.0),
+      ((new_translation.y) * BALANCING.graphics_config.rounding_factor * 50.0).round()
+        / (BALANCING.graphics_config.rounding_factor * 50.0)
+    ];
+
     Rc::new(Self {
-      translation: self.translation
-        + get_camera_translation_change(player_translation)
-        + map_bounds_offset,
+      translation: rounded_translation,
       map_top_left: self.map_top_left,
       map_bottom_right: self.map_bottom_right,
     })

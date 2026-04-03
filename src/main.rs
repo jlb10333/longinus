@@ -1,3 +1,4 @@
+use balance::BALANCING;
 use macroquad::prelude::*;
 use system::ProcessContextOptions;
 
@@ -88,7 +89,8 @@ async fn main() {
           .start(Some(ProcessContextOptions {
             should_freeze_fixed: Some(|ctx| {
               !ctx.get::<MenuSystem<_>>().unwrap().active_menus.is_empty()
-                || ctx.get::<PhysicsSystem>().unwrap().hitstop_frames_left > 0
+                || (BALANCING.graphics_config.hitstop_enabled
+                  && ctx.get::<PhysicsSystem>().unwrap().hitstop_frames_left > 0)
             }),
             ..Default::default()
           }))

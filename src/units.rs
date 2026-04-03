@@ -4,6 +4,8 @@ use derive_more::{Add, Div, Mul, Sub};
 use macroquad::window::screen_height;
 use rapier2d::{na::Vector2, prelude::*};
 
+use crate::balance::BALANCING;
+
 pub fn vec_zero() -> Vector2<f32> {
   return vector![0.0, 0.0];
 }
@@ -42,7 +44,7 @@ impl UnitConvert<PhysicsScalar> for ScreenScalar {
     return Self(0.0);
   }
   fn convert(self) -> PhysicsScalar {
-    return PhysicsScalar(*self * 0.2);
+    return PhysicsScalar(*self / (50.0 * BALANCING.graphics_config.scaling_factor));
   }
 }
 
@@ -63,7 +65,7 @@ impl UnitConvert<ScreenScalar> for PhysicsScalar {
     return Self(0.0);
   }
   fn convert(self) -> ScreenScalar {
-    return ScreenScalar(*self * 50.0);
+    return ScreenScalar(*self * 50.0 * BALANCING.graphics_config.scaling_factor);
   }
 }
 
@@ -101,10 +103,18 @@ pub type PhysicsVector = Vector2<PhysicsScalar>;
 
 impl UnitConvert<ScreenVector> for PhysicsVector {
   fn convert(self) -> ScreenVector {
-    return ScreenVector::from_vec(vector![self.x(), -self.y()].scale(50.0));
+    ScreenVector::from_vec(
+      vector![
+        (self.x() / BALANCING.graphics_config.rounding_factor).round()
+          * BALANCING.graphics_config.rounding_factor,
+        -(self.y() / BALANCING.graphics_config.rounding_factor).round()
+          * BALANCING.graphics_config.rounding_factor
+      ]
+      .scale(50.0 * BALANCING.graphics_config.scaling_factor),
+    )
   }
   fn zero() -> Self {
-    return Self::from_vec(vec_zero());
+    Self::from_vec(vec_zero())
   }
 }
 
@@ -114,16 +124,19 @@ impl UnitConvert2<ScreenVector> for PhysicsVector {
     return vector![mapped[0], mapped[1]];
   }
   fn from_vec(vector: Vector2<f32>) -> Self {
-    return vector![PhysicsScalar(vector.x), PhysicsScalar(vector.y)];
+    vector![PhysicsScalar(vector.x), PhysicsScalar(vector.y)]
   }
   fn into_pos(self, camera_position: Vector2<f32>) -> Vector<ScreenScalar> {
-    return Vector::<ScreenScalar>::from_vec(
+    Vector::<ScreenScalar>::from_vec(
       vector![
-        self.into_vec().x,
-        (screen_height() * 0.02) - self.into_vec().y
+        (self.into_vec().x / BALANCING.graphics_config.rounding_factor).round()
+          * BALANCING.graphics_config.rounding_factor,
+        ((screen_height() * 0.02) - self.into_vec().y / BALANCING.graphics_config.rounding_factor)
+          .round()
+          * BALANCING.graphics_config.rounding_factor
       ]
-      .scale(50.0)
+      .scale(50.0 * BALANCING.graphics_config.scaling_factor)
         - camera_position,
-    );
+    )
   }
 }

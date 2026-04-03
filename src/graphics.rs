@@ -5,14 +5,16 @@ use rapier2d::prelude::*;
 
 use crate::{
   ability::AbilitySystem,
+  balance::BALANCING,
   camera::CameraSystem,
   combat::{
     CombatSystem, Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind,
     distance_projection_screen, get_reticle_pos, get_slot_positions, weapon_module_from_kind,
   },
   controls::ControlsSystem,
-  easing::ease_out_cubic,
-  ecs::{Activator, Damageable, Damager, EntityHandle, GravitySource, Id},
+  easing::{self, ease_out_cubic},
+  ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id},
+  enemy::EnemySniperState,
   graphics_utils::{draw_collider, draw_label},
   load_map::{MapSystem, PLAYER_INTERACTION_GROUPS, physics_scalar_to_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
@@ -176,24 +178,30 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             return;
           }
 
+          let color = if let Some(enemy) = entity.components.get::<Enemy>()
+            && let Enemy::Sniper(sniper) = enemy.as_ref()
+            && let EnemySniperState::Cooldown(frames_left) = sniper.state
+          {
+            let color_diff = COLOR_4.to_vec() - COLOR_2.to_vec();
+            let color_ease = easing::ease_out_sine()
+              * BALANCING.enemies.sniper.cooldown_initial_frames as f32
+              * color_diff;
+
+            let current_color = COLOR_2.to_vec() + color_ease.at(frames_left as f32);
+
+            Some(Color::from_vec(current_color))
+          } else if entity.components.get::<Damager>().is_some() {
+            Some(COLOR_3)
+          } else {
+            None
+          };
+
           handle
             .colliders(&physics_system.rigid_body_set)
             .iter()
             .for_each(|&&collider_handle| {
               let collider = &physics_system.collider_set[collider_handle];
-              draw_collider(
-                collider,
-                camera_system.translation,
-                None,
-                if entity.components.get::<Damager>().is_some()
-                  && collider.collision_groups().test(PLAYER_INTERACTION_GROUPS)
-                {
-                  Some(COLOR_3)
-                } else {
-                  None
-                },
-                None,
-              );
+              draw_collider(collider, camera_system.translation, None, color, None);
             });
 
           /* Draw entity labels */
