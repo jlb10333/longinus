@@ -293,6 +293,10 @@
         {
          "firstgid":1,
          "source":"..\/tilesets\/colliders.tsx"
+        }, 
+        {
+         "firstgid":4,
+         "source":"..\/tilesets\/tiles.tsx"
         }],
  "tilewidth":8,
  "type":"map",
