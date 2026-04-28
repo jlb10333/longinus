@@ -9,6 +9,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
   ability::AbilitySystem,
+  balance::BALANCING,
   combat::{CombatSystem, WeaponModuleKind, WeaponOutputKind, distance_projection_physics},
   controls::{ControlsSystem, angle_from_vec},
   ecs::{
@@ -35,7 +36,6 @@ use crate::{
 };
 
 const PLAYER_SPEED_LIMIT: f32 = 5.5;
-const PLAYER_ACCELERATION_MOD: f32 = 0.35;
 
 const CHAIN_SEGMENT_LENGTH: f32 = 0.5;
 const CHAIN_SEGMENT_HEIGHT: f32 = 0.05;
@@ -102,7 +102,7 @@ fn load_new_map(
     .translation(player_spawn.translation.into_vec())
     .build();
   player_rigid_body.wake_up(true);
-  let player_collider = &ColliderBuilder::ball(0.25)
+  let player_collider = &ColliderBuilder::ball(BALANCING.player.size)
     .collision_groups(PLAYER_INTERACTION_GROUPS)
     .build();
   let player_handle = rigid_body_set.insert(player_rigid_body);
@@ -264,13 +264,17 @@ fn load_new_map(
   let map_transitions = map
     .map_transitions
     .iter()
-    .map(|map_transition| Entity {
-      handle: EntityHandle::Collider(collider_set.insert(map_transition.collider.clone())),
-      components: ComponentSet::new().insert(MapTransitionOnCollision {
-        map_name: map_transition.map_name.clone(),
-        target_player_spawn_id: map_transition.target_player_spawn_id,
-      }),
-      label: map_transition.map_name.clone(),
+    .map(|map_transition| {
+      collider_set.insert(map_transition.enemy_block_collider.clone());
+
+      Entity {
+        handle: EntityHandle::Collider(collider_set.insert(map_transition.collider.clone())),
+        components: ComponentSet::new().insert(MapTransitionOnCollision {
+          map_name: map_transition.map_name.clone(),
+          target_player_spawn_id: map_transition.target_player_spawn_id,
+        }),
+        label: map_transition.map_name.clone(),
+      }
     })
     .collect::<Vec<_>>();
 
@@ -2432,13 +2436,13 @@ fn player_movement_impulse(
   controls_system: Rc<ControlsSystem<SaveData>>,
   player: &RigidBody,
 ) -> Vector<f32> {
-  let attempted_acceleration = controls_system.left_stick.into_vec() * PLAYER_ACCELERATION_MOD;
   let player_mass = player.mass();
+  let attempted_acceleration =
+    controls_system.left_stick.into_vec() * BALANCING.player.acceleration_mod * player.mass();
   let player_velocity = player.linvel();
-  let velocity_change = attempted_acceleration * player_mass;
 
   let safe_acceleration_x = if attempted_acceleration.x == 0.0
-    || velocity_change.x.signum() != player_velocity.x.signum()
+    || attempted_acceleration.x.signum() != player_velocity.x.signum()
     || player_velocity.x.abs() < PLAYER_SPEED_LIMIT
   {
     attempted_acceleration.x
@@ -2447,7 +2451,7 @@ fn player_movement_impulse(
   };
 
   let safe_acceleration_y = if attempted_acceleration.y == 0.0
-    || velocity_change.y.signum() != player_velocity.y.signum()
+    || attempted_acceleration.y.signum() != player_velocity.y.signum()
     || player_velocity.y.abs() < PLAYER_SPEED_LIMIT
   {
     attempted_acceleration.y

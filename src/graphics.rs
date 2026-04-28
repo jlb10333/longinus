@@ -1135,6 +1135,7 @@ fn debug_module_symbol(module_kind: WeaponModuleKind) -> &'static str {
     WeaponModuleKind::StatusDeteriorate => "DETR",
     WeaponModuleKind::StatusVulnerable => "VLNR",
     WeaponModuleKind::StatusWeakness => "W3KR",
+    WeaponModuleKind::ManaFree => "M4NC",
   }
 }
 
@@ -1188,6 +1189,9 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
         "modifier; applies the WEAKNESS status which causes enemies to deal",
         "less damage",
       ]
+    }
+    WeaponModuleKind::ManaFree => {
+      vec!["modifier; damagefree, manafree"]
     }
   }
 }

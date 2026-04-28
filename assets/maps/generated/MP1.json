@@ -67,6 +67,23 @@
                  "width":40,
                  "x":88,
                  "y":312
+                }, 
+                {
+                 "id":22,
+                 "properties":[
+                        {
+                         "name":"Content",
+                         "type":"string",
+                         "value":"To make an embarrassing admission, there have been\npoints in my life at which I've craved death, or\nso I claimed at the very least.\n\nWe are already dead; to be slowly digested is our \neternal punishment. You could say that I got what\nI wanted.\n\nWhy then do I crave life so strongly?"
+                        }, 
+                        {
+                         "name":"CreatedAt",
+                         "type":"string",
+                         "value":"235 A.L. - 47 years ago"
+                        }],
+                 "template":"templates\/Terminal.tx",
+                 "x":80,
+                 "y":264
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -75,7 +92,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":22,
+ "nextobjectid":23,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

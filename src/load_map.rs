@@ -1242,6 +1242,7 @@ pub struct ItemPickup {
 pub struct MapTransition {
   pub map_name: String,
   pub collider: Collider,
+  pub enemy_block_collider: Collider,
   pub target_player_spawn_id: i32,
 }
 
@@ -1518,24 +1519,37 @@ impl Object {
           .build(),
       }),
 
-      Object::MapTransition(map_transition) => MapComponent::MapTransition(MapTransition {
-        target_player_spawn_id: map_transition.properties.0.value,
-        map_name: map_transition.name.clone(),
-        collider: cuboid_collider_from_map(
+      Object::MapTransition(map_transition) => {
+        let collider_base = cuboid_collider_from_map(
           map_transition.x,
           map_transition.y,
           map_transition.width,
           map_transition.height,
           map_height,
-        )
-        .sensor(true)
-        .collision_groups(InteractionGroups {
-          memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
-          filter: COLLISION_GROUP_PLAYER,
-          ..Default::default()
+        );
+
+        MapComponent::MapTransition(MapTransition {
+          target_player_spawn_id: map_transition.properties.0.value,
+          map_name: map_transition.name.clone(),
+          collider: collider_base
+            .clone()
+            .sensor(true)
+            .collision_groups(InteractionGroups {
+              memberships: COLLISION_GROUP_PLAYER_INTERACTIBLE,
+              filter: COLLISION_GROUP_PLAYER,
+              ..Default::default()
+            })
+            .build(),
+          enemy_block_collider: collider_base
+            .clone()
+            .collision_groups(InteractionGroups {
+              memberships: COLLISION_GROUP_WALL,
+              filter: !COLLISION_GROUP_PLAYER,
+              ..Default::default()
+            })
+            .build(),
         })
-        .build(),
-      }),
+      }
 
       Object::SavePoint(save_point) => MapComponent::SavePoint(SavePoint {
         player_spawn_id: save_point.properties.0.value,

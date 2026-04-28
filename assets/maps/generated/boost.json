@@ -293,7 +293,7 @@
                  "y":208
                 }, 
                 {
-                 "height":16,
+                 "height":24,
                  "id":12,
                  "name":"Touch Sensor",
                  "properties":[
@@ -305,9 +305,9 @@
                  "rotation":0,
                  "type":"TouchSensor",
                  "visible":true,
-                 "width":16,
-                 "x":312,
-                 "y":200
+                 "width":24,
+                 "x":332,
+                 "y":196
                 }, 
                 {
                  "height":0,
@@ -560,13 +560,6 @@
                  "y":296
                 }, 
                 {
-                 "id":41,
-                 "name":"Sniper",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":200,
-                 "y":88
-                }, 
-                {
                  "id":42,
                  "name":"Sniper",
                  "template":"templates\/EnemySpawn.tx",
@@ -574,18 +567,11 @@
                  "y":88
                 }, 
                 {
-                 "id":43,
-                 "name":"Sniper",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":224,
-                 "y":120
-                }, 
-                {
                  "id":44,
                  "name":"Sniper",
                  "template":"templates\/EnemySpawn.tx",
-                 "x":184,
-                 "y":120
+                 "x":216,
+                 "y":112
                 }, 
                 {
                  "height":32,
@@ -633,8 +619,8 @@
                  "id":47,
                  "name":"Sniper",
                  "template":"templates\/EnemySpawn.tx",
-                 "x":280,
-                 "y":152
+                 "x":248,
+                 "y":128
                 }, 
                 {
                  "height":0,
@@ -898,7 +884,7 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":12
+                         "value":13
                         }, 
                         {
                          "name":"ReverseDirection",
@@ -982,7 +968,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":66,
+ "nextobjectid":67,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

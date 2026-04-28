@@ -121,7 +121,7 @@
                  "y":460
                 }, 
                 {
-                 "height":16,
+                 "height":56,
                  "id":5,
                  "name":"Touch Sensor",
                  "properties":[
@@ -135,7 +135,7 @@
                  "visible":true,
                  "width":16,
                  "x":144,
-                 "y":420
+                 "y":400
                 }, 
                 {
                  "height":20,

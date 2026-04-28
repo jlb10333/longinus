@@ -13,7 +13,6 @@
       - Make map transitions solid for enemies
     - Visual explainability
       - Show all health tank and mana tanks in inventory
-      - Get rid of hitstop (or better yet, make it configurable)
   - Testing
     - Test at different frame rates
   

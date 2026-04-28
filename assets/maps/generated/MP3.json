@@ -797,24 +797,37 @@
                  "y":56
                 }, 
                 {
-                 "height":0,
                  "id":48,
                  "name":"LaserGate",
                  "rotation":90,
                  "template":"templates\/EnemySpawn.tx",
-                 "width":37,
                  "x":176,
                  "y":99
                 }, 
                 {
-                 "height":0,
                  "id":49,
                  "name":"LaserGate",
                  "rotation":90,
                  "template":"templates\/EnemySpawn.tx",
-                 "width":37,
                  "x":184,
                  "y":96
+                }, 
+                {
+                 "id":50,
+                 "properties":[
+                        {
+                         "name":"Content",
+                         "type":"string",
+                         "value":"Ten thousand voices ring out in harmony;\nI am carried in the great bosom of our species's \nflesh. They know it is for their benefit\nthat I claim victory over the forces of evil\nand secure our lot in the eternal palace\nonce and for all."
+                        }, 
+                        {
+                         "name":"CreatedAt",
+                         "type":"string",
+                         "value":"235 A.L. - 47 years ago"
+                        }],
+                 "template":"templates\/Terminal.tx",
+                 "x":328,
+                 "y":152
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -823,7 +836,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":50,
+ "nextobjectid":51,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",

@@ -7,8 +7,14 @@ use crate::ecs::StatusEffectsBalancing;
 /**
  * Loads balancing data from assets/balancing.json
  *
- * Stores it in a static singleton object `balancing`
+ * Stores it in a static singleton object `BALANCING`
  */
+
+#[derive(Deserialize)]
+pub struct PlayerBalancing {
+  pub size: f32,
+  pub acceleration_mod: f32,
+}
 
 #[derive(Deserialize)]
 pub struct StatusEffectBalancing {
@@ -155,6 +161,16 @@ pub struct EnemyBalancing {
 }
 
 #[derive(Deserialize)]
+pub struct PlasmaBalancing {
+  pub base_speed: f32,
+}
+
+#[derive(Deserialize)]
+pub struct WeaponBalancing {
+  pub plasma: PlasmaBalancing,
+}
+
+#[derive(Deserialize)]
 pub struct ManaTankBalancing {
   pub capacity: f32,
   pub recharge_rate: f32,
@@ -188,8 +204,10 @@ impl GraphicsConfig {
 
 #[derive(Deserialize)]
 pub struct Balancing {
+  pub player: PlayerBalancing,
   pub status_effects: StatusEffectsBalancing,
   pub enemies: EnemyBalancing,
+  pub weapons: WeaponBalancing,
   pub abilities: AbilityBalancing,
   pub graphics_config: GraphicsConfig,
 }

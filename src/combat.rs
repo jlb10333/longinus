@@ -6,6 +6,7 @@ use std::{
 
 use crate::{
   ability::{AbilitySystem, ManaTanksActiveInfo},
+  balance::BALANCING,
   controls::{ControlsSystem, angle_from_vec},
   ecs::{ComponentSet, ExplodeOnCollision, Id, PersistDestruction, StatusEffect},
   load_map::{MapSystem, PLAYER_PROJECTILE_INTERACTION_GROUPS},
@@ -72,8 +73,8 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
 
   let front_ahead = slot(0.0, 0.0);
 
-  let front_double_left = slot(-PI / 8.0, 0.0);
-  let front_double_right = slot(PI / 8.0, 0.0);
+  let front_double_left = slot(-PI / 6.0, 0.0);
+  let front_double_right = slot(PI / 6.0, 0.0);
 
   let front_45_left = slot(-PI / 4.0, -PI / 4.0);
   let front_45_right = slot(PI / 4.0, PI / 4.0);
@@ -87,8 +88,8 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
 
   let back_ahead = slot(PI, PI);
 
-  let back_double_left = slot(PI - PI / 8.0, PI);
-  let back_double_right = slot(PI + PI / 8.0, PI);
+  let back_double_left = slot(PI - PI / 6.0, PI);
+  let back_double_right = slot(PI + PI / 6.0, PI);
 
   let back_45_left = slot(PI - PI / 4.0, PI - PI / 4.0);
   let back_45_right = slot(PI + PI / 4.0, PI + PI / 4.0);
@@ -177,6 +178,8 @@ pub struct Weapon {
   reversed: bool,
   mana_cost: f32,
   status_effects: List<(StatusEffect, f32)>,
+  mana_free: bool,
+  damage_free: bool,
 }
 
 impl Weapon {
@@ -216,7 +219,8 @@ impl Weapon {
       &self.slot_positions
     };
 
-    let mana_cost = self.mana_cost * slot_positions.size() as f32;
+    let mana_cost =
+      self.mana_cost * slot_positions.size() as f32 * if self.mana_free { 0.0 } else { 1.0 };
 
     if mana_tanks_info.total_mana_level() < mana_cost {
       return (self.clone(), Vec::new(), 0.0);
@@ -246,7 +250,9 @@ impl Weapon {
                   initial_impulse,
                   force_mod: base_projectile.force_mod,
                 }),
-                damage: base_weapon_output.damage * self.damage_mod,
+                damage: base_weapon_output.damage
+                  * self.damage_mod
+                  * if self.damage_free { 0.0 } else { 1.0 },
                 offset: slot.offset,
                 component_set: base_weapon_output.component_set,
                 status_effects: self.status_effects.clone(),
@@ -300,7 +306,7 @@ fn base_output_from_weapon_type(weapon_output_type: WeaponOutputType) -> WeaponO
 
 fn base_speed_from_projectile_type(projectile_type: WeaponOutputType) -> f32 {
   match projectile_type {
-    WeaponOutputType::Plasma => 1.0,
+    WeaponOutputType::Plasma => BALANCING.weapons.plasma.base_speed,
     WeaponOutputType::Missile => 0.01,
     WeaponOutputType::Laser => 1.0,
   }
@@ -317,6 +323,8 @@ fn weapon_with_defaults(projectile_type: WeaponOutputType, max_cooldown: f32) ->
     reversed: false,
     mana_cost: 0.0,
     status_effects: list![],
+    mana_free: false,
+    damage_free: false,
   }
 }
 
@@ -406,7 +414,7 @@ fn deteriorate(weapon: &Weapon) -> Weapon {
     status_effects: weapon
       .status_effects
       .push_front((StatusEffect::Deteriorate, 6.0)),
-    mana_cost: weapon.mana_cost + 0.1,
+    mana_cost: weapon.mana_cost + 0.3,
     ..weapon.clone()
   }
 }
@@ -429,6 +437,15 @@ fn weakness(weapon: &Weapon) -> Weapon {
       .status_effects
       .push_front((StatusEffect::Weakness, 8.0)),
     mana_cost: weapon.mana_cost + 0.1,
+    ..weapon.clone()
+  }
+}
+
+// M4NF
+fn mana_free(weapon: &Weapon) -> Weapon {
+  Weapon {
+    mana_free: true,
+    damage_free: true,
     ..weapon.clone()
   }
 }
@@ -460,6 +477,7 @@ pub enum WeaponModuleKind {
   DoubleDamage75Freq,
   DoubleFreq75Damage,
   ManaCost,
+  ManaFree,
   StatusDeteriorate,
   StatusVulnerable,
   StatusWeakness,
@@ -519,6 +537,9 @@ pub fn weapon_module_from_kind(kind: WeaponModuleKind) -> WeaponModule {
     }
     WeaponModuleKind::StatusWeakness => {
       WeaponModule::Modulator(Rc::new(weakness), HashSet::from([Right]))
+    }
+    WeaponModuleKind::ManaFree => {
+      WeaponModule::Modulator(Rc::new(mana_free), HashSet::from([Left]))
     }
   }
 }

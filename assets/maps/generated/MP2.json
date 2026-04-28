@@ -296,6 +296,23 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":232,
                  "y":48
+                }, 
+                {
+                 "id":26,
+                 "properties":[
+                        {
+                         "name":"Content",
+                         "type":"string",
+                         "value":"I crave the burnt-rubber smell of the commercial\nbarges; I crave that uniquely awful casserole \nthat one vendor serves on the Perception. \n\nI would do anything to experience these one last\ntime. I would do the most menial, mind-numbing \njobs. I would serve that casserole if I really had \nto.\n"
+                        }, 
+                        {
+                         "name":"CreatedAt",
+                         "type":"string",
+                         "value":"235 A.L. - 47 years ago"
+                        }],
+                 "template":"templates\/Terminal.tx",
+                 "x":24,
+                 "y":256
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -304,7 +321,7 @@
          "y":0
         }],
  "nextlayerid":3,
- "nextobjectid":26,
+ "nextobjectid":27,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.8.2",
