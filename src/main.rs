@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use balance::BALANCING;
 use macroquad::prelude::*;
 use system::ProcessContextOptions;
@@ -35,6 +37,22 @@ mod units;
 #[derive(Clone, Default)]
 pub struct Start;
 
+pub struct GameTextures {
+  pub tiles_texture: Texture2D,
+}
+
+impl Default for GameTextures {
+  fn default() -> Self {
+    panic!()
+  }
+}
+
+#[derive(Clone, Default)]
+pub struct GameInput {
+  pub save_data: SaveData,
+  pub textures: Rc<GameTextures>,
+}
+
 enum State {
   MainMenu,
   Game(SaveData),
@@ -52,6 +70,15 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+  // Load textures async
+  let tiles_texture = load_texture("./assets/maps/tilesets/tiles.png")
+    .await
+    .unwrap();
+
+  tiles_texture.set_filter(FilterMode::Nearest);
+
+  let textures = Rc::new(GameTextures { tiles_texture });
+
   let mut state = State::MainMenu;
 
   loop {
@@ -75,7 +102,12 @@ async fn main() {
         State::Game(save_data)
       }
       State::Game(save_data) => {
-        let quit_decision = Process::new(&save_data)
+        let game_input = GameInput {
+          save_data,
+          textures: Rc::clone(&textures),
+        };
+
+        let quit_decision = Process::new(&game_input)
           .add_system(SaveSystem::start)
           .add_system(CombatSystem::start)
           .add_system(MapSystem::start)

@@ -21,7 +21,7 @@
          "name":"Colliders",
          "opacity":1,
          "type":"tilelayer",
-         "visible":true,
+         "visible":false,
          "width":40,
          "x":0,
          "y":0
@@ -72,7 +72,7 @@
                 }],
          "opacity":1,
          "type":"objectgroup",
-         "visible":true,
+         "visible":false,
          "x":0,
          "y":0
         }],
@@ -98,7 +98,7 @@
         }, 
         {
          "firstgid":4,
-         "source":"..\/tilesets\/tiles.tsx"
+         "source":"..\/tilesets\/tiles.json"
         }],
  "tilewidth":8,
  "type":"map",

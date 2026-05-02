@@ -1,7 +1,7 @@
 use std::{env::current_dir, f32::consts::PI, fs, path::Path, rc::Rc};
 
 use rapier2d::{
-  na::{Point2, Unit, Vector2},
+  na::{Unit, Vector2},
   prelude::*,
 };
 use rpds::HashTrieMap;
@@ -9,27 +9,21 @@ use serde::Deserialize;
 use serde_literals::lit_str;
 
 use crate::{
+  GameInput,
   balance::BALANCING,
   combat::{WeaponModuleKind, distance_projection_physics},
   ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Id},
-  f::MonadTranslate,
   physics::PhysicsSystem,
-  save::SaveData,
   system::System,
   units::{PhysicsScalar, PhysicsVector, UnitConvert2, vec_zero},
 };
 
 #[derive(Clone, Debug, Deserialize)]
-enum TileLayerName {
-  Colliders,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-struct TileLayer {
-  data: Vec<i32>,
-  height: i32,
-  width: i32,
-  name: TileLayerName,
+pub struct ColliderLayer {
+  pub data: Vec<i32>,
+  pub height: i32,
+  pub width: i32,
+  pub name: String,
 }
 
 lit_str!(EnemySpawnTemplatePath, "templates/EnemySpawn.tx");
@@ -847,8 +841,79 @@ struct ObjectLayer {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(untagged)]
+pub enum Layer {
+  ColliderLayer(ColliderLayer),
+  ObjectLayer(ObjectLayer),
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct RawMap {
-  layers: (TileLayer, ObjectLayer),
+  layers: Vec<Layer>,
+}
+
+impl RawMap {
+  pub fn collider_layer(&self) -> &ColliderLayer {
+    self
+      .layers
+      .iter()
+      .find_map(|layer| {
+        if let Layer::ColliderLayer(collider_layer) = layer
+          && collider_layer.name == "Colliders"
+        {
+          Some(collider_layer)
+        } else {
+          None
+        }
+      })
+      .unwrap()
+  }
+
+  pub fn tile_bg_layer(&self) -> &ColliderLayer {
+    self
+      .layers
+      .iter()
+      .find_map(|layer| {
+        if let Layer::ColliderLayer(collider_layer) = layer
+          && collider_layer.name == "TilesBG"
+        {
+          Some(collider_layer)
+        } else {
+          None
+        }
+      })
+      .unwrap()
+  }
+
+  pub fn tile_layer(&self) -> &ColliderLayer {
+    self
+      .layers
+      .iter()
+      .find_map(|layer| {
+        if let Layer::ColliderLayer(collider_layer) = layer
+          && collider_layer.name == "Tiles"
+        {
+          Some(collider_layer)
+        } else {
+          None
+        }
+      })
+      .unwrap()
+  }
+
+  pub fn object_layer(&self) -> &ObjectLayer {
+    self
+      .layers
+      .iter()
+      .find_map(|layer| {
+        if let Layer::ObjectLayer(object_layer) = layer {
+          Some(object_layer)
+        } else {
+          None
+        }
+      })
+      .unwrap()
+  }
 }
 
 #[derive(Deserialize)]
@@ -2026,7 +2091,7 @@ impl Object {
   }
 }
 
-fn physics_translation_from_map(
+pub fn physics_translation_from_map(
   translation_map_x: f32,
   translation_map_y: f32,
   translation_map_width: f32,
@@ -2092,7 +2157,7 @@ pub fn translation_vector_from_index(index: i32, map_dimensions: Vector2<i32>) -
 const DESTRUCTIBLE_WALL_HEALTH: f32 = 1.0;
 const DAMAGING_WALL_DAMAGE: f32 = 10.0;
 
-impl TileLayer {
+impl ColliderLayer {
   pub fn into(&self) -> Vec<MapTile> {
     self
       .data
@@ -2173,14 +2238,14 @@ pub struct Map {
 
 impl RawMap {
   pub fn as_map(&self) -> Map {
-    let tile_layer = &self.layers.0;
+    let collider_layer = self.collider_layer();
 
-    let colliders = tile_layer.into();
+    let colliders = collider_layer.into();
 
-    let entities_layer = &self.layers.1;
+    let entities_layer = self.object_layer();
 
-    let map_height = tile_layer.height as f32 * 8.0;
-    let map_width = tile_layer.width as f32 * 8.0;
+    let map_height = collider_layer.height as f32 * 8.0;
+    let map_width = collider_layer.width as f32 * 8.0;
 
     let converted_entities = entities_layer.into(map_height);
 
@@ -2482,15 +2547,8 @@ impl RawMap {
   }
 }
 
-pub fn load_raw(file_path: &str) -> Option<RawMap> {
-  fs::read_to_string(file_path)
-    .translate()
-    .as_ref()
-    .map(|raw_file| deser_map(raw_file))
-}
-
-pub fn load(file_path: &str) -> Option<Map> {
-  load_raw(file_path).as_ref().map(RawMap::as_map)
+pub fn load(data: &str) -> Map {
+  deser_map(data).as_map()
 }
 
 pub fn load_world() -> Option<World> {
@@ -2508,11 +2566,13 @@ pub fn load_world() -> Option<World> {
 
 #[derive(Clone)]
 pub struct MapSystem {
-  pub map: Option<Map>,
+  pub map: Map,
+  pub raw_map: Rc<RawMap>,
   pub world: Rc<World>,
   pub current_map_name: String,
   pub target_player_spawn_id: i32,
   pub map_registry: Rc<HashTrieMap<String, WorldMapWithTiles>>,
+  pub new_map: bool,
 }
 
 fn map_read_path(map_name: &String) -> String {
@@ -2524,14 +2584,14 @@ fn map_read_path(map_name: &String) -> String {
 }
 
 impl System for MapSystem {
-  type Input = SaveData;
+  type Input = GameInput;
   fn start(
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
-    let save_data = &ctx.input;
+    let save_data = &ctx.input.save_data;
 
     let world = Rc::new(load_world().unwrap());
 
@@ -2540,8 +2600,11 @@ impl System for MapSystem {
         .visited_maps
         .iter()
         .map(|map_name| {
-          let map_raw = load_raw(&map_read_path(map_name)).unwrap();
-          let tiles = map_raw.layers.0.data.clone();
+          let map_data = fs::read_to_string(map_read_path(map_name)).unwrap();
+
+          let map_raw = deser_map(&map_data);
+
+          let tiles = map_raw.collider_layer().data.clone();
 
           let world_map = world
             .maps
@@ -2554,10 +2617,16 @@ impl System for MapSystem {
         .collect::<HashTrieMap<_, _>>(),
     );
 
-    let map = load(&map_read_path(&save_data.map_name));
+    let map_data = fs::read_to_string(map_read_path(&save_data.map_name)).unwrap();
+
+    let raw_map = deser_map(&map_data);
+    let map = raw_map.as_map();
+
     Rc::new(Self {
       world,
       map,
+      raw_map: Rc::new(raw_map),
+      new_map: true,
       map_registry,
       current_map_name: save_data.map_name.clone(),
       target_player_spawn_id: save_data.player_spawn_id,
@@ -2571,8 +2640,10 @@ impl System for MapSystem {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
     if let Some((map_name, id)) = physics_system.load_new_map.as_ref() {
-      let map_raw = load_raw(&map_read_path(map_name)).unwrap();
-      let tiles = map_raw.layers.0.data.clone();
+      let map_data = fs::read_to_string(map_read_path(map_name)).unwrap();
+
+      let raw_map = deser_map(&map_data);
+      let tiles = raw_map.collider_layer().data.clone();
 
       let world_map = self
         .world
@@ -2588,7 +2659,9 @@ impl System for MapSystem {
       );
 
       Rc::new(Self {
-        map: Some(map_raw.as_map()),
+        map: raw_map.as_map(),
+        raw_map: Rc::new(raw_map),
+        new_map: true,
         map_registry,
         current_map_name: map_name.clone(),
         target_player_spawn_id: *id,
@@ -2597,7 +2670,9 @@ impl System for MapSystem {
     } else {
       Rc::new(Self {
         current_map_name: self.current_map_name.clone(),
-        map: None,
+        map: self.map.clone(),
+        raw_map: Rc::clone(&self.raw_map),
+        new_map: false,
         map_registry: Rc::clone(&self.map_registry),
         target_player_spawn_id: self.target_player_spawn_id,
         world: Rc::clone(&self.world),

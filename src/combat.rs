@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::{
+  GameInput,
   ability::{AbilitySystem, ManaTanksActiveInfo},
   balance::BALANCING,
   controls::{ControlsSystem, angle_from_vec},
@@ -12,7 +13,6 @@ use crate::{
   load_map::{MapSystem, PLAYER_PROJECTILE_INTERACTION_GROUPS},
   menu::MenuSystem,
   physics::PhysicsSystem,
-  save::SaveData,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -740,13 +740,13 @@ pub struct CombatSystem {
 }
 
 impl System for CombatSystem {
-  type Input = SaveData;
+  type Input = GameInput;
 
   fn start(ctx: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
-    let save_data = ctx.input.clone();
+    let save_data = ctx.input.clone().save_data;
 
     /* Initialize default equipped weapons */
     let equipped_modules = EquippedModules::from_data(ArrayStorage(save_data.equipped_modules));

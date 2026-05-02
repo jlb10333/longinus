@@ -5,9 +5,9 @@ use macroquad::input::{KeyCode, MouseButton, is_key_down, is_mouse_button_down, 
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
+  GameInput,
   camera::CameraSystem,
   physics::PhysicsSystem,
-  save::SaveData,
   system::{ProcessContext, System},
   units::{PhysicsVector, UnitConvert, UnitConvert2, vec_zero},
 };
@@ -132,7 +132,7 @@ impl<Input: Clone> ControlsSystem<Input> {
           if kbd_w_pressed { 1.0 } else { 0.0 } + if kbd_s_pressed { -1.0 } else { 0.0 }
         ];
 
-        let right_stick_denormalized = if let Some(ctx) = ctx.downcast::<SaveData>() {
+        let right_stick_denormalized = if let Some(ctx) = ctx.downcast::<GameInput>() {
           let physics_system = ctx.get::<PhysicsSystem>().unwrap();
           let camera_system = ctx.get::<CameraSystem>().unwrap();
 

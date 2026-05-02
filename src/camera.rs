@@ -7,10 +7,10 @@ use macroquad::{
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
+  GameInput,
   balance::BALANCING,
   load_map::MapSystem,
   physics::PhysicsSystem,
-  save::SaveData,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert2, vec_zero},
 };
@@ -52,13 +52,13 @@ pub struct CameraSystem {
 }
 
 impl System for CameraSystem {
-  type Input = SaveData;
+  type Input = GameInput;
   fn start(ctx: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
     let map_system = ctx.get::<MapSystem>().unwrap();
-    let map = map_system.map.as_ref().unwrap();
+    let map = &map_system.map;
 
     Rc::new(Self {
       translation: map
@@ -81,7 +81,9 @@ impl System for CameraSystem {
   ) -> Rc<dyn System<Input = Self::Input>> {
     let map_system = ctx.get::<MapSystem>().unwrap();
 
-    if let Some(map) = map_system.map.as_ref() {
+    if map_system.new_map {
+      let map = &map_system.map;
+
       return Rc::new(Self {
         translation: map
           .player_spawns

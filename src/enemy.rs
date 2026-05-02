@@ -6,17 +6,16 @@ use rpds::{List, list};
 
 use crate::{
   balance::BALANCING,
-  combat::{Beam, Projectile, WeaponOutput, WeaponOutputKind, distance_projection_physics},
+  combat::{distance_projection_physics, Beam, Projectile, WeaponOutput, WeaponOutputKind},
   controls::angle_from_vec,
   easing,
   ecs::{Damageable, Enemy, Entity, EntityHandle, StatusEffect},
   load_map::{
-    ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, EnemySpawnEnemy, RAYCAST_INTERACTION_GROUPS,
+    EnemySpawn, EnemySpawnEnemy, ENEMY_PROJECTILE_INTERACTION_GROUPS, RAYCAST_INTERACTION_GROUPS
   },
   physics::PhysicsSystem,
-  save::SaveData,
   system::System,
-  units::{PhysicsVector, UnitConvert2, vec_zero},
+  units::{vec_zero, PhysicsVector, UnitConvert2}, GameInput,
 };
 
 #[derive(Clone)]
@@ -57,7 +56,7 @@ pub struct EnemySystem {
 }
 
 impl System for EnemySystem {
-  type Input = SaveData;
+  type Input = GameInput;
   fn start(
     _: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>>

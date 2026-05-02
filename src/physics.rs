@@ -8,6 +8,7 @@ use rpds::{HashTrieMap, HashTrieSet, List, ht_map, list};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
+  GameInput,
   ability::AbilitySystem,
   balance::BALANCING,
   combat::{CombatSystem, WeaponModuleKind, WeaponOutputKind, distance_projection_physics},
@@ -30,7 +31,6 @@ use crate::{
     COLLISION_GROUP_WALL, ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawnColliderHandles,
     EnemySpawnEnemy, Map, MapAbilityType, MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
   },
-  save::SaveData,
   system::System,
   units::{PhysicsVector, UnitConvert2},
 };
@@ -849,25 +849,27 @@ fn load_new_map(
 }
 
 impl System for PhysicsSystem {
-  type Input = SaveData;
+  type Input = GameInput;
   fn start(ctx: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
   where
     Self: Sized,
   {
     let map_system = ctx.get::<MapSystem>().unwrap();
-    let map = map_system.map.as_ref().unwrap();
+    let map = &map_system.map;
 
     let combat_system = ctx.get::<CombatSystem>().unwrap();
+
+    let save_data = &ctx.input.save_data;
 
     load_new_map(
       map,
       &map_system.current_map_name,
       &combat_system.exhausted_entities,
       map_system.target_player_spawn_id,
-      ctx.input.player_health,
-      ctx.input.player_max_health,
-      ctx.input.acquired_boost,
-      ctx.input.acquired_chain,
+      save_data.player_health,
+      save_data.player_max_health,
+      save_data.acquired_boost,
+      save_data.acquired_chain,
     )
   }
 
@@ -898,7 +900,7 @@ impl System for PhysicsSystem {
       QueryFilter::default().groups(ENEMY_PROJECTILE_INTERACTION_GROUPS),
     );
 
-    if let Some(map) = map_system.map.as_ref() {
+    if map_system.new_map {
       let player_entity = self
         .entities
         .get(&EntityHandle::RigidBody(self.player_handle))
@@ -906,7 +908,7 @@ impl System for PhysicsSystem {
       let player_damageable = player_entity.components.get::<Damageable>().unwrap();
 
       return load_new_map(
-        map,
+        &map_system.map,
         &map_system.current_map_name,
         &combat_system.exhausted_entities,
         map_system.target_player_spawn_id,
@@ -2433,7 +2435,7 @@ impl System for PhysicsSystem {
 }
 
 fn player_movement_impulse(
-  controls_system: Rc<ControlsSystem<SaveData>>,
+  controls_system: Rc<ControlsSystem<GameInput>>,
   player: &RigidBody,
 ) -> Vector<f32> {
   let player_mass = player.mass();

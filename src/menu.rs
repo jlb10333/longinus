@@ -5,12 +5,12 @@ use std::rc::Rc;
 use rapier2d::prelude::*;
 use rapier2d::{na::Vector2, parry::utils::hashmap::HashMap};
 
-use crate::Start;
 use crate::combat::Direction;
 use crate::ecs::{Destroyed, EntityHandle, Terminal};
 use crate::load_map::MapAbilityType;
 use crate::physics::PhysicsSystem;
 use crate::save::{SaveData, SaveSystem};
+use crate::{GameInput, Start};
 use crate::{
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, EquippedModules, UnequippedModules,
@@ -136,7 +136,7 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
 
     let save_system = ctx.get::<SaveSystem<_>>().unwrap();
 
-    if let Some(ctx) = ctx.downcast::<SaveData>() {
+    if let Some(ctx) = ctx.downcast::<GameInput>() {
       let combat_system = ctx.get::<CombatSystem>().unwrap();
 
       if !self.active_menus.is_empty() {

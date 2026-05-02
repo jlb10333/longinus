@@ -17,7 +17,7 @@ use crate::{
   ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id},
   enemy::EnemySniperState,
   graphics_utils::{draw_collider, draw_label},
-  load_map::{MapSystem, PLAYER_INTERACTION_GROUPS, physics_scalar_to_map},
+  load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
   save::SaveSystem,
@@ -28,7 +28,7 @@ use crate::{
 const RETICLE_SIZE: f32 = 3.0;
 
 /* DEBUG OPTIONS */
-const SHOW_COLLIDERS: bool = true;
+const SHOW_COLLIDERS: bool = false;
 const SHOW_SLOTS: bool = true;
 
 /* Colors */
@@ -63,6 +63,9 @@ pub struct GraphicsSystem<Input>(PhantomData<Input>);
 const MINI_MAP_TILE_WIDTH: f32 = 2.0;
 const MINI_MAP_TILE_HEIGHT: f32 = 2.0;
 
+const TILEMAP_TILE_WIDTH: f32 = 8.0;
+const TILEMAP_TILE_HEIGHT: f32 = 8.0;
+
 impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   type Input = Input;
 
@@ -88,6 +91,15 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       let physics_system = ctx.get::<PhysicsSystem>().unwrap();
       let map_system = ctx.get::<MapSystem>().unwrap();
       let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
+
+      let tiles_texture = &ctx.input.textures.tiles_texture;
+
+      // Draw tiles bg
+      let tile_bg_layer = map_system.raw_map.tile_bg_layer();
+      draw_tile_layer(tile_bg_layer, tiles_texture, &camera_system);
+
+      let tile_layer = map_system.raw_map.tile_layer();
+      draw_tile_layer(tile_layer, tiles_texture, &camera_system);
 
       let sorted_entities = physics_system
         .entities
@@ -519,6 +531,54 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   ) -> Rc<dyn System<Input = Self::Input>> {
     Rc::new(self.clone())
   }
+}
+
+fn draw_tile_layer(
+  layer: &ColliderLayer,
+  target_texture: &Texture2D,
+  camera_system: &Rc<CameraSystem>,
+) {
+  layer
+    .data
+    .iter()
+    .enumerate()
+    .for_each(|(index, tile_data)| {
+      let map_x = index as i32 % layer.width;
+      let map_y = index as i32 / layer.width;
+
+      let physics_translation = PhysicsVector::from_vec(physics_translation_from_map(
+        map_x as f32 * 8.0,
+        map_y as f32 * 8.0,
+        0.0,
+        0.0,
+        layer.height as f32 * 8.0,
+      ));
+      let screen_translation = physics_translation.into_pos(camera_system.translation);
+
+      let actual_data = (tile_data - 4) as f32;
+
+      let source = Rect {
+        x: (actual_data % TILEMAP_TILE_WIDTH) * TILEMAP_TILE_WIDTH,
+        y: (actual_data / TILEMAP_TILE_WIDTH).floor() * TILEMAP_TILE_HEIGHT,
+        h: TILEMAP_TILE_WIDTH,
+        w: TILEMAP_TILE_HEIGHT,
+      };
+
+      draw_texture_ex(
+        target_texture,
+        screen_translation.x(),
+        screen_translation.y(),
+        WHITE,
+        DrawTextureParams {
+          dest_size: Some(Vec2 { x: 64.0, y: 64.0 }),
+          source: Some(source),
+          rotation: 0.0,
+          flip_x: false,
+          flip_y: false,
+          pivot: None,
+        },
+      );
+    });
 }
 
 fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {

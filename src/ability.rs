@@ -4,13 +4,13 @@ use rapier2d::{na::Vector2, prelude::RigidBodyHandle};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+  GameInput,
   balance::BALANCING,
   combat::CombatSystem,
   controls::ControlsSystem,
   load_map::MapAbilityType,
   menu::MenuSystem,
   physics::PhysicsSystem,
-  save::SaveData,
   system::System,
   units::{PhysicsVector, UnitConvert, UnitConvert2},
 };
@@ -132,7 +132,7 @@ pub struct AbilitySystem {
 }
 
 impl System for AbilitySystem {
-  type Input = SaveData;
+  type Input = GameInput;
 
   fn start(
     ctx: &crate::system::ProcessContext<Self::Input>,
@@ -140,9 +140,11 @@ impl System for AbilitySystem {
   where
     Self: Sized,
   {
+    let save_data = &ctx.input.save_data;
+
     Rc::new(AbilitySystem {
-      acquired_boost: ctx.input.acquired_boost,
-      acquired_chain: ctx.input.acquired_chain,
+      acquired_boost: save_data.acquired_boost,
+      acquired_chain: save_data.acquired_chain,
       boost_force: None,
       current_boost_cooldown: BALANCING.abilities.boost.max_cooldown,
       max_boost_cooldown: BALANCING.abilities.boost.max_cooldown,
@@ -150,12 +152,11 @@ impl System for AbilitySystem {
       chain_activated: false,
       kill_chain: false,
       mana_tanks: ManaTanksActiveInfo {
-        rechargeable_mana_level: ctx.input.mana_tanks_capacity.max_rechargeable_mana_level(),
-        non_rechargeable_mana_level: ctx
-          .input
+        rechargeable_mana_level: save_data.mana_tanks_capacity.max_rechargeable_mana_level(),
+        non_rechargeable_mana_level: save_data
           .mana_tanks_capacity
           .max_non_rechargeable_mana_level(),
-        capacity: ctx.input.mana_tanks_capacity,
+        capacity: save_data.mana_tanks_capacity,
       },
     })
   }

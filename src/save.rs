@@ -5,6 +5,7 @@ use rpds::HashTrieSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+  GameInput,
   ability::{AbilitySystem, ManaTanksCapacityInfo},
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, UnequippedModules, WeaponModuleKind,
@@ -103,7 +104,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    let new_save_data = ctx.downcast::<SaveData>().and_then(|ctx| {
+    let new_save_data = ctx.downcast::<GameInput>().and_then(|ctx| {
       let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
       let map_system = ctx.get::<MapSystem>().unwrap();
       let combat_system = ctx.get::<CombatSystem>().unwrap();

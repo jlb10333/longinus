@@ -340,7 +340,7 @@
         }, 
         {
          "firstgid":4,
-         "source":"..\/tilesets\/tiles.tsx"
+         "source":"..\/tilesets\/tiles.json"
         }],
  "tilewidth":8,
  "type":"map",
