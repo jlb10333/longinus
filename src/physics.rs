@@ -19,7 +19,7 @@ use crate::{
     Engine, Entity, EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision,
     GiveManaOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision, Id,
     IncreaseMaxHealthOnCollision, Locomotor, MapTransitionOnCollision, Not, Or, PersistDestruction,
-    SaveMenuOnCollision, SimpleActivatable, StatusEffect, Switch, Terminal, TouchSensor,
+    SaveMenuOnCollision, SimpleActivatable, Sprite, StatusEffect, Switch, Terminal, TouchSensor,
   },
   enemy::{
     EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp,
@@ -31,6 +31,7 @@ use crate::{
     COLLISION_GROUP_WALL, ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawnColliderHandles,
     EnemySpawnEnemy, Map, MapAbilityType, MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
   },
+  sprite,
   system::System,
   units::{PhysicsVector, UnitConvert2},
 };
@@ -111,13 +112,17 @@ fn load_new_map(
 
   let player = Entity {
     handle: EntityHandle::RigidBody(player_handle),
-    components: ComponentSet::new().insert(Damageable {
-      health: player_health,
-      max_health: player_max_health,
-      max_hitstun: PLAYER_MAX_HITSTUN,
-      hurtboxes: vec![player_hurtbox_handle],
-      ..Default::default()
-    }),
+    components: ComponentSet::new()
+      .insert(Damageable {
+        health: player_health,
+        max_health: player_max_health,
+        max_hitstun: PLAYER_MAX_HITSTUN,
+        hurtboxes: vec![player_hurtbox_handle],
+        ..Default::default()
+      })
+      .insert(Sprite {
+        texture_pick: sprite::player,
+      }),
     label: "player".to_string(),
   };
 

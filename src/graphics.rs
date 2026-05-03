@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, marker::PhantomData, rc::Rc};
+use std::{cmp::Ordering, f32::consts::PI, marker::PhantomData, rc::Rc};
 
 use itertools::Itertools;
 use macroquad::prelude::*;
@@ -14,7 +14,7 @@ use crate::{
   },
   controls::ControlsSystem,
   easing::{self, ease_out_cubic},
-  ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id},
+  ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id, Sprite},
   enemy::EnemySniperState,
   graphics_utils::{draw_collider, draw_label},
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
@@ -125,6 +125,56 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           },
         )
         .collect::<Vec<_>>();
+
+      sorted_entities.iter().for_each(|(handle, entity)| {
+        let sprite = if let Some(sprite) = entity.components.get::<Sprite>() {
+          sprite
+        } else {
+          return;
+        };
+
+        if let Some(damageable) = entity.components.get::<Damageable>()
+          && (damageable.damaged
+            || damageable.current_hitstun % 10.0 == 1.0
+            || damageable.current_hitstun % 10.0 == 2.0)
+        {
+          return;
+        }
+
+        let (physics_translation, rotation) = match *handle {
+          EntityHandle::Collider(collider_handle) => {
+            let collider = &physics_system.collider_set[*collider_handle];
+            (collider.translation(), collider.rotation().angle())
+          }
+          EntityHandle::RigidBody(rigid_body_handle) => {
+            let rigid_body = &physics_system.rigid_body_set[*rigid_body_handle];
+            (rigid_body.translation(), rigid_body.rotation().angle())
+          }
+        };
+
+        let translation =
+          PhysicsVector::from_vec(*physics_translation).into_pos(camera_system.translation);
+
+        let (texture, rect) = (sprite.texture_pick)(ctx.input.textures.as_ref());
+
+        draw_texture_ex(
+          texture,
+          translation.x() - rect.w * 4.0,
+          translation.y() - rect.h * 4.02,
+          WHITE,
+          DrawTextureParams {
+            dest_size: Some(Vec2 {
+              x: rect.w * 8.0,
+              y: rect.h * 8.0,
+            }),
+            source: Some(rect),
+            rotation: -(rotation * (8.0 / PI)).round() / (8.0 / PI),
+            flip_x: false,
+            flip_y: false,
+            pivot: None,
+          },
+        );
+      });
 
       /* Debug */
       if SHOW_COLLIDERS {

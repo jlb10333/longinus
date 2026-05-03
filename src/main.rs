@@ -31,6 +31,7 @@ mod load_map;
 mod menu;
 mod physics;
 mod save;
+mod sprite;
 mod system;
 mod units;
 
@@ -39,6 +40,7 @@ pub struct Start;
 
 pub struct GameTextures {
   pub tiles_texture: Texture2D,
+  pub player_texture: Texture2D,
 }
 
 impl Default for GameTextures {
@@ -68,16 +70,25 @@ fn window_conf() -> Conf {
   }
 }
 
-#[macroquad::main(window_conf)]
-async fn main() {
-  // Load textures async
+async fn load_game_textures() -> GameTextures {
   let tiles_texture = load_texture("./assets/maps/tilesets/tiles.png")
     .await
     .unwrap();
-
   tiles_texture.set_filter(FilterMode::Nearest);
 
-  let textures = Rc::new(GameTextures { tiles_texture });
+  let player_texture = load_texture("./assets/sprites/player.png").await.unwrap();
+  player_texture.set_filter(FilterMode::Nearest);
+
+  GameTextures {
+    tiles_texture,
+    player_texture,
+  }
+}
+
+#[macroquad::main(window_conf)]
+async fn main() {
+  // Load textures async
+  let textures = Rc::new(load_game_textures().await);
 
   let mut state = State::MainMenu;
 
