@@ -9,10 +9,11 @@ use crate::{
   ability::{AbilitySystem, ManaTanksActiveInfo},
   balance::BALANCING,
   controls::{ControlsSystem, angle_from_vec},
-  ecs::{ComponentSet, ExplodeOnCollision, Id, PersistDestruction, StatusEffect},
+  ecs::{ComponentSet, ExplodeOnCollision, Id, PersistDestruction, Sprite, StatusEffect},
   load_map::{MapSystem, PLAYER_PROJECTILE_INTERACTION_GROUPS},
   menu::MenuSystem,
   physics::PhysicsSystem,
+  sprite,
   system::System,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -271,7 +272,9 @@ fn base_output_from_weapon_type(weapon_output_type: WeaponOutputType) -> WeaponO
   match weapon_output_type {
     WeaponOutputType::Plasma => WeaponOutput {
       damage: 10.0,
-      component_set: ComponentSet::new(),
+      component_set: ComponentSet::new().insert(Sprite {
+        texture_pick: sprite::plasma_projectile,
+      }),
       offset: PhysicsVector::zero(),
       status_effects: list![],
       kind: WeaponOutputKind::Projectile(Projectile {

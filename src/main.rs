@@ -38,9 +38,14 @@ mod units;
 #[derive(Clone, Default)]
 pub struct Start;
 
+pub struct ProjectileTextures {
+  pub plasma: Texture2D,
+}
+
 pub struct GameTextures {
   pub tiles_texture: Texture2D,
   pub player_texture: Texture2D,
+  pub projectile_textures: ProjectileTextures,
 }
 
 impl Default for GameTextures {
@@ -70,18 +75,23 @@ fn window_conf() -> Conf {
   }
 }
 
-async fn load_game_textures() -> GameTextures {
-  let tiles_texture = load_texture("./assets/maps/tilesets/tiles.png")
-    .await
-    .unwrap();
-  tiles_texture.set_filter(FilterMode::Nearest);
+async fn load_texture_with_filter(path: &'static str) -> Texture2D {
+  let texture = load_texture(path).await.unwrap();
+  texture.set_filter(FilterMode::Nearest);
+  texture
+}
 
-  let player_texture = load_texture("./assets/sprites/player.png").await.unwrap();
-  player_texture.set_filter(FilterMode::Nearest);
+async fn load_game_textures() -> GameTextures {
+  let tiles_texture = load_texture_with_filter("./assets/maps/tilesets/tiles.png").await;
+  let player_texture = load_texture_with_filter("./assets/sprites/player.png").await;
+  let plasma_texture = load_texture_with_filter("./assets/sprites/projectiles/plasma.png").await;
 
   GameTextures {
     tiles_texture,
     player_texture,
+    projectile_textures: ProjectileTextures {
+      plasma: plasma_texture,
+    },
   }
 }
 

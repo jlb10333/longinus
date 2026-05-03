@@ -2134,7 +2134,7 @@ impl ObjectLayer {
   }
 }
 
-pub const TILE_DIMENSION_PHYSICS: f32 = 0.8;
+pub const TILE_DIMENSION_PHYSICS: f32 = 1.2;
 
 const EMPTY: i32 = 0;
 const WALL_COLLIDER: i32 = 1;

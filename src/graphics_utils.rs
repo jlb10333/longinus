@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
-  graphics::{COLOR_2, COLOR_3, COLOR_4},
+  graphics::{COLOR_2, COLOR_4},
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 

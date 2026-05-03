@@ -156,15 +156,18 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
         let (texture, rect) = (sprite.texture_pick)(ctx.input.textures.as_ref());
 
+        let adjusted_width = rect.w * 8.0 * BALANCING.graphics_config.scaling_factor;
+        let adjusted_height = rect.h * 8.0 * BALANCING.graphics_config.scaling_factor;
+
         draw_texture_ex(
           texture,
-          translation.x() - rect.w * 4.0,
-          translation.y() - rect.h * 4.02,
+          translation.x() - (adjusted_width / 2.0),
+          translation.y() - (adjusted_height / 2.0),
           WHITE,
           DrawTextureParams {
             dest_size: Some(Vec2 {
-              x: rect.w * 8.0,
-              y: rect.h * 8.0,
+              x: adjusted_width,
+              y: adjusted_height,
             }),
             source: Some(rect),
             rotation: -(rotation * (8.0 / PI)).round() / (8.0 / PI),
@@ -619,7 +622,10 @@ fn draw_tile_layer(
         screen_translation.y(),
         WHITE,
         DrawTextureParams {
-          dest_size: Some(Vec2 { x: 64.0, y: 64.0 }),
+          dest_size: Some(Vec2 {
+            x: 64.0 * BALANCING.graphics_config.scaling_factor,
+            y: 64.0 * BALANCING.graphics_config.scaling_factor,
+          }),
           source: Some(source),
           rotation: 0.0,
           flip_x: false,
