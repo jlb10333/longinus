@@ -28,7 +28,6 @@ use crate::{
 const RETICLE_SIZE: f32 = 3.0;
 
 /* DEBUG OPTIONS */
-const SHOW_COLLIDERS: bool = false;
 const SHOW_SLOTS: bool = true;
 
 /* Colors */
@@ -177,7 +176,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       });
 
       /* Debug */
-      if SHOW_COLLIDERS {
+      if BALANCING.debug.show_colliders {
         sorted_entities.iter().for_each(|(handle, entity)| {
           if let Some(damageable) = entity.components.get::<Damageable>()
             && damageable.damaged
@@ -434,7 +433,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             ScreenVector::from_vec(player_screen_pos.into_vec() + slot_screen_offset.into_vec());
 
           let slot_next_screen_pos = ScreenVector::from_vec(
-            slot_screen_pos.into_vec() + distance_projection_screen(slot.angle, 7.0).into_vec(),
+            slot_screen_pos.into_vec() + distance_projection_screen(slot.angle, 9.0).into_vec(),
           );
 
           draw_circle(slot_screen_pos.x(), slot_screen_pos.y(), 2.0, COLOR_3);

@@ -38,6 +38,8 @@ pub fn draw_collider(
     0.5
   });
 
+  let alpha = alpha * 0.3;
+
   if let Some(cuboid) = collider.shape().as_cuboid() {
     let half_extents = PhysicsVector::from_vec(cuboid.half_extents).convert();
 

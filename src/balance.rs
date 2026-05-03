@@ -203,6 +203,11 @@ impl GraphicsConfig {
 }
 
 #[derive(Deserialize)]
+pub struct DebugConfig {
+  pub show_colliders: bool,
+}
+
+#[derive(Deserialize)]
 pub struct Balancing {
   pub player: PlayerBalancing,
   pub status_effects: StatusEffectsBalancing,
@@ -210,6 +215,7 @@ pub struct Balancing {
   pub weapons: WeaponBalancing,
   pub abilities: AbilityBalancing,
   pub graphics_config: GraphicsConfig,
+  pub debug: DebugConfig,
 }
 
 const BALANCING_PATH: &str = "assets/balancing.json";

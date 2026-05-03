@@ -29,7 +29,7 @@ pub fn distance_projection_screen(angle: f32, distance: f32) -> ScreenVector {
   ScreenVector::from_vec(vector![angle.cos() * distance, angle.sin() * distance])
 }
 
-const RETICLE_DISTANCE_SCREEN: f32 = 20.0;
+const RETICLE_DISTANCE_SCREEN: f32 = 50.0;
 
 pub fn get_reticle_pos(angle: f32) -> ScreenVector {
   distance_projection_screen(angle, RETICLE_DISTANCE_SCREEN)

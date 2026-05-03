@@ -126,6 +126,9 @@
         "rounding_factor": 0.08,
         "hitstop_enabled": false,
         "scaling_factor": 1.5
+    },
+    "debug": {
+        "show_colliders": true
     }
 }
 
