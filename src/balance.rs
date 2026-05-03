@@ -198,7 +198,7 @@ pub struct GraphicsConfig {
 
 impl GraphicsConfig {
   pub fn adjusted_scaling(&self) -> f32 {
-    self.scaling_factor * 50.0
+    self.scaling_factor * 64.0
   }
 }
 

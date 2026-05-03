@@ -275,8 +275,8 @@
             "scale": 2,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 251.25,
-                "y": 84.25
+                "x": 161.25,
+                "y": -409.75
             }
         },
         "maps/generated/start.json#colliders": {

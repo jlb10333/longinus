@@ -7,7 +7,7 @@ use rapier2d::{na::Vector2, prelude::*};
 use crate::balance::BALANCING;
 
 pub fn vec_zero() -> Vector2<f32> {
-  return vector![0.0, 0.0];
+  vector![0.0, 0.0]
 }
 
 pub trait UnitConvert<Other>: Clone + Copy {
@@ -20,10 +20,10 @@ pub trait UnitConvert2<Other>: UnitConvert<Other> {
   fn from_vec(vector: Vector2<f32>) -> Self;
   fn into_pos(self, camera_position: Vector2<f32>) -> Other;
   fn x(self) -> f32 {
-    return self.into_vec().x;
+    self.into_vec().x
   }
   fn y(self) -> f32 {
-    return self.into_vec().y;
+    self.into_vec().y
   }
 }
 
@@ -35,16 +35,16 @@ pub struct ScreenScalar(pub f32);
 impl Deref for ScreenScalar {
   type Target = f32;
   fn deref(&self) -> &Self::Target {
-    return &self.0;
+    &self.0
   }
 }
 
 impl UnitConvert<PhysicsScalar> for ScreenScalar {
   fn zero() -> Self {
-    return Self(0.0);
+    Self(0.0)
   }
   fn convert(self) -> PhysicsScalar {
-    return PhysicsScalar(*self / (BALANCING.graphics_config.adjusted_scaling()));
+    PhysicsScalar(*self / (BALANCING.graphics_config.adjusted_scaling()))
   }
 }
 
@@ -56,16 +56,16 @@ pub struct PhysicsScalar(pub f32);
 impl Deref for PhysicsScalar {
   type Target = f32;
   fn deref(&self) -> &Self::Target {
-    return &self.0;
+    &self.0
   }
 }
 
 impl UnitConvert<ScreenScalar> for PhysicsScalar {
   fn zero() -> Self {
-    return Self(0.0);
+    Self(0.0)
   }
   fn convert(self) -> ScreenScalar {
-    return ScreenScalar(*self * BALANCING.graphics_config.adjusted_scaling());
+    ScreenScalar(*self * BALANCING.graphics_config.adjusted_scaling())
   }
 }
 
@@ -75,30 +75,30 @@ pub type ScreenVector = Vector2<ScreenScalar>;
 
 impl UnitConvert<PhysicsVector> for ScreenVector {
   fn zero() -> Self {
-    return vector![ScreenScalar::zero(), ScreenScalar::zero()];
+    vector![ScreenScalar::zero(), ScreenScalar::zero()]
   }
   fn convert(self) -> PhysicsVector {
-    return PhysicsVector::from_vec(
+    PhysicsVector::from_vec(
       vector![self.into_vec().x, -self.into_vec().y]
         .scale(1.0 / BALANCING.graphics_config.adjusted_scaling()),
-    );
+    )
   }
 }
 
 impl UnitConvert2<PhysicsVector> for ScreenVector {
   fn into_vec(self) -> Vector2<f32> {
     let mapped: Vec<f32> = self.iter().map(ScreenScalar::deref).cloned().collect();
-    return vector![mapped[0], mapped[1]];
+    vector![mapped[0], mapped[1]]
   }
   fn from_vec(vector: Vector2<f32>) -> Self {
-    return vector![ScreenScalar(vector.x), ScreenScalar(vector.y)];
+    vector![ScreenScalar(vector.x), ScreenScalar(vector.y)]
   }
   fn into_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
-    return PhysicsVector::from_vec(
+    PhysicsVector::from_vec(
       vector![self.into_vec().x, screen_height() - self.into_vec().y]
         .scale(1.0 / BALANCING.graphics_config.adjusted_scaling())
         + camera_position,
-    );
+    )
   }
 }
 
@@ -109,13 +109,7 @@ pub type PhysicsVector = Vector2<PhysicsScalar>;
 impl UnitConvert<ScreenVector> for PhysicsVector {
   fn convert(self) -> ScreenVector {
     ScreenVector::from_vec(
-      vector![
-        (self.x() / BALANCING.graphics_config.rounding_factor).round()
-          * BALANCING.graphics_config.rounding_factor,
-        -(self.y() / BALANCING.graphics_config.rounding_factor).round()
-          * BALANCING.graphics_config.rounding_factor
-      ]
-      .scale(BALANCING.graphics_config.adjusted_scaling()),
+      vector![self.x(), -self.y()].scale(BALANCING.graphics_config.adjusted_scaling()),
     )
   }
   fn zero() -> Self {
@@ -126,7 +120,7 @@ impl UnitConvert<ScreenVector> for PhysicsVector {
 impl UnitConvert2<ScreenVector> for PhysicsVector {
   fn into_vec(self) -> Vector2<f32> {
     let mapped: Vec<f32> = self.iter().map(PhysicsScalar::deref).cloned().collect();
-    return vector![mapped[0], mapped[1]];
+    vector![mapped[0], mapped[1]]
   }
   fn from_vec(vector: Vector2<f32>) -> Self {
     vector![PhysicsScalar(vector.x), PhysicsScalar(vector.y)]

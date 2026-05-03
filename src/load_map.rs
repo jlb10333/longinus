@@ -2134,7 +2134,7 @@ impl ObjectLayer {
   }
 }
 
-pub const TILE_DIMENSION_PHYSICS: f32 = 1.2;
+pub const TILE_DIMENSION_PHYSICS: f32 = 1.0;
 
 const EMPTY: i32 = 0;
 const WALL_COLLIDER: i32 = 1;
@@ -2165,6 +2165,7 @@ impl ColliderLayer {
       .enumerate()
       .filter_map(|(uindex, tile_data)| {
         let index = uindex.try_into().unwrap();
+
         if WALL.contains(tile_data) {
           let collider =
             ColliderBuilder::cuboid(TILE_DIMENSION_PHYSICS / 2.0, TILE_DIMENSION_PHYSICS / 2.0)

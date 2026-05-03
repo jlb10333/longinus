@@ -123,7 +123,7 @@
         }
     },
     "graphics_config": {
-        "rounding_factor": 0.08,
+        "rounding_factor": 0.125,
         "hitstop_enabled": false,
         "scaling_factor": 1.0
     },
