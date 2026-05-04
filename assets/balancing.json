@@ -128,6 +128,6 @@
         "scaling_factor": 1.0
     },
     "debug": {
-        "show_colliders": true
+        "show_colliders": false
     }
 }

@@ -33,7 +33,7 @@ use crate::{
   },
   sprite,
   system::System,
-  units::{PhysicsVector, UnitConvert2},
+  units::{PhysicsVector, UnitConvert2, vec_zero},
 };
 
 const PLAYER_SPEED_LIMIT: f32 = 5.5;
@@ -121,7 +121,7 @@ fn load_new_map(
         ..Default::default()
       })
       .insert(Sprite {
-        texture_pick: sprite::player,
+        kind: sprite::Player,
       }),
     label: "player".to_string(),
   };
@@ -239,7 +239,10 @@ fn load_new_map(
             amount: health_tank.capacity,
           })
           .insert(Id { id: health_tank.id })
-          .insert(DestroyOnCollision),
+          .insert(DestroyOnCollision)
+          .insert(Sprite {
+            kind: sprite::HealthTankPickup,
+          }),
         label: "health_tank".to_string(),
       }
     })
@@ -313,7 +316,13 @@ fn load_new_map(
       );
       Entity {
         handle: EntityHandle::RigidBody(rigid_body_handle),
-        components: ComponentSet::new().insert(Id { id: block.id }),
+        components: ComponentSet::new()
+          .insert(Id { id: block.id })
+          .insert(Sprite {
+            kind: sprite::Block(PhysicsVector::from_vec(
+              block.collider.shape().as_cuboid().unwrap().half_extents * 2.0,
+            )),
+          }),
         label: format!("g{}", block.id),
       }
     })
@@ -652,9 +661,13 @@ fn load_new_map(
             None,
           )
         } else {
-          let rigid_body_handle = rigid_body_set.insert(RigidBodyBuilder::fixed());
+          let rigid_body_handle = rigid_body_set
+            .insert(RigidBodyBuilder::fixed().translation(*wall.collider.translation()));
+          let mut collider = wall.collider.clone();
+          collider.set_translation(vec_zero());
+          let collider = collider;
           let collider_handle = collider_set.insert_with_parent(
-            wall.collider.clone(),
+            collider.clone(),
             rigid_body_handle,
             &mut rigid_body_set,
           );
@@ -685,7 +698,9 @@ fn load_new_map(
             component_set
           };
           let component_set = if let Some(damageable) = damageable {
-            component_set.insert(damageable)
+            component_set.insert(damageable).insert(Sprite {
+              kind: sprite::BreakableTile,
+            })
           } else {
             component_set
           };
@@ -2443,7 +2458,6 @@ fn player_movement_impulse(
   controls_system: Rc<ControlsSystem<GameInput>>,
   player: &RigidBody,
 ) -> Vector<f32> {
-  let player_mass = player.mass();
   let attempted_acceleration =
     controls_system.left_stick.into_vec() * BALANCING.player.acceleration_mod * player.mass();
   let player_velocity = player.linvel();

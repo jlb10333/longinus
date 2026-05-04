@@ -42,10 +42,21 @@ pub struct ProjectileTextures {
   pub plasma: Texture2D,
 }
 
+pub struct PickupTextures {
+  pub health_tank: Texture2D,
+}
+
+pub struct BlockTextures {
+  pub block: Texture2D,
+}
+
 pub struct GameTextures {
   pub tiles_texture: Texture2D,
   pub player_texture: Texture2D,
+  pub breakable_tile_texture: Texture2D,
   pub projectile_textures: ProjectileTextures,
+  pub pickup_textures: PickupTextures,
+  pub block_textures: BlockTextures,
 }
 
 impl Default for GameTextures {
@@ -85,12 +96,24 @@ async fn load_game_textures() -> GameTextures {
   let tiles_texture = load_texture_with_filter("./assets/maps/tilesets/tiles.png").await;
   let player_texture = load_texture_with_filter("./assets/sprites/player.png").await;
   let plasma_texture = load_texture_with_filter("./assets/sprites/projectiles/plasma.png").await;
+  let health_tank_texture =
+    load_texture_with_filter("./assets/sprites/pickups/health_tank.png").await;
+  let breakable_tile_texture =
+    load_texture_with_filter("./assets/sprites/breakable_tile.png").await;
+  let block_texture = load_texture_with_filter("./assets/sprites/blocks/block.png").await;
 
   GameTextures {
     tiles_texture,
     player_texture,
+    breakable_tile_texture,
     projectile_textures: ProjectileTextures {
       plasma: plasma_texture,
+    },
+    pickup_textures: PickupTextures {
+      health_tank: health_tank_texture,
+    },
+    block_textures: BlockTextures {
+      block: block_texture,
     },
   }
 }

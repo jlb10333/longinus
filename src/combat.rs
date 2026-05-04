@@ -273,7 +273,7 @@ fn base_output_from_weapon_type(weapon_output_type: WeaponOutputType) -> WeaponO
     WeaponOutputType::Plasma => WeaponOutput {
       damage: 10.0,
       component_set: ComponentSet::new().insert(Sprite {
-        texture_pick: sprite::plasma_projectile,
+        kind: sprite::PlasmaProjectile,
       }),
       offset: PhysicsVector::zero(),
       status_effects: list![],

@@ -1,6 +1,5 @@
 use std::{any::Any, rc::Rc};
 
-use macroquad::{math::Rect, texture::Texture2D};
 use rapier2d::{
   na::Vector2,
   prelude::{
@@ -13,7 +12,6 @@ use serde::Deserialize;
 use struct_record::record;
 
 use crate::{
-  GameTextures,
   balance::{BALANCING, StatusEffectBalancing},
   combat::WeaponModuleKind,
   enemy::{
@@ -21,7 +19,7 @@ use crate::{
     EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
   },
   load_map::MapAbilityType,
-  units::PhysicsVector,
+  sprite::TextureKind,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -409,7 +407,7 @@ pub struct Terminal {
 impl Component for Terminal {}
 
 pub struct Sprite {
-  pub texture_pick: for<'a> fn(&'a GameTextures) -> (&'a Texture2D, Rect),
+  pub kind: TextureKind,
 }
 impl Component for Sprite {}
 

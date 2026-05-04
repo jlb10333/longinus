@@ -21,6 +21,7 @@ use crate::{
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
   save::SaveSystem,
+  sprite::get_sprites_to_draw,
   system::System,
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -154,28 +155,54 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         let translation =
           PhysicsVector::from_vec(*physics_translation).into_pos(camera_system.translation);
 
-        let (texture, rect) = (sprite.texture_pick)(ctx.input.textures.as_ref());
+        let rotation = -(rotation * (16.0 / PI)).round() / (16.0 / PI);
 
-        let adjusted_width = rect.w * 8.0 * BALANCING.graphics_config.scaling_factor;
-        let adjusted_height = rect.h * 8.0 * BALANCING.graphics_config.scaling_factor;
+        let rotation_sin = rotation.sin();
+        let rotation_cos = rotation.cos();
 
-        draw_texture_ex(
-          texture,
-          translation.x() - (adjusted_width / 2.0),
-          translation.y() - (adjusted_height / 2.0),
-          WHITE,
-          DrawTextureParams {
-            dest_size: Some(Vec2 {
-              x: adjusted_width,
-              y: adjusted_height,
-            }),
-            source: Some(rect),
-            rotation: -(rotation * (8.0 / PI)).round() / (8.0 / PI),
-            flip_x: false,
-            flip_y: false,
-            pivot: None,
-          },
-        );
+        let sprites_to_draw = get_sprites_to_draw(&sprite.kind, ctx.input.textures.as_ref());
+
+        sprites_to_draw.iter().for_each(|sprite_to_draw| {
+          let adjusted_width =
+            sprite_to_draw.source.w * 8.0 * BALANCING.graphics_config.scaling_factor;
+          let adjusted_height =
+            sprite_to_draw.source.h * 8.0 * BALANCING.graphics_config.scaling_factor;
+
+          let offset_x = sprite_to_draw
+            .offset
+            .map(|offset| offset.x * 8.0 * BALANCING.graphics_config.scaling_factor)
+            .unwrap_or(0.0);
+
+          let offset_y = sprite_to_draw
+            .offset
+            .map(|offset| offset.y * 8.0 * BALANCING.graphics_config.scaling_factor)
+            .unwrap_or(0.0);
+
+          let new_offset_x = offset_x * rotation_cos - offset_y * rotation_sin;
+          let new_offset_y = offset_x * rotation_sin + offset_y * rotation_cos;
+
+          let dest_x = translation.x() - (adjusted_width / 2.0) + new_offset_x;
+
+          let dest_y = translation.y() - (adjusted_height / 2.0) + new_offset_y;
+
+          draw_texture_ex(
+            sprite_to_draw.texture,
+            dest_x,
+            dest_y,
+            WHITE,
+            DrawTextureParams {
+              dest_size: Some(Vec2 {
+                x: adjusted_width,
+                y: adjusted_height,
+              }),
+              source: Some(sprite_to_draw.source),
+              rotation,
+              flip_x: false,
+              flip_y: false,
+              pivot: None,
+            },
+          );
+        })
       });
 
       /* Debug */

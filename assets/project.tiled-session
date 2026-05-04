@@ -184,19 +184,19 @@
             }
         },
         "maps/generated/MP25.json": {
-            "scale": 1,
+            "scale": 2,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 458.5,
-                "y": -417.5
+                "x": 493.75,
+                "y": 1475.25
             }
         },
         "maps/generated/MP26.json": {
-            "scale": 2,
-            "selectedLayer": 2,
+            "scale": 1.5,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 251.25,
-                "y": 724.25
+                "x": 537.6666666666666,
+                "y": 623.6666666666666
             }
         },
         "maps/generated/MP28.json": {
@@ -272,15 +272,15 @@
             }
         },
         "maps/generated/start.json": {
-            "scale": 2,
-            "selectedLayer": 2,
+            "scale": 1.5,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 161.25,
-                "y": -409.75
+                "x": 537.6666666666666,
+                "y": -138.33333333333331
             }
         },
         "maps/generated/start.json#colliders": {
-            "scaleInDock": 1
+            "scaleInDock": 5.5
         },
         "maps/generated/templates/tiles.json": {
             "scaleInDock": 1,
@@ -442,7 +442,7 @@
         "maps/generated/start.json"
     ],
     "project": "project.tiled-project",
-    "property.type": "float",
+    "property.type": "string",
     "recentFiles": [
         "maps/generated/MP20.json",
         "maps/generated/MP11.json",
