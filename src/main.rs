@@ -50,6 +50,15 @@ pub struct BlockTextures {
   pub block: Texture2D,
 }
 
+pub struct ActivatorTextures {
+  pub touch_sensor_activated: Texture2D,
+  pub touch_sensor_deactivated: Texture2D,
+}
+
+pub struct EnemyTextures {
+  pub goblin: Texture2D,
+}
+
 pub struct GameTextures {
   pub tiles_texture: Texture2D,
   pub player_texture: Texture2D,
@@ -57,6 +66,8 @@ pub struct GameTextures {
   pub projectile_textures: ProjectileTextures,
   pub pickup_textures: PickupTextures,
   pub block_textures: BlockTextures,
+  pub activator_textures: ActivatorTextures,
+  pub enemy_textures: EnemyTextures,
 }
 
 impl Default for GameTextures {
@@ -101,6 +112,11 @@ async fn load_game_textures() -> GameTextures {
   let breakable_tile_texture =
     load_texture_with_filter("./assets/sprites/breakable_tile.png").await;
   let block_texture = load_texture_with_filter("./assets/sprites/blocks/block.png").await;
+  let touch_sensor_deactivated_texture =
+    load_texture_with_filter("./assets/sprites/activators/touch_sensor_deactivated.png").await;
+  let touch_sensor_activated_texture =
+    load_texture_with_filter("./assets/sprites/activators/touch_sensor_activated.png").await;
+  let goblin_texture = load_texture_with_filter("./assets/sprites/enemies/goblin.png").await;
 
   GameTextures {
     tiles_texture,
@@ -114,6 +130,13 @@ async fn load_game_textures() -> GameTextures {
     },
     block_textures: BlockTextures {
       block: block_texture,
+    },
+    activator_textures: ActivatorTextures {
+      touch_sensor_activated: touch_sensor_activated_texture,
+      touch_sensor_deactivated: touch_sensor_deactivated_texture,
+    },
+    enemy_textures: EnemyTextures {
+      goblin: goblin_texture,
     },
   }
 }

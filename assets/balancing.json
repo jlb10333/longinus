@@ -27,8 +27,9 @@
         "goblin": {
             "aggro_range": 20,
             "lunge_force": 9,
-            "max_lunge_distance": 4,
-            "slowing_frames": 70,
+            "lunge_angvel": 15,
+            "max_lunge_distance": 10,
+            "slowing_frames": 50,
             "recovering_frames": 50
         },
         "imp": {

@@ -97,7 +97,73 @@ pub fn block<'a>(
   tiled_sprites_to_draw(dimensions, &game_textures.block_textures.block)
 }
 
-pub fn tiled_sprites_to_draw<'a>(
+pub fn touch_sensor_activated<'a>(
+  dimensions: &PhysicsVector,
+  game_textures: &'a GameTextures,
+) -> Vec<SpriteToDraw<'a>> {
+  tiled_sprites_to_draw(
+    dimensions,
+    &game_textures.activator_textures.touch_sensor_activated,
+  )
+}
+
+pub fn touch_sensor_deactivated<'a>(
+  dimensions: &PhysicsVector,
+  game_textures: &'a GameTextures,
+) -> Vec<SpriteToDraw<'a>> {
+  tiled_sprites_to_draw(
+    dimensions,
+    &game_textures.activator_textures.touch_sensor_deactivated,
+  )
+}
+
+pub fn goblin(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
+  draw_from_sprite_sheet(
+    index,
+    SpriteSheetArgs {
+      num_sprites: 2,
+      num_columns: 1,
+      width: 32,
+      height: 32,
+      offset: None,
+    },
+    &game_textures.enemy_textures.goblin,
+  )
+}
+
+struct SpriteSheetArgs {
+  num_sprites: i32,
+  num_columns: i32,
+  width: i32,
+  height: i32,
+  offset: Option<Vec2>,
+}
+fn draw_from_sprite_sheet(
+  index: i32,
+  args: SpriteSheetArgs,
+  texture: &Texture2D,
+) -> Vec<SpriteToDraw<'_>> {
+  let index = index % args.num_sprites;
+
+  let target_column = index % args.num_columns;
+  let target_row = index / args.num_columns;
+
+  let x = (target_column * args.width) as f32;
+  let y = (target_row * args.height) as f32;
+
+  vec![SpriteToDraw {
+    texture,
+    source: Rect {
+      x,
+      y,
+      w: args.width as f32,
+      h: args.height as f32,
+    },
+    offset: args.offset,
+  }]
+}
+
+fn tiled_sprites_to_draw<'a>(
   dimensions: &PhysicsVector,
   texture: &'a Texture2D,
 ) -> Vec<SpriteToDraw<'a>> {
@@ -241,13 +307,13 @@ pub fn tiled_sprites_to_draw<'a>(
     texture,
     source: Rect {
       x: 8.0,
-      y: 0.0,
+      y: 16.0,
       w: 8.0,
       h: 8.0,
     },
     offset: Some(Vec2 {
       x: x as f32 * 8.0 - (map_dimensions.x / 2.0) + 4.0,
-      y: (map_dimensions.y / 2.0) - 3.0,
+      y: (map_dimensions.y / 2.0) + 4.0,
     }),
   });
 

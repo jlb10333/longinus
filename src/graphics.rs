@@ -14,14 +14,16 @@ use crate::{
   },
   controls::ControlsSystem,
   easing::{self, ease_out_cubic},
-  ecs::{Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id, Sprite},
+  ecs::{
+    Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id, Sprite, TouchSensor,
+  },
   enemy::EnemySniperState,
   graphics_utils::{draw_collider, draw_label},
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
   save::SaveSystem,
-  sprite::get_sprites_to_draw,
+  sprite::{self, SpriteToDraw, get_sprites_to_draw},
   system::System,
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -98,9 +100,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       let tile_bg_layer = map_system.raw_map.tile_bg_layer();
       draw_tile_layer(tile_bg_layer, tiles_texture, &camera_system);
 
-      let tile_layer = map_system.raw_map.tile_layer();
-      draw_tile_layer(tile_layer, tiles_texture, &camera_system);
-
       let sorted_entities = physics_system
         .entities
         .iter()
@@ -127,20 +126,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         .collect::<Vec<_>>();
 
       sorted_entities.iter().for_each(|(handle, entity)| {
-        let sprite = if let Some(sprite) = entity.components.get::<Sprite>() {
-          sprite
-        } else {
-          return;
-        };
-
-        if let Some(damageable) = entity.components.get::<Damageable>()
-          && (damageable.damaged
-            || damageable.current_hitstun % 10.0 == 1.0
-            || damageable.current_hitstun % 10.0 == 2.0)
-        {
-          return;
-        }
-
         let (physics_translation, rotation) = match *handle {
           EntityHandle::Collider(collider_handle) => {
             let collider = &physics_system.collider_set[*collider_handle];
@@ -152,58 +137,62 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           }
         };
 
+        if let Some(damageable) = entity.components.get::<Damageable>()
+          && (damageable.damaged
+            || damageable.current_hitstun % 10.0 == 1.0
+            || damageable.current_hitstun % 10.0 == 2.0)
+        {
+          return;
+        }
+
         let translation =
           PhysicsVector::from_vec(*physics_translation).into_pos(camera_system.translation);
 
         let rotation = -(rotation * (16.0 / PI)).round() / (16.0 / PI);
 
-        let rotation_sin = rotation.sin();
-        let rotation_cos = rotation.cos();
+        let sprites_to_draw = {
+          if entity.components.get::<TouchSensor>().is_some()
+            && let Some(activator) = entity.components.get::<Activator>()
+          {
+            handle
+              .colliders(&physics_system.rigid_body_set)
+              .iter()
+              .flat_map(|&&collider_handle| {
+                let collider = &physics_system.collider_set[collider_handle];
+                let dimensions = &PhysicsVector::from_vec(
+                  collider.shape().as_cuboid().unwrap().half_extents * 2.0,
+                );
 
-        let sprites_to_draw = get_sprites_to_draw(&sprite.kind, ctx.input.textures.as_ref());
+                if activator.activation >= 0.5 {
+                  sprite::touch_sensor_activated(dimensions, &ctx.input.textures)
+                } else {
+                  sprite::touch_sensor_deactivated(dimensions, &ctx.input.textures)
+                }
+              })
+              .collect::<Vec<_>>()
+          } else if let Some(enemy) = entity.components.get::<Enemy>()
+            && let Enemy::Goblin(_goblin) = enemy.as_ref()
+          {
+            sprite::goblin(
+              (physics_system.frame_count / 15) as i32,
+              &ctx.input.textures,
+            )
+          } else {
+            let sprite = if let Some(sprite) = entity.components.get::<Sprite>() {
+              sprite
+            } else {
+              return;
+            };
 
-        sprites_to_draw.iter().for_each(|sprite_to_draw| {
-          let adjusted_width =
-            sprite_to_draw.source.w * 8.0 * BALANCING.graphics_config.scaling_factor;
-          let adjusted_height =
-            sprite_to_draw.source.h * 8.0 * BALANCING.graphics_config.scaling_factor;
+            get_sprites_to_draw(&sprite.kind, ctx.input.textures.as_ref())
+          }
+        };
 
-          let offset_x = sprite_to_draw
-            .offset
-            .map(|offset| offset.x * 8.0 * BALANCING.graphics_config.scaling_factor)
-            .unwrap_or(0.0);
-
-          let offset_y = sprite_to_draw
-            .offset
-            .map(|offset| offset.y * 8.0 * BALANCING.graphics_config.scaling_factor)
-            .unwrap_or(0.0);
-
-          let new_offset_x = offset_x * rotation_cos - offset_y * rotation_sin;
-          let new_offset_y = offset_x * rotation_sin + offset_y * rotation_cos;
-
-          let dest_x = translation.x() - (adjusted_width / 2.0) + new_offset_x;
-
-          let dest_y = translation.y() - (adjusted_height / 2.0) + new_offset_y;
-
-          draw_texture_ex(
-            sprite_to_draw.texture,
-            dest_x,
-            dest_y,
-            WHITE,
-            DrawTextureParams {
-              dest_size: Some(Vec2 {
-                x: adjusted_width,
-                y: adjusted_height,
-              }),
-              source: Some(sprite_to_draw.source),
-              rotation,
-              flip_x: false,
-              flip_y: false,
-              pivot: None,
-            },
-          );
-        })
+        draw_sprites(&sprites_to_draw, translation, rotation);
       });
+
+      let tile_layer = map_system.raw_map.tile_layer();
+      draw_tile_layer(tile_layer, tiles_texture, &camera_system);
 
       /* Debug */
       if BALANCING.debug.show_colliders {
@@ -621,7 +610,11 @@ fn draw_tile_layer(
     .data
     .iter()
     .enumerate()
-    .for_each(|(index, tile_data)| {
+    .for_each(|(index, &tile_data)| {
+      if tile_data == 0 {
+        return;
+      }
+
       let map_x = index as i32 % layer.width;
       let map_y = index as i32 / layer.width;
 
@@ -1336,4 +1329,46 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
       vec!["modifier; damagefree, manafree"]
     }
   }
+}
+
+pub fn draw_sprites(sprites_to_draw: &Vec<SpriteToDraw>, translation: ScreenVector, rotation: f32) {
+  sprites_to_draw.iter().for_each(|sprite_to_draw| {
+    let adjusted_width = sprite_to_draw.source.w * 8.0 * BALANCING.graphics_config.scaling_factor;
+    let adjusted_height = sprite_to_draw.source.h * 8.0 * BALANCING.graphics_config.scaling_factor;
+
+    let offset_x = sprite_to_draw
+      .offset
+      .map(|offset| offset.x * 8.0 * BALANCING.graphics_config.scaling_factor)
+      .unwrap_or(0.0);
+
+    let offset_y = sprite_to_draw
+      .offset
+      .map(|offset| offset.y * 8.0 * BALANCING.graphics_config.scaling_factor)
+      .unwrap_or(0.0);
+
+    let new_offset_x = offset_x * rotation.cos() - offset_y * rotation.sin();
+    let new_offset_y = offset_x * rotation.sin() + offset_y * rotation.cos();
+
+    let dest_x = translation.x() - (adjusted_width / 2.0) + new_offset_x;
+
+    let dest_y = translation.y() - (adjusted_height / 2.0) + new_offset_y;
+
+    draw_texture_ex(
+      sprite_to_draw.texture,
+      dest_x,
+      dest_y,
+      WHITE,
+      DrawTextureParams {
+        dest_size: Some(Vec2 {
+          x: adjusted_width,
+          y: adjusted_height,
+        }),
+        source: Some(sprite_to_draw.source),
+        rotation,
+        flip_x: false,
+        flip_y: false,
+        pivot: None,
+      },
+    );
+  });
 }

@@ -25,6 +25,7 @@ pub struct StatusEffectBalancing {
 pub struct GoblinBalancing {
   pub aggro_range: f32,
   pub lunge_force: f32,
+  pub lunge_angvel: f32,
   pub max_lunge_distance: f32,
   pub slowing_frames: i32,
   pub recovering_frames: i32,

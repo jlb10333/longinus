@@ -8,7 +8,7 @@ use crate::{
   balance::BALANCING,
   combat::{distance_projection_physics, Beam, Projectile, WeaponOutput, WeaponOutputKind},
   controls::angle_from_vec,
-  easing,
+  easing::{self, ease_in_out_sine},
   ecs::{Damageable, Enemy, Entity, EntityHandle, StatusEffect},
   load_map::{
     EnemySpawn, EnemySpawnEnemy, ENEMY_PROJECTILE_INTERACTION_GROUPS, RAYCAST_INTERACTION_GROUPS
@@ -247,18 +247,19 @@ impl EnemyGoblin {
           let self_translation = self_rigid_body.translation();
           let vector_to_player = player_translation - self_translation;
 
-          let movement_force = vector_to_player.normalize() * BALANCING.enemies.goblin.lunge_force;
+          let movement_force = vector_to_player.normalize() * BALANCING.enemies.goblin.lunge_force * rigid_body_set[handle].mass();
 
           let lunge_distance = vector_to_player
             .magnitude()
             .min(BALANCING.enemies.goblin.max_lunge_distance);
 
           let lunge_frames = (lunge_distance
-            / (BALANCING.enemies.goblin.lunge_force / self_rigid_body.mass())
+            / (BALANCING.enemies.goblin.lunge_force)
             * 60.0) as i32;
 
           EnemyDecision {
             movement_force,
+            angvel: Some(BALANCING.enemies.goblin.lunge_angvel),
             ..EnemyDecision::default(
               handle,
               Enemy::Goblin(Self {
@@ -300,10 +301,10 @@ impl EnemyGoblin {
       }
       EnemyGoblinState::Slowing(remaining_frames) => {
         let linvel = rigid_body_set[handle].linvel();
-
         if remaining_frames > 0 && linvel.magnitude() > 0.0 {
           EnemyDecision {
-            movement_force: -linvel.normalize() * BALANCING.enemies.goblin.slowing_force(),
+            movement_force: -linvel.normalize() * BALANCING.enemies.goblin.slowing_force() * rigid_body_set[handle].mass(),
+            angvel: Some((ease_in_out_sine()  * BALANCING.enemies.goblin.lunge_angvel).at(remaining_frames as f32 / BALANCING.enemies.goblin.slowing_frames as f32)),
             ..EnemyDecision::default(
               handle,
               Enemy::Goblin(Self {
