@@ -184,19 +184,19 @@
             }
         },
         "maps/generated/MP25.json": {
-            "scale": 2,
-            "selectedLayer": 1,
-            "viewCenter": {
-                "x": 493.75,
-                "y": 1475.25
-            }
-        },
-        "maps/generated/MP26.json": {
             "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 537.6666666666666,
-                "y": 623.6666666666666
+                "x": 142.33333333333337,
+                "y": 513
+            }
+        },
+        "maps/generated/MP26.json": {
+            "scale": 3,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 8.833333333333314,
+                "y": -234.16666666666666
             }
         },
         "maps/generated/MP28.json": {
@@ -272,11 +272,11 @@
             }
         },
         "maps/generated/start.json": {
-            "scale": 1.5,
+            "scale": 3,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 537.6666666666666,
-                "y": -138.33333333333331
+                "x": 158.16666666666669,
+                "y": -198.5
             }
         },
         "maps/generated/start.json#colliders": {

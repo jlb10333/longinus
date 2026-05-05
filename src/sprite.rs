@@ -94,6 +94,13 @@ pub fn block<'a>(
   dimensions: &PhysicsVector,
   game_textures: &'a GameTextures,
 ) -> Vec<SpriteToDraw<'a>> {
+  tiled_sprites_to_draw(dimensions, &game_textures.block_textures.block)
+}
+
+pub fn tiled_sprites_to_draw<'a>(
+  dimensions: &PhysicsVector,
+  texture: &'a Texture2D,
+) -> Vec<SpriteToDraw<'a>> {
   let map_dimensions = dimensions.into_vec() * 8.0;
 
   let num_full_tiles_x = map_dimensions.x as i32 / 8;
@@ -101,7 +108,7 @@ pub fn block<'a>(
 
   let full_tiles = (0..num_full_tiles_x).flat_map(move |x| {
     (0..num_full_tiles_y).map(move |y| SpriteToDraw {
-      texture: &game_textures.block_textures.block,
+      texture,
       source: Rect {
         x: 8.0,
         y: 8.0,
@@ -119,7 +126,7 @@ pub fn block<'a>(
   let partial_tile_y = (map_dimensions.y as i32 % 8) as f32;
 
   let bottom_row = (0..num_full_tiles_x).map(move |x| SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 8.0,
       y: 8.0,
@@ -133,7 +140,7 @@ pub fn block<'a>(
   });
 
   let right_column = (0..num_full_tiles_y).map(move |y| SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 8.0,
       y: 8.0,
@@ -147,7 +154,7 @@ pub fn block<'a>(
   });
 
   let bottom_right_tile = SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 8.0,
       y: 8.0,
@@ -161,7 +168,7 @@ pub fn block<'a>(
   };
 
   let left_edge = (0..num_full_tiles_y).map(move |y| SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 0.0,
       y: 8.0,
@@ -175,7 +182,7 @@ pub fn block<'a>(
   });
 
   let right_edge = (0..num_full_tiles_y).map(move |y| SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 16.0,
       y: 8.0,
@@ -189,7 +196,7 @@ pub fn block<'a>(
   });
 
   let left_edge_remainder = SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 0.0,
       y: 8.0,
@@ -203,7 +210,7 @@ pub fn block<'a>(
   };
 
   let right_edge_remainder = SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 16.0,
       y: 8.0,
@@ -217,7 +224,7 @@ pub fn block<'a>(
   };
 
   let top_edge = (0..num_full_tiles_x).map(move |x| SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 8.0,
       y: 0.0,
@@ -231,7 +238,7 @@ pub fn block<'a>(
   });
 
   let bottom_edge = (0..num_full_tiles_x).map(move |x| SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 8.0,
       y: 0.0,
@@ -245,7 +252,7 @@ pub fn block<'a>(
   });
 
   let top_edge_remainder = SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 8.0,
       y: 0.0,
@@ -259,7 +266,7 @@ pub fn block<'a>(
   };
 
   let bottom_edge_remainder = SpriteToDraw {
-    texture: &game_textures.block_textures.block,
+    texture,
     source: Rect {
       x: 8.0,
       y: 16.0,
@@ -273,7 +280,7 @@ pub fn block<'a>(
   };
 
   // let top_left_corner = SpriteToDraw {
-  //   texture: &game_textures.block_textures.block,
+  //   texture,
   //   source: Rect {
   //     x: 0.0,
   //     y: 0.0,
@@ -287,7 +294,7 @@ pub fn block<'a>(
   // };
 
   // let bottom_right_corner = SpriteToDraw {
-  //   texture: &game_textures.block_textures.block,
+  //   texture,
   //   source: Rect {
   //     x: 16.0,
   //     y: 16.0,
