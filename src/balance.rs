@@ -23,6 +23,7 @@ pub struct StatusEffectBalancing {
 
 #[derive(Deserialize)]
 pub struct GoblinBalancing {
+  pub damage: f32,
   pub aggro_range: f32,
   pub lunge_force: f32,
   pub lunge_angvel: f32,
@@ -39,6 +40,10 @@ impl GoblinBalancing {
 
 #[derive(Deserialize)]
 pub struct ImpBalancing {
+  pub width: f32,
+  pub height: f32,
+  pub sprite_to_ball_frame_count: i32,
+  pub sprite_ball_frame_count: i32,
   pub aggro_range: f32,
   pub moving_initial_frames: i32,
   pub shooting_cooldown_initial_frames: i32,

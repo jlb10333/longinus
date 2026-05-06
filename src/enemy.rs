@@ -5,17 +5,9 @@ use rapier2d::{na::Vector2, prelude::*};
 use rpds::{List, list};
 
 use crate::{
-  balance::BALANCING,
-  combat::{distance_projection_physics, Beam, Projectile, WeaponOutput, WeaponOutputKind},
-  controls::angle_from_vec,
-  easing::{self, ease_in_out_sine},
-  ecs::{Damageable, Enemy, Entity, EntityHandle, StatusEffect},
-  load_map::{
+  balance::BALANCING, combat::{distance_projection_physics, Beam, Projectile, WeaponOutput, WeaponOutputKind}, controls::angle_from_vec, easing::{self, ease_in_out_sine}, ecs::{ComponentSet, Damageable, Enemy, Entity, EntityHandle, SimpleSprite, StatusEffect}, load_map::{
     EnemySpawn, EnemySpawnEnemy, ENEMY_PROJECTILE_INTERACTION_GROUPS, RAYCAST_INTERACTION_GROUPS
-  },
-  physics::PhysicsSystem,
-  system::System,
-  units::{vec_zero, PhysicsVector, UnitConvert2}, GameInput,
+  }, physics::PhysicsSystem, sprite, system::System, units::{vec_zero, PhysicsVector, UnitConvert2}, GameInput
 };
 
 #[derive(Clone)]
@@ -430,6 +422,9 @@ impl EnemyImp {
             .iter()
             .map(|&angle| WeaponOutput {
               damage: BALANCING.enemies.imp.projectile_damage,
+              component_set: ComponentSet::new().insert(SimpleSprite {
+                kind: sprite::ImpProjectile,
+              }),
               ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
                 initial_impulse: distance_projection_physics(
                   angle,
@@ -483,7 +478,7 @@ impl EnemyImp {
       EnemyImpState::Moving(frames_left, direction) => {
         if frames_left > 0 {
           let ease = easing::ease_in_out_sine_ddt2()
-            * (direction / BALANCING.enemies.imp.moving_initial_frames as f32);
+            * (direction / BALANCING.enemies.imp.moving_initial_frames as f32) * self_rigid_body.mass();
           let x = 1.0 - frames_left as f32 / BALANCING.enemies.imp.moving_initial_frames as f32;
           let movement_force = ease.at(x);
 

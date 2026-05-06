@@ -6,14 +6,14 @@
     "activeFile": "maps/generated/MP26.json",
     "automapping.whileDrawing": true,
     "expandedProjectPaths": [
-        "maps/templates",
-        "maps/tilesets",
         "maps/generated",
-        ".",
         "maps/templates/enemies",
+        ".",
         "maps/old",
+        "maps/generated/templates",
         "maps",
-        "maps/generated/templates"
+        "maps/templates",
+        "maps/tilesets"
     ],
     "fileStates": {
         ":/automap-tiles.tsx": {
@@ -100,11 +100,14 @@
             }
         },
         "maps/generated/MP1.json": {
-            "scale": 4,
-            "selectedLayer": 2,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 0.75,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": -47.125,
-                "y": -36.25
+                "x": 351.33333333333326,
+                "y": 1370
             }
         },
         "maps/generated/MP11.json": {
@@ -148,19 +151,22 @@
             }
         },
         "maps/generated/MP2.json": {
-            "scale": 1.5,
-            "selectedLayer": 2,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 5.5,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 159.66666666666666,
-                "y": 159.66666666666666
+                "x": 423.18181818181824,
+                "y": 97.18181818181819
             }
         },
         "maps/generated/MP20.json": {
             "scale": 3,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 200,
-                "y": 119.83333333333333
+                "x": 199.83333333333331,
+                "y": 120.83333333333331
             }
         },
         "maps/generated/MP21.json": {
@@ -188,11 +194,11 @@
             }
         },
         "maps/generated/MP25.json": {
-            "scale": 0.5,
-            "selectedLayer": 2,
+            "scale": 2,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": -995,
-                "y": -446
+                "x": 422.25,
+                "y": -558.25
             }
         },
         "maps/generated/MP26.json": {
@@ -200,7 +206,7 @@
             "selectedLayer": 2,
             "viewCenter": {
                 "x": -292.5,
-                "y": -64
+                "y": -334
             }
         },
         "maps/generated/MP28.json": {
@@ -220,11 +226,14 @@
             }
         },
         "maps/generated/MP4.json": {
-            "scale": 2,
-            "selectedLayer": 1,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 1.5,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 113.25,
-                "y": 401.75
+                "x": -175,
+                "y": 69
             }
         },
         "maps/generated/MP5.json": {
@@ -236,19 +245,22 @@
             }
         },
         "maps/generated/MP6.json": {
-            "scale": 1,
-            "selectedLayer": 1,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 2,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": -501.5,
-                "y": 462.5
+                "x": 84.25,
+                "y": 754.25
             }
         },
         "maps/generated/MP7.json": {
-            "scale": 0.33,
+            "scale": 2,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 159.09090909090912,
-                "y": 198.4848484848485
+                "x": -75.75,
+                "y": 354.25
             }
         },
         "maps/generated/MP9.json": {
@@ -277,18 +289,21 @@
         },
         "maps/generated/rules.json": {
             "scale": 8,
-            "selectedLayer": 1,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 200.0625,
-                "y": 200.0625
+                "x": 240.4375,
+                "y": 157.75
             }
         },
         "maps/generated/start.json": {
-            "scale": 1,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 0.75,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": -292.5,
-                "y": -164
+                "x": -138,
+                "y": -1652.6666666666665
             }
         },
         "maps/generated/start.json#colliders": {

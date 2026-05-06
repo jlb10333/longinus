@@ -40,10 +40,12 @@ pub struct Start;
 
 pub struct ProjectileTextures {
   pub plasma: Texture2D,
+  pub imp: Texture2D,
 }
 
 pub struct PickupTextures {
   pub health_tank: Texture2D,
+  pub weapon_module: Texture2D,
 }
 
 pub struct BlockTextures {
@@ -57,6 +59,7 @@ pub struct ActivatorTextures {
 
 pub struct EnemyTextures {
   pub goblin: Texture2D,
+  pub imp: Texture2D,
 }
 
 pub struct GameTextures {
@@ -107,8 +110,12 @@ async fn load_game_textures() -> GameTextures {
   let tiles_texture = load_texture_with_filter("./assets/maps/tilesets/tiles.png").await;
   let player_texture = load_texture_with_filter("./assets/sprites/player.png").await;
   let plasma_texture = load_texture_with_filter("./assets/sprites/projectiles/plasma.png").await;
+  let imp_projectile_texture =
+    load_texture_with_filter("./assets/sprites/projectiles/imp_projectile.png").await;
   let health_tank_texture =
     load_texture_with_filter("./assets/sprites/pickups/health_tank.png").await;
+  let weapon_module_texture =
+    load_texture_with_filter("./assets/sprites/pickups/weapon_module.png").await;
   let breakable_tile_texture =
     load_texture_with_filter("./assets/sprites/breakable_tile.png").await;
   let block_texture = load_texture_with_filter("./assets/sprites/blocks/block.png").await;
@@ -117,6 +124,7 @@ async fn load_game_textures() -> GameTextures {
   let touch_sensor_activated_texture =
     load_texture_with_filter("./assets/sprites/activators/touch_sensor_activated.png").await;
   let goblin_texture = load_texture_with_filter("./assets/sprites/enemies/goblin.png").await;
+  let imp_texture = load_texture_with_filter("./assets/sprites/enemies/imp.png").await;
 
   GameTextures {
     tiles_texture,
@@ -124,9 +132,11 @@ async fn load_game_textures() -> GameTextures {
     breakable_tile_texture,
     projectile_textures: ProjectileTextures {
       plasma: plasma_texture,
+      imp: imp_projectile_texture,
     },
     pickup_textures: PickupTextures {
       health_tank: health_tank_texture,
+      weapon_module: weapon_module_texture,
     },
     block_textures: BlockTextures {
       block: block_texture,
@@ -137,6 +147,7 @@ async fn load_game_textures() -> GameTextures {
     },
     enemy_textures: EnemyTextures {
       goblin: goblin_texture,
+      imp: imp_texture,
     },
   }
 }

@@ -438,13 +438,6 @@
                  "y":44
                 }, 
                 {
-                 "id":11,
-                 "name":"Goblin",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":368,
-                 "y":152
-                }, 
-                {
                  "id":12,
                  "template":"templates\/Player Spawn.tx",
                  "x":212,
@@ -629,6 +622,18 @@
                  "width":10,
                  "x":346,
                  "y":323
+                }, 
+                {
+                 "height":7,
+                 "id":29,
+                 "name":"Block",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"Block",
+                 "visible":true,
+                 "width":53,
+                 "x":330,
+                 "y":152
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -637,7 +642,7 @@
          "y":0
         }],
  "nextlayerid":5,
- "nextobjectid":29,
+ "nextobjectid":31,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

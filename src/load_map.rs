@@ -1095,7 +1095,7 @@ impl EnemySpawn {
           ..Default::default()
         })
         .insert(Damager {
-          damage: 15.0,
+          damage: BALANCING.enemies.goblin.damage,
           hitboxes,
           ..Default::default()
         })
@@ -1450,8 +1450,11 @@ pub struct Wall {
 
 fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
   let collider_builders = match name {
-    EnemySpawnEnemy::Goblin => vec![ColliderBuilder::cuboid(0.8, 0.8)],
-    EnemySpawnEnemy::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
+    EnemySpawnEnemy::Goblin => vec![ColliderBuilder::cuboid(0.6, 0.6)],
+    EnemySpawnEnemy::Imp => vec![ColliderBuilder::cuboid(
+      BALANCING.enemies.imp.width,
+      BALANCING.enemies.imp.height,
+    )],
     EnemySpawnEnemy::Aranea(_) => vec![ColliderBuilder::cuboid(0.3, 0.3)],
     EnemySpawnEnemy::AraneaQueen(_) => vec![ColliderBuilder::cuboid(
       BALANCING.enemies.aranea_queen.colliders_side_length,
@@ -1477,8 +1480,11 @@ fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
 
 fn hitboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
   let collider_builders = match name {
-    EnemySpawnEnemy::Goblin => vec![ColliderBuilder::cuboid(0.8, 0.8)],
-    EnemySpawnEnemy::Imp => vec![ColliderBuilder::cuboid(0.5, 0.3)],
+    EnemySpawnEnemy::Goblin => vec![ColliderBuilder::cuboid(0.6, 0.6)],
+    EnemySpawnEnemy::Imp => vec![ColliderBuilder::cuboid(
+      BALANCING.enemies.imp.width,
+      BALANCING.enemies.imp.height,
+    )],
     EnemySpawnEnemy::Aranea(_) => vec![ColliderBuilder::cuboid(0.3, 0.3)],
     EnemySpawnEnemy::AraneaQueen(_) => vec![ColliderBuilder::cuboid(
       BALANCING.enemies.aranea_queen.colliders_side_length,

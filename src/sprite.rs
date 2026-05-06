@@ -15,24 +15,28 @@ pub struct SpriteToDraw<'a> {
 }
 
 #[derive(Clone)]
-pub enum TextureKind {
+pub enum SimpleSpriteTextureKind {
   Player,
   PlasmaProjectile,
+  ImpProjectile,
   HealthTankPickup,
+  WeaponModulePickup,
   BreakableTile,
   Block(PhysicsVector),
 }
 
-pub use TextureKind::*;
+pub use SimpleSpriteTextureKind::*;
 
 pub fn get_sprites_to_draw<'a>(
-  kind: &TextureKind,
+  kind: &SimpleSpriteTextureKind,
   game_textures: &'a GameTextures,
 ) -> Vec<SpriteToDraw<'a>> {
   match kind {
     Player => player(game_textures),
     PlasmaProjectile => plasma_projectile(game_textures),
+    ImpProjectile => imp_projectile(game_textures),
     HealthTankPickup => health_tank_pickup(game_textures),
+    WeaponModulePickup => weapon_module_pickup(game_textures),
     BreakableTile => breakable_tile(game_textures),
     Block(dimensions) => block(dimensions, game_textures),
   }
@@ -64,9 +68,35 @@ pub fn plasma_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> 
   }]
 }
 
+pub fn imp_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
+  vec![SpriteToDraw {
+    texture: &game_textures.projectile_textures.imp,
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: None,
+  }]
+}
+
 pub fn health_tank_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
   vec![SpriteToDraw {
     texture: &game_textures.pickup_textures.health_tank,
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 16.0,
+      h: 16.0,
+    },
+    offset: None,
+  }]
+}
+
+pub fn weapon_module_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
+  vec![SpriteToDraw {
+    texture: &game_textures.pickup_textures.weapon_module,
     source: Rect {
       x: 0.0,
       y: 0.0,
@@ -123,11 +153,25 @@ pub fn goblin(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>>
     SpriteSheetArgs {
       num_sprites: 2,
       num_columns: 1,
+      width: 16,
+      height: 16,
+      offset: None,
+    },
+    &game_textures.enemy_textures.goblin,
+  )
+}
+
+pub fn imp(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
+  draw_from_sprite_sheet(
+    index,
+    SpriteSheetArgs {
+      num_sprites: 6,
+      num_columns: 2,
       width: 32,
       height: 32,
       offset: None,
     },
-    &game_textures.enemy_textures.goblin,
+    &game_textures.enemy_textures.imp,
   )
 }
 

@@ -19,7 +19,8 @@ use crate::{
     Engine, Entity, EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision,
     GiveManaOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision, Id,
     IncreaseMaxHealthOnCollision, Locomotor, MapTransitionOnCollision, Not, Or, PersistDestruction,
-    SaveMenuOnCollision, SimpleActivatable, Sprite, StatusEffect, Switch, Terminal, TouchSensor,
+    SaveMenuOnCollision, SimpleActivatable, SimpleSprite, StatusEffect, Switch, Terminal,
+    TouchSensor,
   },
   enemy::{
     EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp,
@@ -120,7 +121,7 @@ fn load_new_map(
         hurtboxes: vec![player_hurtbox_handle],
         ..Default::default()
       })
-      .insert(Sprite {
+      .insert(SimpleSprite {
         kind: sprite::Player,
       }),
     label: "player".to_string(),
@@ -220,7 +221,10 @@ fn load_new_map(
             weapon_module_kind: item_pickup.weapon_module_kind,
           })
           .insert(Id { id: item_pickup.id })
-          .insert(DestroyOnCollision),
+          .insert(DestroyOnCollision)
+          .insert(SimpleSprite {
+            kind: sprite::WeaponModulePickup,
+          }),
         label: "item".to_string(),
       }
     })
@@ -240,7 +244,7 @@ fn load_new_map(
           })
           .insert(Id { id: health_tank.id })
           .insert(DestroyOnCollision)
-          .insert(Sprite {
+          .insert(SimpleSprite {
             kind: sprite::HealthTankPickup,
           }),
         label: "health_tank".to_string(),
@@ -318,7 +322,7 @@ fn load_new_map(
         handle: EntityHandle::RigidBody(rigid_body_handle),
         components: ComponentSet::new()
           .insert(Id { id: block.id })
-          .insert(Sprite {
+          .insert(SimpleSprite {
             kind: sprite::Block(PhysicsVector::from_vec(
               block.collider.shape().as_cuboid().unwrap().half_extents * 2.0,
             )),
@@ -698,7 +702,7 @@ fn load_new_map(
             component_set
           };
           let component_set = if let Some(damageable) = damageable {
-            component_set.insert(damageable).insert(Sprite {
+            component_set.insert(damageable).insert(SimpleSprite {
               kind: sprite::BreakableTile,
             })
           } else {
@@ -1113,7 +1117,8 @@ impl System for PhysicsSystem {
                 EntityHandle::RigidBody(handle),
                 Rc::new(Entity {
                   handle: EntityHandle::RigidBody(handle),
-                  components: ComponentSet::new()
+                  components: weapon_output
+                    .component_set
                     .insert(DestroyOnCollision)
                     .insert(Damager {
                       damage: weapon_output.damage,
@@ -2179,7 +2184,7 @@ impl System for PhysicsSystem {
             })
             .collect_tuple()
         {
-          let activation = (activation_1 + activation_2) / 2.0;
+          let activation = (activation_1 + activation_2 - 1.0).max(0.0);
           (
             handle,
             Rc::new(Entity {

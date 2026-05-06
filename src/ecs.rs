@@ -19,7 +19,7 @@ use crate::{
     EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
   },
   load_map::MapAbilityType,
-  sprite::TextureKind,
+  sprite::SimpleSpriteTextureKind,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
@@ -406,10 +406,10 @@ pub struct Terminal {
 }
 impl Component for Terminal {}
 
-pub struct Sprite {
-  pub kind: TextureKind,
+pub struct SimpleSprite {
+  pub kind: SimpleSpriteTextureKind,
 }
-impl Component for Sprite {}
+impl Component for SimpleSprite {}
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct Id {

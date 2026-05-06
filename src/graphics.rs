@@ -15,9 +15,10 @@ use crate::{
   controls::ControlsSystem,
   easing::{self, ease_out_cubic},
   ecs::{
-    Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id, Sprite, TouchSensor,
+    Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id, SimpleSprite,
+    TouchSensor,
   },
-  enemy::EnemySniperState,
+  enemy::{EnemyImpState, EnemySniperState},
   graphics_utils::{draw_collider, draw_label},
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
@@ -150,10 +151,10 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
         let rotation = -(rotation * (16.0 / PI)).round() / (16.0 / PI);
 
-        let sprites_to_draw = {
-          if entity.components.get::<TouchSensor>().is_some()
-            && let Some(activator) = entity.components.get::<Activator>()
-          {
+        let sprites_override = if entity.components.get::<TouchSensor>().is_some()
+          && let Some(activator) = entity.components.get::<Activator>()
+        {
+          Some(
             handle
               .colliders(&physics_system.rigid_body_set)
               .iter()
@@ -169,23 +170,74 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                   sprite::touch_sensor_deactivated(dimensions, &ctx.input.textures)
                 }
               })
-              .collect::<Vec<_>>()
-          } else if let Some(enemy) = entity.components.get::<Enemy>()
-            && let Enemy::Goblin(_goblin) = enemy.as_ref()
-          {
-            sprite::goblin(
+              .collect::<Vec<_>>(),
+          )
+        } else if let Some(enemy) = entity.components.get::<Enemy>() {
+          match enemy.as_ref() {
+            Enemy::Goblin(_goblin) => Some(sprite::goblin(
               (physics_system.frame_count / 15) as i32,
               &ctx.input.textures,
-            )
-          } else {
-            let sprite = if let Some(sprite) = entity.components.get::<Sprite>() {
-              sprite
-            } else {
-              return;
-            };
-
-            get_sprites_to_draw(&sprite.kind, ctx.input.textures.as_ref())
+            )),
+            Enemy::Imp(imp) => match imp.state {
+              EnemyImpState::Moving(frames_left, _) => {
+                if frames_left
+                  > BALANCING.enemies.imp.sprite_to_ball_frame_count
+                    + BALANCING.enemies.imp.sprite_ball_frame_count
+                {
+                  Some(sprite::imp(
+                    (physics_system.frame_count / 15) as i32 % 2,
+                    &ctx.input.textures,
+                  ))
+                } else if frames_left > BALANCING.enemies.imp.sprite_ball_frame_count {
+                  Some(sprite::imp(
+                    ((frames_left - BALANCING.enemies.imp.sprite_ball_frame_count)
+                      / BALANCING.enemies.imp.sprite_to_ball_frame_count)
+                      % 2
+                      + 2,
+                    &ctx.input.textures,
+                  ))
+                } else {
+                  Some(sprite::imp(4, &ctx.input.textures))
+                }
+              }
+              EnemyImpState::ShootingCooldown(frames_left) => {
+                if BALANCING.enemies.imp.shooting_cooldown_initial_frames - frames_left < 7 {
+                  Some(sprite::imp(5, &ctx.input.textures))
+                } else {
+                  Some(sprite::imp(
+                    (physics_system.frame_count / 15) as i32 % 2,
+                    &ctx.input.textures,
+                  ))
+                }
+              }
+              _ => Some(sprite::imp(
+                (physics_system.frame_count / 15) as i32 % 2,
+                &ctx.input.textures,
+              )),
+            },
+            _ => None,
           }
+        } else {
+          None
+        };
+
+        if entity.components.get::<Enemy>().is_some() && sprites_override.is_none() {
+          println!("Uh oh!");
+        }
+
+        let sprites_to_draw = sprites_override.or_else(|| {
+          let sprite = entity.components.get::<SimpleSprite>()?;
+
+          Some(get_sprites_to_draw(
+            &sprite.kind,
+            ctx.input.textures.as_ref(),
+          ))
+        });
+
+        let sprites_to_draw = if let Some(sprites_to_draw) = sprites_to_draw {
+          sprites_to_draw
+        } else {
+          return;
         };
 
         draw_sprites(&sprites_to_draw, translation, rotation);
