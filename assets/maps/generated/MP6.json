@@ -911,13 +911,6 @@
                  "y":88
                 }, 
                 {
-                 "id":41,
-                 "name":"Goblin",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":408,
-                 "y":232
-                }, 
-                {
                  "id":42,
                  "name":"Goblin",
                  "template":"templates\/EnemySpawn.tx",

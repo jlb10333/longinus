@@ -172,7 +172,7 @@
                  "type":"Block",
                  "visible":true,
                  "width":6,
-                 "x":208,
+                 "x":209,
                  "y":64
                 }, 
                 {
@@ -187,7 +187,7 @@
                         }, 
                         {
                          "x":0,
-                         "y":32
+                         "y":24
                         }],
                  "properties":[
                         {
@@ -204,7 +204,7 @@
                  "type":"Locomotor",
                  "visible":true,
                  "width":0,
-                 "x":211,
+                 "x":212,
                  "y":80
                 }, 
                 {

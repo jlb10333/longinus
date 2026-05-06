@@ -229,11 +229,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 1.5,
+            "scale": 5.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": -175,
-                "y": 69
+                "x": 518.6363636363636,
+                "y": -7.7272727272727195
             }
         },
         "maps/generated/MP5.json": {
@@ -248,11 +248,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 2,
+            "scale": 4,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 84.25,
-                "y": 754.25
+                "x": 133.375,
+                "y": 223.125
             }
         },
         "maps/generated/MP7.json": {
