@@ -1,6 +1,15 @@
 # Longinus Master Plan
 ## Gameplay
 - Mechanical prototype v2
+  - Graphics
+    - Basic tile layers for all levels
+    - Enemy art for all levels
+    - All menus
+    - Misc
+      - Save points
+      - Gravity
+      - Missile
+      - Enemy deaths
   - Core elements
     - 2nd boss
   - Full blocking

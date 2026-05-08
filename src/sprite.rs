@@ -19,10 +19,14 @@ pub enum SimpleSpriteTextureKind {
   Player,
   PlasmaProjectile,
   ImpProjectile,
+  Beam(i32, PhysicsVector),
   HealthTankPickup,
   WeaponModulePickup,
   BreakableTile,
   Block(PhysicsVector),
+  HealthPickup,
+  ManaPickup,
+  LaserGate,
 }
 
 pub use SimpleSpriteTextureKind::*;
@@ -34,11 +38,15 @@ pub fn get_sprites_to_draw<'a>(
   match kind {
     Player => player(game_textures),
     PlasmaProjectile => plasma_projectile(game_textures),
+    Beam(index, dimension) => beam(*index, dimension, game_textures),
     ImpProjectile => imp_projectile(game_textures),
     HealthTankPickup => health_tank_pickup(game_textures),
     WeaponModulePickup => weapon_module_pickup(game_textures),
     BreakableTile => breakable_tile(game_textures),
     Block(dimensions) => block(dimensions, game_textures),
+    HealthPickup => health_pickup(game_textures),
+    ManaPickup => mana_pickup(game_textures),
+    LaserGate => laser_gate(game_textures),
   }
 }
 
@@ -66,6 +74,22 @@ pub fn plasma_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> 
     },
     offset: None,
   }]
+}
+
+pub fn beam<'a>(
+  index: i32,
+  dimensions: &PhysicsVector,
+  game_textures: &'a GameTextures,
+) -> Vec<SpriteToDraw<'a>> {
+  let offset = Vec2 {
+    x: 0.0,
+    y: index as f32 * 24.0,
+  };
+  tiled_sprites_to_draw(
+    dimensions,
+    &game_textures.projectile_textures.beam,
+    Some(offset),
+  )
 }
 
 pub fn imp_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
@@ -107,6 +131,32 @@ pub fn weapon_module_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_
   }]
 }
 
+pub fn health_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
+  vec![SpriteToDraw {
+    texture: &game_textures.pickup_textures.health,
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: None,
+  }]
+}
+
+pub fn mana_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
+  vec![SpriteToDraw {
+    texture: &game_textures.pickup_textures.mana,
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: None,
+  }]
+}
+
 pub fn breakable_tile(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
   vec![SpriteToDraw {
     texture: &game_textures.breakable_tile_texture,
@@ -124,7 +174,7 @@ pub fn block<'a>(
   dimensions: &PhysicsVector,
   game_textures: &'a GameTextures,
 ) -> Vec<SpriteToDraw<'a>> {
-  tiled_sprites_to_draw(dimensions, &game_textures.block_textures.block)
+  tiled_sprites_to_draw(dimensions, &game_textures.block_textures.block, None)
 }
 
 pub fn touch_sensor_activated<'a>(
@@ -134,6 +184,7 @@ pub fn touch_sensor_activated<'a>(
   tiled_sprites_to_draw(
     dimensions,
     &game_textures.activator_textures.touch_sensor_activated,
+    None,
   )
 }
 
@@ -144,6 +195,7 @@ pub fn touch_sensor_deactivated<'a>(
   tiled_sprites_to_draw(
     dimensions,
     &game_textures.activator_textures.touch_sensor_deactivated,
+    None,
   )
 }
 
@@ -173,6 +225,19 @@ pub fn imp(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
     },
     &game_textures.enemy_textures.imp,
   )
+}
+
+pub fn laser_gate(game_textures: &GameTextures) -> Vec<SpriteToDraw<'_>> {
+  vec![SpriteToDraw {
+    texture: &game_textures.enemy_textures.laser_gate,
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: None,
+  }]
 }
 
 struct SpriteSheetArgs {
@@ -210,18 +275,26 @@ fn draw_from_sprite_sheet(
 fn tiled_sprites_to_draw<'a>(
   dimensions: &PhysicsVector,
   texture: &'a Texture2D,
+  source_offset: Option<Vec2>,
 ) -> Vec<SpriteToDraw<'a>> {
   let map_dimensions = dimensions.into_vec() * 8.0;
 
   let num_full_tiles_x = map_dimensions.x as i32 / 8;
   let num_full_tiles_y = map_dimensions.y as i32 / 8;
 
+  let source_offset_x = source_offset
+    .map(|source_offset| source_offset.x)
+    .unwrap_or(0.0);
+  let source_offset_y = source_offset
+    .map(|source_offset| source_offset.y)
+    .unwrap_or(0.0);
+
   let full_tiles = (0..num_full_tiles_x).flat_map(move |x| {
     (0..num_full_tiles_y).map(move |y| SpriteToDraw {
       texture,
       source: Rect {
-        x: 8.0,
-        y: 8.0,
+        x: 8.0 + source_offset_x,
+        y: 8.0 + source_offset_y,
         w: 8.0,
         h: 8.0,
       },
@@ -238,8 +311,8 @@ fn tiled_sprites_to_draw<'a>(
   let bottom_row = (0..num_full_tiles_x).map(move |x| SpriteToDraw {
     texture,
     source: Rect {
-      x: 8.0,
-      y: 8.0,
+      x: 8.0 + source_offset_x,
+      y: 8.0 + source_offset_y,
       w: 8.0,
       h: partial_tile_y,
     },
@@ -252,8 +325,8 @@ fn tiled_sprites_to_draw<'a>(
   let right_column = (0..num_full_tiles_y).map(move |y| SpriteToDraw {
     texture,
     source: Rect {
-      x: 8.0,
-      y: 8.0,
+      x: 8.0 + source_offset_x,
+      y: 8.0 + source_offset_y,
       w: partial_tile_x,
       h: 8.0,
     },
@@ -266,8 +339,8 @@ fn tiled_sprites_to_draw<'a>(
   let bottom_right_tile = SpriteToDraw {
     texture,
     source: Rect {
-      x: 8.0,
-      y: 8.0,
+      x: 8.0 + source_offset_x,
+      y: 8.0 + source_offset_y,
       w: partial_tile_x,
       h: partial_tile_y,
     },
@@ -280,8 +353,8 @@ fn tiled_sprites_to_draw<'a>(
   let left_edge = (0..num_full_tiles_y).map(move |y| SpriteToDraw {
     texture,
     source: Rect {
-      x: 0.0,
-      y: 8.0,
+      x: 0.0 + source_offset_x,
+      y: 8.0 + source_offset_y,
       w: 8.0,
       h: 8.0,
     },
@@ -294,8 +367,8 @@ fn tiled_sprites_to_draw<'a>(
   let right_edge = (0..num_full_tiles_y).map(move |y| SpriteToDraw {
     texture,
     source: Rect {
-      x: 16.0,
-      y: 8.0,
+      x: 16.0 + source_offset_x,
+      y: 8.0 + source_offset_y,
       w: 8.0,
       h: 8.0,
     },
@@ -308,8 +381,8 @@ fn tiled_sprites_to_draw<'a>(
   let left_edge_remainder = SpriteToDraw {
     texture,
     source: Rect {
-      x: 0.0,
-      y: 8.0,
+      x: 0.0 + source_offset_x,
+      y: 8.0 + source_offset_y,
       w: 8.0,
       h: partial_tile_y,
     },
@@ -322,8 +395,8 @@ fn tiled_sprites_to_draw<'a>(
   let right_edge_remainder = SpriteToDraw {
     texture,
     source: Rect {
-      x: 16.0,
-      y: 8.0,
+      x: 16.0 + source_offset_x,
+      y: 8.0 + source_offset_y,
       w: 8.0,
       h: partial_tile_y,
     },
@@ -336,8 +409,8 @@ fn tiled_sprites_to_draw<'a>(
   let top_edge = (0..num_full_tiles_x).map(move |x| SpriteToDraw {
     texture,
     source: Rect {
-      x: 8.0,
-      y: 0.0,
+      x: 8.0 + source_offset_x,
+      y: 0.0 + source_offset_y,
       w: 8.0,
       h: 8.0,
     },
@@ -350,8 +423,8 @@ fn tiled_sprites_to_draw<'a>(
   let bottom_edge = (0..num_full_tiles_x).map(move |x| SpriteToDraw {
     texture,
     source: Rect {
-      x: 8.0,
-      y: 16.0,
+      x: 8.0 + source_offset_x,
+      y: 16.0 + source_offset_y,
       w: 8.0,
       h: 8.0,
     },
@@ -364,8 +437,8 @@ fn tiled_sprites_to_draw<'a>(
   let top_edge_remainder = SpriteToDraw {
     texture,
     source: Rect {
-      x: 8.0,
-      y: 0.0,
+      x: 8.0 + source_offset_x,
+      y: 0.0 + source_offset_y,
       w: partial_tile_x,
       h: 8.0,
     },
@@ -378,8 +451,8 @@ fn tiled_sprites_to_draw<'a>(
   let bottom_edge_remainder = SpriteToDraw {
     texture,
     source: Rect {
-      x: 8.0,
-      y: 16.0,
+      x: 8.0 + source_offset_x,
+      y: 16.0 + source_offset_y,
       w: partial_tile_x,
       h: 8.0,
     },
@@ -389,33 +462,61 @@ fn tiled_sprites_to_draw<'a>(
     }),
   };
 
-  // let top_left_corner = SpriteToDraw {
-  //   texture,
-  //   source: Rect {
-  //     x: 0.0,
-  //     y: 0.0,
-  //     w: 8.0,
-  //     h: 8.0,
-  //   },
-  //   offset: Some(Vec2 {
-  //     x: -(map_dimensions.x / 2.0) - 4.0,
-  //     y: -(map_dimensions.y / 2.0) - 4.0,
-  //   }),
-  // };
+  let top_left_corner = SpriteToDraw {
+    texture,
+    source: Rect {
+      x: 0.0 + source_offset_x,
+      y: 0.0 + source_offset_y,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: Some(Vec2 {
+      x: -(map_dimensions.x / 2.0) - 4.0,
+      y: -(map_dimensions.y / 2.0) - 4.0,
+    }),
+  };
 
-  // let bottom_right_corner = SpriteToDraw {
-  //   texture,
-  //   source: Rect {
-  //     x: 16.0,
-  //     y: 16.0,
-  //     w: 8.0,
-  //     h: 8.0,
-  //   },
-  //   offset: Some(Vec2 {
-  //     x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x / 2.0),
-  //     y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y / 2.0),
-  //   }),
-  // };
+  let bottom_right_corner = SpriteToDraw {
+    texture,
+    source: Rect {
+      x: 16.0 + source_offset_x,
+      y: 16.0 + source_offset_y,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: Some(Vec2 {
+      x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x) + 4.0,
+      y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y) + 4.0,
+    }),
+  };
+
+  let top_right_corner = SpriteToDraw {
+    texture,
+    source: Rect {
+      x: 16.0 + source_offset_x,
+      y: 0.0 + source_offset_y,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: Some(Vec2 {
+      x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x) + 4.0,
+      y: -(map_dimensions.y / 2.0) - 4.0,
+    }),
+  };
+
+  let bottom_left_corner = SpriteToDraw {
+    texture,
+    source: Rect {
+      x: 0.0 + source_offset_x,
+      y: 16.0 + source_offset_y,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: Some(Vec2 {
+      x: -(map_dimensions.x / 2.0) - 4.0,
+      y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y) + 4.0,
+    }),
+  };
 
   full_tiles
     .chain(bottom_row)
@@ -429,5 +530,9 @@ fn tiled_sprites_to_draw<'a>(
     .chain(bottom_edge)
     .chain([top_edge_remainder])
     .chain([bottom_edge_remainder])
+    .chain([top_left_corner])
+    .chain([bottom_right_corner])
+    .chain([top_right_corner])
+    .chain([bottom_left_corner])
     .collect()
 }

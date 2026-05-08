@@ -12,8 +12,9 @@ use crate::{
   GameInput,
   balance::BALANCING,
   combat::{WeaponModuleKind, distance_projection_physics},
-  ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Id},
+  ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Id, SimpleSprite},
   physics::PhysicsSystem,
+  sprite,
   system::System,
   units::{PhysicsScalar, PhysicsVector, UnitConvert2, vec_zero},
 };
@@ -1279,6 +1280,9 @@ impl EnemySpawn {
           chance_health: 0.3,
           mana_amount: 1.0,
           chance_mana: 0.2,
+        })
+        .insert(SimpleSprite {
+          kind: sprite::LaserGate,
         }),
     }
   }

@@ -109,7 +109,7 @@
             "health": 30,
             "damage": 10,
             "deteriorate_apply_amount": 60,
-            "beam_thickness": 0.1
+            "beam_thickness": 0.25
         }
     },
     "weapons": {

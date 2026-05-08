@@ -41,11 +41,14 @@ pub struct Start;
 pub struct ProjectileTextures {
   pub plasma: Texture2D,
   pub imp: Texture2D,
+  pub beam: Texture2D,
 }
 
 pub struct PickupTextures {
   pub health_tank: Texture2D,
   pub weapon_module: Texture2D,
+  pub health: Texture2D,
+  pub mana: Texture2D,
 }
 
 pub struct BlockTextures {
@@ -60,6 +63,7 @@ pub struct ActivatorTextures {
 pub struct EnemyTextures {
   pub goblin: Texture2D,
   pub imp: Texture2D,
+  pub laser_gate: Texture2D,
 }
 
 pub struct GameTextures {
@@ -112,10 +116,15 @@ async fn load_game_textures() -> GameTextures {
   let plasma_texture = load_texture_with_filter("./assets/sprites/projectiles/plasma.png").await;
   let imp_projectile_texture =
     load_texture_with_filter("./assets/sprites/projectiles/imp_projectile.png").await;
+  let beam_texture = load_texture_with_filter("./assets/sprites/projectiles/beam.png").await;
   let health_tank_texture =
     load_texture_with_filter("./assets/sprites/pickups/health_tank.png").await;
   let weapon_module_texture =
     load_texture_with_filter("./assets/sprites/pickups/weapon_module.png").await;
+  let health_pickup_texture =
+    load_texture_with_filter("./assets/sprites/pickups/health_pickup.png").await;
+  let mana_pickup_texture =
+    load_texture_with_filter("./assets/sprites/pickups/mana_pickup.png").await;
   let breakable_tile_texture =
     load_texture_with_filter("./assets/sprites/breakable_tile.png").await;
   let block_texture = load_texture_with_filter("./assets/sprites/blocks/block.png").await;
@@ -125,6 +134,8 @@ async fn load_game_textures() -> GameTextures {
     load_texture_with_filter("./assets/sprites/activators/touch_sensor_activated.png").await;
   let goblin_texture = load_texture_with_filter("./assets/sprites/enemies/goblin.png").await;
   let imp_texture = load_texture_with_filter("./assets/sprites/enemies/imp.png").await;
+  let laser_gate_texture =
+    load_texture_with_filter("./assets/sprites/enemies/laser_gate.png").await;
 
   GameTextures {
     tiles_texture,
@@ -133,10 +144,13 @@ async fn load_game_textures() -> GameTextures {
     projectile_textures: ProjectileTextures {
       plasma: plasma_texture,
       imp: imp_projectile_texture,
+      beam: beam_texture,
     },
     pickup_textures: PickupTextures {
       health_tank: health_tank_texture,
       weapon_module: weapon_module_texture,
+      health: health_pickup_texture,
+      mana: mana_pickup_texture,
     },
     block_textures: BlockTextures {
       block: block_texture,
@@ -148,6 +162,7 @@ async fn load_game_textures() -> GameTextures {
     enemy_textures: EnemyTextures {
       goblin: goblin_texture,
       imp: imp_texture,
+      laser_gate: laser_gate_texture,
     },
   }
 }

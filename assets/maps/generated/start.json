@@ -186,6 +186,44 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":160,
                  "y":272
+                }, 
+                {
+                 "height":16,
+                 "id":34,
+                 "name":"Touch Sensor",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"TargetActivation",
+                         "type":"float",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"TouchSensor",
+                 "visible":true,
+                 "width":16,
+                 "x":184,
+                 "y":216
+                }, 
+                {
+                 "height":20,
+                 "id":35,
+                 "name":"Block",
+                 "opacity":1,
+                 "rotation":0,
+                 "type":"Block",
+                 "visible":true,
+                 "width":6,
+                 "x":144,
+                 "y":224
+                }, 
+                {
+                 "id":36,
+                 "name":"LaserGate",
+                 "rotation":90,
+                 "template":"templates\/EnemySpawn.tx",
+                 "x":56,
+                 "y":208
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -194,7 +232,7 @@
          "y":0
         }],
  "nextlayerid":5,
- "nextobjectid":34,
+ "nextobjectid":37,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

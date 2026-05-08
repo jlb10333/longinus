@@ -221,10 +221,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           None
         };
 
-        if entity.components.get::<Enemy>().is_some() && sprites_override.is_none() {
-          println!("Uh oh!");
-        }
-
         let sprites_to_draw = sprites_override.or_else(|| {
           let sprite = entity.components.get::<SimpleSprite>()?;
 

@@ -1156,8 +1156,10 @@ impl System for PhysicsSystem {
                   .rotation(-rotation_angle),
               );
 
+              let dimensions = PhysicsVector::from_vec(vector![distance, beam.thickness]);
+
               let collider_handle = collider_set.insert_with_parent(
-                ColliderBuilder::cuboid(distance / 2.0, beam.thickness / 2.0)
+                ColliderBuilder::cuboid(dimensions.x() / 2.0, dimensions.y() / 2.0)
                   .sensor(true)
                   .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS),
                 rigid_body_handle,
@@ -1174,7 +1176,10 @@ impl System for PhysicsSystem {
                       hitboxes: vec![collider_handle],
                       status_effects: weapon_output.status_effects.clone(),
                     })
-                    .insert(DestroyAfterFrames { frames: 2 }),
+                    .insert(DestroyAfterFrames { frames: 2 })
+                    .insert(SimpleSprite {
+                      kind: sprite::Beam((self.frame_count as i32 / 7) % 4, dimensions),
+                    }),
                   label: "beam".to_string(),
                 }),
               )
@@ -1505,11 +1510,14 @@ impl System for PhysicsSystem {
               EntityHandle::Collider(new_handle),
               Entity {
                 handle: EntityHandle::Collider(new_handle),
-                components: ComponentSet::new().insert(DestroyOnCollision).insert(
-                  HealOnCollision {
+                components: ComponentSet::new()
+                  .insert(DestroyOnCollision)
+                  .insert(HealOnCollision {
                     amount: drop_on_destroy.health_amount,
-                  },
-                ),
+                  })
+                  .insert(SimpleSprite {
+                    kind: sprite::HealthPickup,
+                  }),
                 label: "health".to_string(),
               }
               .into(),
@@ -1533,11 +1541,14 @@ impl System for PhysicsSystem {
               EntityHandle::Collider(new_handle),
               Entity {
                 handle: EntityHandle::Collider(new_handle),
-                components: ComponentSet::new().insert(DestroyOnCollision).insert(
-                  GiveManaOnCollision {
+                components: ComponentSet::new()
+                  .insert(DestroyOnCollision)
+                  .insert(GiveManaOnCollision {
                     amount: drop_on_destroy.mana_amount,
-                  },
-                ),
+                  })
+                  .insert(SimpleSprite {
+                    kind: sprite::ManaPickup,
+                  }),
 
                 label: "mana".to_string(),
               }

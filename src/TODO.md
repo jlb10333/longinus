@@ -1,2 +1,0 @@
-- Save all sprites as .piskel files to make editing easier
-- Work on enemy animation (index into sprite sheet with i32), use either the global frame count or the enemy's individual state for that
