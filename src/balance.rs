@@ -30,6 +30,7 @@ pub struct GoblinBalancing {
   pub max_lunge_distance: f32,
   pub slowing_frames: i32,
   pub recovering_frames: i32,
+  pub destroy_effect_duration: i32,
 }
 
 impl GoblinBalancing {
@@ -51,6 +52,7 @@ pub struct ImpBalancing {
   pub move_distance: f32,
   pub projectile_speed: f32,
   pub projectile_damage: f32,
+  pub destroy_effect_duration: i32,
 }
 
 #[derive(Deserialize)]

@@ -31,7 +31,8 @@
             "lunge_angvel": 15,
             "max_lunge_distance": 10,
             "slowing_frames": 50,
-            "recovering_frames": 50
+            "recovering_frames": 50,
+            "destroy_effect_duration": 25
         },
         "imp": {
             "width": 0.7,
@@ -44,7 +45,8 @@
             "move_force": 0.16,
             "move_distance": 4,
             "projectile_speed": 0.7,
-            "projectile_damage": 5.0
+            "projectile_damage": 5.0,
+            "destroy_effect_duration": 30
         },
         "aranea": {
             "launch_force": 5,

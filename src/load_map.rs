@@ -12,7 +12,8 @@ use crate::{
   GameInput,
   balance::BALANCING,
   combat::{WeaponModuleKind, distance_projection_physics},
-  ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Id, SimpleSprite},
+  ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Id, OnDestroyEffect, SimpleSprite},
+  effects,
   physics::PhysicsSystem,
   sprite,
   system::System,
@@ -1105,6 +1106,10 @@ impl EnemySpawn {
           chance_health: 0.3,
           mana_amount: 1.0,
           chance_mana: 0.2,
+        })
+        .insert(OnDestroyEffect {
+          effect_kind: effects::NoiseDissolve,
+          duration: BALANCING.enemies.goblin.destroy_effect_duration,
         }),
       EnemySpawnEnemy::Imp => ComponentSet::new()
         .insert(Damageable {
@@ -1125,6 +1130,10 @@ impl EnemySpawn {
           chance_health: 0.3,
           mana_amount: 1.0,
           chance_mana: 0.2,
+        })
+        .insert(OnDestroyEffect {
+          effect_kind: effects::NoiseDissolve,
+          duration: BALANCING.enemies.imp.destroy_effect_duration,
         }),
       EnemySpawnEnemy::Aranea(_) => ComponentSet::new()
         .insert(Damageable {

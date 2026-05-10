@@ -14,6 +14,7 @@ use struct_record::record;
 use crate::{
   balance::{BALANCING, StatusEffectBalancing},
   combat::WeaponModuleKind,
+  effects::EffectKind,
   enemy::{
     EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyGoblin, EnemyImp, EnemyLaserGate,
     EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
@@ -410,6 +411,12 @@ pub struct SimpleSprite {
   pub kind: SimpleSpriteTextureKind,
 }
 impl Component for SimpleSprite {}
+
+pub struct OnDestroyEffect {
+  pub effect_kind: EffectKind,
+  pub duration: i32,
+}
+impl Component for OnDestroyEffect {}
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct Id {

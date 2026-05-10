@@ -18,10 +18,11 @@ use crate::{
     Damager, DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, EnemyGate,
     Engine, Entity, EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision,
     GiveManaOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision, Id,
-    IncreaseMaxHealthOnCollision, Locomotor, MapTransitionOnCollision, Not, Or, PersistDestruction,
-    SaveMenuOnCollision, SimpleActivatable, SimpleSprite, StatusEffect, Switch, Terminal,
-    TouchSensor,
+    IncreaseMaxHealthOnCollision, Locomotor, MapTransitionOnCollision, Not, OnDestroyEffect, Or,
+    PersistDestruction, SaveMenuOnCollision, SimpleActivatable, SimpleSprite, StatusEffect, Switch,
+    Terminal, TouchSensor,
   },
+  effects,
   enemy::{
     EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp,
     EnemyImpState, EnemyLaserGate, EnemySeeker, EnemySeekerGenerator, EnemySniper,
@@ -702,9 +703,15 @@ fn load_new_map(
             component_set
           };
           let component_set = if let Some(damageable) = damageable {
-            component_set.insert(damageable).insert(SimpleSprite {
-              kind: sprite::BreakableTile,
-            })
+            component_set
+              .insert(damageable)
+              .insert(SimpleSprite {
+                kind: sprite::BreakableTile,
+              })
+              .insert(OnDestroyEffect {
+                duration: 5,
+                effect_kind: effects::NoiseDissolve,
+              })
           } else {
             component_set
           };
@@ -954,6 +961,50 @@ impl System for PhysicsSystem {
     let mut collider_set = self.collider_set.clone();
 
     let entities = self.entities.clone();
+
+    let entities = entities
+      .into_iter()
+      .filter_map(|(&handle, entity)| {
+        if entity.components.get::<Destroyed>().is_none()
+          || handle == EntityHandle::RigidBody(self.player_handle)
+        {
+          return Some((handle, Rc::clone(entity)));
+        }
+
+        let removed_colliders = entity
+          .handle
+          .colliders(rigid_body_set)
+          .into_iter()
+          .copied()
+          .collect::<Vec<ColliderHandle>>();
+
+        match entity.handle {
+          EntityHandle::RigidBody(rigid_body_handle) => {
+            rigid_body_set.remove(
+              rigid_body_handle,
+              &mut island_manager,
+              &mut collider_set,
+              &mut impulse_joint_set,
+              &mut multibody_joint_set,
+              true,
+            );
+          }
+          EntityHandle::Collider(collider_handle) => {
+            collider_set.remove(collider_handle, &mut island_manager, rigid_body_set, true);
+          }
+        };
+        narrow_phase.handle_user_changes(
+          Some(&mut island_manager),
+          &[],
+          &removed_colliders,
+          &mut collider_set,
+          rigid_body_set,
+          &(),
+        );
+
+        None
+      })
+      .collect::<HashTrieMap<_, _>>();
 
     /* MARK: Move the player */
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
@@ -1826,8 +1877,6 @@ impl System for PhysicsSystem {
 
     /* MARK: Initiate chain on selected mount point */
     let chain_entities = ability_system.chain_to_mount_point.map(|mount_point| {
-      println!("chaining {}", self.frame_count);
-
       let player_translation = *rigid_body_set[self.player_handle].translation();
 
       let vector_to_mount_point = rigid_body_set[mount_point].translation() - player_translation;
@@ -2362,7 +2411,7 @@ impl System for PhysicsSystem {
       }
     });
 
-    /* MARK: Remove destroyed entities */
+    /* MARK: Indicate destroyed entities */
     let destroyed_entities = entities
       .iter()
       .filter_map(|(&handle, entity)| {
@@ -2371,34 +2420,6 @@ impl System for PhysicsSystem {
         } else {
           None
         }
-      })
-      .collect::<HashTrieMap<_, _>>();
-
-    let entities = entities
-      .into_iter()
-      .filter_map(|(&handle, entity)| {
-        if entity.components.get::<Destroyed>().is_none()
-          || handle == EntityHandle::RigidBody(self.player_handle)
-        {
-          return Some((handle, Rc::clone(entity)));
-        }
-
-        match entity.handle {
-          EntityHandle::RigidBody(rigid_body_handle) => {
-            rigid_body_set.remove(
-              rigid_body_handle,
-              &mut island_manager,
-              &mut collider_set,
-              &mut impulse_joint_set,
-              &mut multibody_joint_set,
-              true,
-            );
-          }
-          EntityHandle::Collider(collider_handle) => {
-            collider_set.remove(collider_handle, &mut island_manager, rigid_body_set, true);
-          }
-        }
-        None
       })
       .collect::<HashTrieMap<_, _>>();
 
@@ -2595,21 +2616,12 @@ fn fold_damageable_damage_taken(
             .applied_status_effects
             .iter()
             .filter(|(status_effect, steps_left)| {
-              if *status_effect == StatusEffect::Deteriorate
-                && steps_left % DETERIORATION_STEP_FREQ == 0
-              {
-                println!("{steps_left}")
-              }
-
               *status_effect == StatusEffect::Deteriorate
                 && steps_left % DETERIORATION_STEP_FREQ == 0
             })
             .count() as f32;
           let incoming_deterioration_damage =
             num_active_deterioration_effects * DETERIORATION_DAMAGE_PERCENT * damageable.max_health;
-          if incoming_deterioration_damage > 0.0 {
-            println!("incoming det damage {}", incoming_deterioration_damage)
-          }
           let incoming_damage = incoming_damage + incoming_deterioration_damage;
 
           let num_vulnerable_effects =

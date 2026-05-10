@@ -15,9 +15,10 @@ use crate::{
   controls::ControlsSystem,
   easing::{self, ease_out_cubic},
   ecs::{
-    Activator, Damageable, Damager, Enemy, EntityHandle, GravitySource, Id, SimpleSprite,
-    TouchSensor,
+    Activator, Damageable, Damager, Destroyed, Enemy, EntityHandle, GravitySource, Id,
+    OnDestroyEffect, SimpleSprite, TouchSensor,
   },
+  effects::{Effect, EffectKind},
   enemy::{EnemyImpState, EnemySniperState},
   graphics_utils::{draw_collider, draw_label},
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
@@ -61,7 +62,10 @@ pub const COLOR_4: Color = Color {
 };
 
 #[derive(Clone)]
-pub struct GraphicsSystem<Input>(PhantomData<Input>);
+pub struct GraphicsSystem<Input> {
+  effects: Vec<Effect>,
+  _phantom_data: PhantomData<Input>,
+}
 
 const MINI_MAP_TILE_WIDTH: f32 = 2.0;
 const MINI_MAP_TILE_HEIGHT: f32 = 2.0;
@@ -76,7 +80,10 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   where
     Self: Sized,
   {
-    Rc::new(GraphicsSystem(PhantomData))
+    Rc::new(GraphicsSystem {
+      effects: vec![],
+      _phantom_data: PhantomData,
+    })
   }
 
   fn update(
@@ -126,117 +133,177 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         )
         .collect::<Vec<_>>();
 
-      sorted_entities.iter().for_each(|(handle, entity)| {
-        let (physics_translation, rotation) = match *handle {
-          EntityHandle::Collider(collider_handle) => {
-            let collider = &physics_system.collider_set[*collider_handle];
-            (collider.translation(), collider.rotation().angle())
+      let new_effects: Vec<Effect> = sorted_entities
+        .iter()
+        .filter_map(|(handle, entity)| {
+          let (physics_translation, rotation) = match *handle {
+            EntityHandle::Collider(collider_handle) => {
+              let collider = &physics_system.collider_set[*collider_handle];
+              (collider.translation(), collider.rotation().angle())
+            }
+            EntityHandle::RigidBody(rigid_body_handle) => {
+              let rigid_body = &physics_system.rigid_body_set[*rigid_body_handle];
+              (rigid_body.translation(), rigid_body.rotation().angle())
+            }
+          };
+
+          if let Some(damageable) = entity.components.get::<Damageable>()
+            && (damageable.damaged
+              || damageable.current_hitstun % 10.0 == 1.0
+              || damageable.current_hitstun % 10.0 == 2.0)
+            && (entity.components.get::<Destroyed>().is_none()
+              || (entity.components.get::<Destroyed>().is_some()
+                && entity.components.get::<OnDestroyEffect>().is_none()))
+          {
+            return None;
           }
-          EntityHandle::RigidBody(rigid_body_handle) => {
-            let rigid_body = &physics_system.rigid_body_set[*rigid_body_handle];
-            (rigid_body.translation(), rigid_body.rotation().angle())
-          }
-        };
 
-        if let Some(damageable) = entity.components.get::<Damageable>()
-          && (damageable.damaged
-            || damageable.current_hitstun % 10.0 == 1.0
-            || damageable.current_hitstun % 10.0 == 2.0)
-        {
-          return;
-        }
+          let translation =
+            PhysicsVector::from_vec(*physics_translation).into_pos(camera_system.translation);
 
-        let translation =
-          PhysicsVector::from_vec(*physics_translation).into_pos(camera_system.translation);
+          let rotation = -(rotation * (16.0 / PI)).round() / (16.0 / PI);
 
-        let rotation = -(rotation * (16.0 / PI)).round() / (16.0 / PI);
+          let sprites_override = if entity.components.get::<TouchSensor>().is_some()
+            && let Some(activator) = entity.components.get::<Activator>()
+          {
+            Some(
+              handle
+                .colliders(&physics_system.rigid_body_set)
+                .iter()
+                .flat_map(|&&collider_handle| {
+                  let collider = &physics_system.collider_set[collider_handle];
+                  let dimensions = &PhysicsVector::from_vec(
+                    collider.shape().as_cuboid().unwrap().half_extents * 2.0,
+                  );
 
-        let sprites_override = if entity.components.get::<TouchSensor>().is_some()
-          && let Some(activator) = entity.components.get::<Activator>()
-        {
-          Some(
-            handle
-              .colliders(&physics_system.rigid_body_set)
-              .iter()
-              .flat_map(|&&collider_handle| {
-                let collider = &physics_system.collider_set[collider_handle];
-                let dimensions = &PhysicsVector::from_vec(
-                  collider.shape().as_cuboid().unwrap().half_extents * 2.0,
-                );
-
-                if activator.activation >= 0.5 {
-                  sprite::touch_sensor_activated(dimensions, &ctx.input.textures)
-                } else {
-                  sprite::touch_sensor_deactivated(dimensions, &ctx.input.textures)
-                }
-              })
-              .collect::<Vec<_>>(),
-          )
-        } else if let Some(enemy) = entity.components.get::<Enemy>() {
-          match enemy.as_ref() {
-            Enemy::Goblin(_goblin) => Some(sprite::goblin(
-              (physics_system.frame_count / 15) as i32,
-              &ctx.input.textures,
-            )),
-            Enemy::Imp(imp) => match imp.state {
-              EnemyImpState::Moving(frames_left, _) => {
-                if frames_left
-                  > BALANCING.enemies.imp.sprite_to_ball_frame_count
-                    + BALANCING.enemies.imp.sprite_ball_frame_count
-                {
-                  Some(sprite::imp(
-                    (physics_system.frame_count / 15) as i32 % 2,
-                    &ctx.input.textures,
-                  ))
-                } else if frames_left > BALANCING.enemies.imp.sprite_ball_frame_count {
-                  Some(sprite::imp(
-                    ((frames_left - BALANCING.enemies.imp.sprite_ball_frame_count)
-                      / BALANCING.enemies.imp.sprite_to_ball_frame_count)
-                      % 2
-                      + 2,
-                    &ctx.input.textures,
-                  ))
-                } else {
-                  Some(sprite::imp(4, &ctx.input.textures))
-                }
-              }
-              EnemyImpState::ShootingCooldown(frames_left) => {
-                if BALANCING.enemies.imp.shooting_cooldown_initial_frames - frames_left < 7 {
-                  Some(sprite::imp(5, &ctx.input.textures))
-                } else {
-                  Some(sprite::imp(
-                    (physics_system.frame_count / 15) as i32 % 2,
-                    &ctx.input.textures,
-                  ))
-                }
-              }
-              _ => Some(sprite::imp(
-                (physics_system.frame_count / 15) as i32 % 2,
+                  if activator.activation >= 0.5 {
+                    sprite::touch_sensor_activated(dimensions, &ctx.input.textures)
+                  } else {
+                    sprite::touch_sensor_deactivated(dimensions, &ctx.input.textures)
+                  }
+                })
+                .collect::<Vec<_>>(),
+            )
+          } else if let Some(enemy) = entity.components.get::<Enemy>() {
+            match enemy.as_ref() {
+              Enemy::Goblin(_goblin) => Some(sprite::goblin(
+                (physics_system.frame_count / 15) as i32,
                 &ctx.input.textures,
               )),
-            },
-            _ => None,
+              Enemy::Imp(imp) => match imp.state {
+                EnemyImpState::Moving(frames_left, _) => {
+                  if frames_left
+                    > BALANCING.enemies.imp.sprite_to_ball_frame_count
+                      + BALANCING.enemies.imp.sprite_ball_frame_count
+                  {
+                    Some(sprite::imp(
+                      (physics_system.frame_count / 15) as i32 % 2,
+                      &ctx.input.textures,
+                    ))
+                  } else if frames_left > BALANCING.enemies.imp.sprite_ball_frame_count {
+                    Some(sprite::imp(
+                      ((frames_left - BALANCING.enemies.imp.sprite_ball_frame_count)
+                        / BALANCING.enemies.imp.sprite_to_ball_frame_count)
+                        % 2
+                        + 2,
+                      &ctx.input.textures,
+                    ))
+                  } else {
+                    Some(sprite::imp(4, &ctx.input.textures))
+                  }
+                }
+                EnemyImpState::ShootingCooldown(frames_left) => {
+                  if BALANCING.enemies.imp.shooting_cooldown_initial_frames - frames_left < 7 {
+                    Some(sprite::imp(5, &ctx.input.textures))
+                  } else {
+                    Some(sprite::imp(
+                      (physics_system.frame_count / 15) as i32 % 2,
+                      &ctx.input.textures,
+                    ))
+                  }
+                }
+                _ => Some(sprite::imp(
+                  (physics_system.frame_count / 15) as i32 % 2,
+                  &ctx.input.textures,
+                )),
+              },
+              _ => None,
+            }
+          } else {
+            None
+          };
+
+          let sprites_to_draw = sprites_override.or_else(|| {
+            let sprite = entity.components.get::<SimpleSprite>()?;
+
+            Some(get_sprites_to_draw(
+              &sprite.kind,
+              ctx.input.textures.as_ref(),
+            ))
+          });
+
+          let sprites_to_draw = sprites_to_draw?;
+
+          draw_sprites(&sprites_to_draw, translation, rotation);
+
+          if entity.components.get::<Destroyed>().is_some()
+            && let Some(destroy_effect) = entity.components.get::<OnDestroyEffect>()
+          {
+            let easing = easing::linear()
+              .scale(destroy_effect.duration as f32)
+              .offset(physics_system.frame_count as f32);
+
+            Some(Effect {
+              easing,
+              kind: destroy_effect.effect_kind,
+              sprites_to_draw: Rc::new(sprites_to_draw),
+              translation: PhysicsVector::from_vec(*physics_translation),
+              rotation,
+            })
+          } else {
+            None
           }
-        } else {
-          None
+        })
+        .collect::<Vec<_>>();
+
+      let effects = self
+        .effects
+        .iter()
+        .cloned()
+        .chain(new_effects)
+        .filter(|effect| effect.easing.at(physics_system.frame_count as f32) <= 1.0)
+        .collect::<Vec<_>>();
+
+      effects.iter().for_each(|effect| {
+        let material = match &effect.kind {
+          EffectKind::NoiseDissolve => {
+            let dissolve = ctx.input.materials.dissolve.clone();
+            dissolve.set_uniform(
+              "Progress",
+              effect.easing.at(physics_system.frame_count as f32),
+            );
+            dissolve.set_texture(
+              "NoiseTexture",
+              ctx.input.textures.noise_texture.weak_clone(),
+            );
+            dissolve
+          }
         };
 
-        let sprites_to_draw = sprites_override.or_else(|| {
-          let sprite = entity.components.get::<SimpleSprite>()?;
+        let sprites_to_draw = effect
+          .sprites_to_draw
+          .iter()
+          .map(|sprite_to_draw| {
+            let material = material.clone();
+            sprite_to_draw.with_material(Some(material))
+          })
+          .collect::<Vec<_>>();
 
-          Some(get_sprites_to_draw(
-            &sprite.kind,
-            ctx.input.textures.as_ref(),
-          ))
-        });
-
-        let sprites_to_draw = if let Some(sprites_to_draw) = sprites_to_draw {
-          sprites_to_draw
-        } else {
-          return;
-        };
-
-        draw_sprites(&sprites_to_draw, translation, rotation);
+        draw_sprites(
+          &sprites_to_draw,
+          effect.translation.into_pos(camera_system.translation),
+          effect.rotation,
+        );
       });
 
       let tile_layer = map_system.raw_map.tile_layer();
@@ -621,6 +688,26 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         40.0,
         COLOR_4,
       );
+
+      /* Draw the scuffed menu */
+      let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+      let save_system = ctx.get::<SaveSystem<_>>().unwrap();
+
+      menu_system
+        .active_main_menus
+        .iter()
+        .rev()
+        .for_each(|menu| draw_main_menu(menu, &save_system.available_save_data));
+      menu_system
+        .active_menus
+        .iter()
+        .rev()
+        .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
+
+      return Rc::new(GraphicsSystem {
+        effects,
+        _phantom_data: PhantomData,
+      });
     }
 
     /* Draw the scuffed menu */
@@ -638,7 +725,10 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       .rev()
       .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
 
-    Rc::new(GraphicsSystem(PhantomData))
+    Rc::new(GraphicsSystem {
+      effects: self.effects.clone(),
+      _phantom_data: PhantomData,
+    })
   }
 
   fn fixed_update(
@@ -1379,7 +1469,7 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
   }
 }
 
-pub fn draw_sprites(sprites_to_draw: &Vec<SpriteToDraw>, translation: ScreenVector, rotation: f32) {
+pub fn draw_sprites(sprites_to_draw: &[SpriteToDraw], translation: ScreenVector, rotation: f32) {
   sprites_to_draw.iter().for_each(|sprite_to_draw| {
     let adjusted_width = sprite_to_draw.source.w * 8.0 * BALANCING.graphics_config.scaling_factor;
     let adjusted_height = sprite_to_draw.source.h * 8.0 * BALANCING.graphics_config.scaling_factor;
@@ -1401,8 +1491,26 @@ pub fn draw_sprites(sprites_to_draw: &Vec<SpriteToDraw>, translation: ScreenVect
 
     let dest_y = translation.y() - (adjusted_height / 2.0) + new_offset_y;
 
+    if let Some(material) = sprite_to_draw.material.as_ref() {
+      material.set_uniform("PixelsX", sprite_to_draw.source.w);
+      material.set_uniform("PixelsY", sprite_to_draw.source.h);
+      material.set_uniform_array(
+        "TextureOffset",
+        &[sprite_to_draw.source.x, sprite_to_draw.source.y],
+      );
+      material.set_uniform_array(
+        "TextureSize",
+        &[
+          sprite_to_draw.texture.size().x,
+          sprite_to_draw.texture.size().y,
+        ],
+      );
+
+      gl_use_material(material);
+    }
+
     draw_texture_ex(
-      sprite_to_draw.texture,
+      sprite_to_draw.texture.as_ref(),
       dest_x,
       dest_y,
       WHITE,
@@ -1418,5 +1526,7 @@ pub fn draw_sprites(sprites_to_draw: &Vec<SpriteToDraw>, translation: ScreenVect
         pivot: None,
       },
     );
+
+    gl_use_default_material();
   });
 }

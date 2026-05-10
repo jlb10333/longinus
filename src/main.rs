@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use balance::BALANCING;
 use macroquad::prelude::*;
+use shaders::{DISSOLVE_FRAGMENT_SHADER, IDENTITY_VERTEX_SHADER};
 use system::ProcessContextOptions;
 
 use crate::ability::AbilitySystem;
@@ -23,6 +24,7 @@ mod combat;
 mod controls;
 mod easing;
 mod ecs;
+mod effects;
 mod enemy;
 mod f;
 mod graphics;
@@ -31,6 +33,7 @@ mod load_map;
 mod menu;
 mod physics;
 mod save;
+mod shaders;
 mod sprite;
 mod system;
 mod units;
@@ -63,6 +66,7 @@ pub struct ActivatorTextures {
 pub struct EnemyTextures {
   pub goblin: Texture2D,
   pub imp: Texture2D,
+  pub aranea: Texture2D,
   pub laser_gate: Texture2D,
 }
 
@@ -75,9 +79,20 @@ pub struct GameTextures {
   pub block_textures: BlockTextures,
   pub activator_textures: ActivatorTextures,
   pub enemy_textures: EnemyTextures,
+  pub noise_texture: Texture2D,
 }
 
 impl Default for GameTextures {
+  fn default() -> Self {
+    panic!()
+  }
+}
+
+pub struct GameMaterials {
+  pub dissolve: Material,
+}
+
+impl Default for GameMaterials {
   fn default() -> Self {
     panic!()
   }
@@ -87,6 +102,7 @@ impl Default for GameTextures {
 pub struct GameInput {
   pub save_data: SaveData,
   pub textures: Rc<GameTextures>,
+  pub materials: Rc<GameMaterials>,
 }
 
 enum State {
@@ -134,8 +150,10 @@ async fn load_game_textures() -> GameTextures {
     load_texture_with_filter("./assets/sprites/activators/touch_sensor_activated.png").await;
   let goblin_texture = load_texture_with_filter("./assets/sprites/enemies/goblin.png").await;
   let imp_texture = load_texture_with_filter("./assets/sprites/enemies/imp.png").await;
+  let aranea_texture = load_texture_with_filter("./assets/sprites/enemies/imp.png").await;
   let laser_gate_texture =
     load_texture_with_filter("./assets/sprites/enemies/laser_gate.png").await;
+  let noise_texture = load_texture_with_filter("./assets/sprites/noise.png").await;
 
   GameTextures {
     tiles_texture,
@@ -162,8 +180,35 @@ async fn load_game_textures() -> GameTextures {
     enemy_textures: EnemyTextures {
       goblin: goblin_texture,
       imp: imp_texture,
+      aranea: aranea_texture,
       laser_gate: laser_gate_texture,
     },
+    noise_texture,
+  }
+}
+
+fn load_game_materials() -> GameMaterials {
+  let dissolve_material = load_material(
+    ShaderSource::Glsl {
+      vertex: IDENTITY_VERTEX_SHADER,
+      fragment: DISSOLVE_FRAGMENT_SHADER,
+    },
+    MaterialParams {
+      uniforms: vec![
+        UniformDesc::new("Progress", UniformType::Float1),
+        UniformDesc::new("PixelsX", UniformType::Float1),
+        UniformDesc::new("PixelsY", UniformType::Float1),
+        UniformDesc::new("TextureOffset", UniformType::Float2),
+        UniformDesc::new("TextureSize", UniformType::Float2),
+      ],
+      textures: vec!["NoiseTexture".to_string()],
+      ..Default::default()
+    },
+  )
+  .unwrap();
+
+  GameMaterials {
+    dissolve: dissolve_material,
   }
 }
 
@@ -171,6 +216,7 @@ async fn load_game_textures() -> GameTextures {
 async fn main() {
   // Load textures async
   let textures = Rc::new(load_game_textures().await);
+  let materials = Rc::new(load_game_materials());
 
   let mut state = State::MainMenu;
 
@@ -198,6 +244,7 @@ async fn main() {
         let game_input = GameInput {
           save_data,
           textures: Rc::clone(&textures),
+          materials: Rc::clone(&materials),
         };
 
         let quit_decision = Process::new(&game_input)
