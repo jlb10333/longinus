@@ -128,6 +128,24 @@ fn load_new_map(
     label: "player".to_string(),
   };
 
+  let aranea_eggs = map
+    .aranea_eggs
+    .iter()
+    .map(|(id, aranea_egg)| {
+      let collider_handle = collider_set.insert(aranea_egg.collider.clone());
+
+      let entity = Entity {
+        handle: EntityHandle::Collider(collider_handle),
+        components: ComponentSet::new().insert(SimpleSprite {
+          kind: sprite::AraneaEgg,
+        }),
+        label: "aranea_egg".to_string(),
+      };
+
+      (id, (collider_handle, entity))
+    })
+    .collect::<HashMap<_, _>>();
+
   /* MARK: Spawn enemies. */
   let enemies = map
     .enemy_spawns
@@ -163,8 +181,7 @@ fn load_new_map(
           state: EnemyImpState::initial(),
         }),
         EnemySpawnEnemy::Aranea(egg_id) => {
-          let aranea_egg = map.aranea_eggs.get(&egg_id).unwrap().collider.clone();
-          let egg_handle = collider_set.insert(aranea_egg);
+          let egg_handle = aranea_eggs.get(&egg_id).unwrap().0;
           Enemy::Aranea(EnemyAranea::new(egg_handle))
         }
         EnemySpawnEnemy::AraneaQueen(egg_id) => {
@@ -756,6 +773,7 @@ fn load_new_map(
   let entities = [player]
     .iter()
     .cloned()
+    .chain(aranea_eggs.into_iter().map(|(_, (_, entity))| entity))
     .chain(enemies)
     .chain(interactive_walls)
     .chain(blocks)

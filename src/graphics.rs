@@ -19,7 +19,7 @@ use crate::{
     OnDestroyEffect, SimpleSprite, TouchSensor,
   },
   effects::{Effect, EffectKind},
-  enemy::{EnemyImpState, EnemySniperState},
+  enemy::{EnemyAraneaState, EnemyImpState, EnemySniperState},
   graphics_utils::{draw_collider, draw_label},
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
@@ -227,6 +227,27 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                   &ctx.input.textures,
                 )),
               },
+              Enemy::Aranea(aranea) => {
+                if let EnemyAraneaState::Idle = aranea.state {
+                  Some(sprite::aranea(0, &ctx.input.textures))
+                } else if let EnemyAraneaState::Detaching(frames_left, _, _) = aranea.state {
+                  Some(sprite::aranea(
+                    ((1 + BALANCING.enemies.aranea.detaching_initial_frames - frames_left) as f32
+                      / (BALANCING.enemies.aranea.detaching_initial_frames as f32 / 5.0))
+                      as i32,
+                    &ctx.input.textures,
+                  ))
+                } else if let EnemyAraneaState::Cooldown(frames_left) = aranea.state
+                  && (BALANCING.enemies.aranea.cooldown_initial_frames - frames_left) < 8
+                {
+                  Some(sprite::aranea(6, &ctx.input.textures))
+                } else {
+                  Some(sprite::aranea(
+                    4 + ((physics_system.frame_count / 20) % 2) as i32,
+                    &ctx.input.textures,
+                  ))
+                }
+              }
               _ => None,
             }
           } else {

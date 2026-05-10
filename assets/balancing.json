@@ -49,8 +49,10 @@
             "destroy_effect_duration": 30
         },
         "aranea": {
-            "launch_force": 5,
+            "collider_side_length": 0.8,
+            "launch_force": 11,
             "stopping_frames": 5,
+            "detaching_initial_frames": 20,
             "cooldown_initial_frames": 35,
             "shooting_force": 0.65,
             "projectile_damage": 10,

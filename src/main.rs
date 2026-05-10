@@ -67,6 +67,7 @@ pub struct EnemyTextures {
   pub goblin: Texture2D,
   pub imp: Texture2D,
   pub aranea: Texture2D,
+  pub aranea_egg: Texture2D,
   pub laser_gate: Texture2D,
 }
 
@@ -150,7 +151,9 @@ async fn load_game_textures() -> GameTextures {
     load_texture_with_filter("./assets/sprites/activators/touch_sensor_activated.png").await;
   let goblin_texture = load_texture_with_filter("./assets/sprites/enemies/goblin.png").await;
   let imp_texture = load_texture_with_filter("./assets/sprites/enemies/imp.png").await;
-  let aranea_texture = load_texture_with_filter("./assets/sprites/enemies/imp.png").await;
+  let aranea_texture = load_texture_with_filter("./assets/sprites/enemies/aranea.png").await;
+  let aranea_egg_texture =
+    load_texture_with_filter("./assets/sprites/enemies/aranea_egg.png").await;
   let laser_gate_texture =
     load_texture_with_filter("./assets/sprites/enemies/laser_gate.png").await;
   let noise_texture = load_texture_with_filter("./assets/sprites/noise.png").await;
@@ -181,6 +184,7 @@ async fn load_game_textures() -> GameTextures {
       goblin: goblin_texture,
       imp: imp_texture,
       aranea: aranea_texture,
+      aranea_egg: aranea_egg_texture,
       laser_gate: laser_gate_texture,
     },
     noise_texture,

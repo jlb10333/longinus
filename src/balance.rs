@@ -57,8 +57,10 @@ pub struct ImpBalancing {
 
 #[derive(Deserialize)]
 pub struct AraneaBalancing {
+  pub collider_side_length: f32,
   pub launch_force: f32,
   pub stopping_frames: i32,
+  pub detaching_initial_frames: i32,
   pub cooldown_initial_frames: i32,
   pub shooting_force: f32,
   pub projectile_damage: f32,

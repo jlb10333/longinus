@@ -42,6 +42,7 @@ pub enum SimpleSpriteTextureKind {
   HealthPickup,
   ManaPickup,
   LaserGate,
+  AraneaEgg,
 }
 
 pub use SimpleSpriteTextureKind::*;
@@ -62,6 +63,7 @@ pub fn get_sprites_to_draw(
     HealthPickup => health_pickup(game_textures),
     ManaPickup => mana_pickup(game_textures),
     LaserGate => laser_gate(game_textures),
+    AraneaEgg => aranea_egg(game_textures),
   }
 }
 
@@ -259,6 +261,20 @@ pub fn aranea(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
     },
     &game_textures.enemy_textures.aranea,
   )
+}
+
+pub fn aranea_egg(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw {
+    texture: Rc::new(game_textures.enemy_textures.aranea_egg.weak_clone()),
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 16.0,
+      h: 16.0,
+    },
+    offset: None,
+    material: None,
+  }]
 }
 
 pub fn laser_gate(game_textures: &GameTextures) -> Vec<SpriteToDraw> {

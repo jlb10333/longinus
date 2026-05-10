@@ -510,6 +510,7 @@ impl EnemyImp {
 #[derive(Clone)]
 pub enum EnemyAraneaState {
   Idle,
+  Detaching(i32, Vector2<f32>, i32),
   Launching(i32),
   Stopping(i32),
   Shooting,
@@ -518,8 +519,8 @@ pub enum EnemyAraneaState {
 
 #[derive(Clone)]
 pub struct EnemyAranea {
-  state: EnemyAraneaState,
-  egg_handle: ColliderHandle,
+  pub state: EnemyAraneaState,
+  pub egg_handle: ColliderHandle,
 }
 
 impl EnemyAranea {
@@ -553,19 +554,18 @@ impl EnemyAranea {
           let egg_translation = collider_set[self.egg_handle].translation();
           let vector_to_egg = egg_translation - self_translation;
 
-          let movement_force = vector_to_egg.normalize() * BALANCING.enemies.aranea.launch_force;
+          let movement_force = vector_to_egg.normalize() * BALANCING.enemies.aranea.launch_force * self_rigid_body.mass();
 
           let launch_frames = (vector_to_egg.magnitude()
             / (movement_force.magnitude() / self_rigid_body.mass())
             * 60.0) as i32;
 
           EnemyDecision {
-            movement_force,
             ..EnemyDecision::default(
               handle,
               Enemy::Aranea(Self {
                 egg_handle: self.egg_handle,
-                state: EnemyAraneaState::Launching(launch_frames),
+                state: EnemyAraneaState::Detaching(BALANCING.enemies.aranea.detaching_initial_frames, movement_force, launch_frames),
               }),
             )
           }
@@ -580,6 +580,30 @@ impl EnemyAranea {
               }),
             )
           }
+        }
+      }
+      EnemyAraneaState::Detaching(frames_left, movement_force, launch_frames) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Detaching(frames_left - 1, movement_force, launch_frames),
+              }),
+            )
+          }
+        } else {
+          EnemyDecision {
+            movement_force,
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Aranea(Self {
+                egg_handle: self.egg_handle,
+                state: EnemyAraneaState::Launching(launch_frames),
+              }),
+            )
+          }          
         }
       }
       EnemyAraneaState::Launching(frames_left) => {
@@ -637,6 +661,7 @@ impl EnemyAranea {
       EnemyAraneaState::Cooldown(frames_left) => {
         if frames_left > 0 {
           EnemyDecision {
+            angvel: Some(0.0),
             movement_force,
             ..EnemyDecision::default(
               handle,
@@ -648,6 +673,7 @@ impl EnemyAranea {
           }
         } else {
           EnemyDecision {
+            angvel: Some(0.0),
             movement_force,
             ..EnemyDecision::default(
               handle,
@@ -668,6 +694,9 @@ impl EnemyAranea {
 
         let weapon_output = WeaponOutput {
           damage: BALANCING.enemies.aranea.projectile_damage,
+          component_set: ComponentSet::new().insert(SimpleSprite {
+            kind: sprite::ImpProjectile,
+          }),
           ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
             initial_impulse: PhysicsVector::from_vec(shooting_force),
             ..Projectile::default(
@@ -679,6 +708,7 @@ impl EnemyAranea {
         };
 
         EnemyDecision {
+          angvel: Some(0.0),
           weapon_outputs: vec![weapon_output],
           ..EnemyDecision::default(
             handle,

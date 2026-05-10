@@ -1154,6 +1154,10 @@ impl EnemySpawn {
           chance_health: 0.3,
           mana_amount: 1.0,
           chance_mana: 0.2,
+        })
+        .insert(OnDestroyEffect {
+          effect_kind: effects::NoiseDissolve,
+          duration: BALANCING.enemies.imp.destroy_effect_duration,
         }),
       EnemySpawnEnemy::AraneaQueen(_) => ComponentSet::new()
         .insert(Damageable {
@@ -1468,7 +1472,10 @@ fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
       BALANCING.enemies.imp.width,
       BALANCING.enemies.imp.height,
     )],
-    EnemySpawnEnemy::Aranea(_) => vec![ColliderBuilder::cuboid(0.3, 0.3)],
+    EnemySpawnEnemy::Aranea(_) => vec![ColliderBuilder::cuboid(
+      BALANCING.enemies.aranea.collider_side_length,
+      BALANCING.enemies.aranea.collider_side_length,
+    )],
     EnemySpawnEnemy::AraneaQueen(_) => vec![ColliderBuilder::cuboid(
       BALANCING.enemies.aranea_queen.colliders_side_length,
       BALANCING.enemies.aranea_queen.colliders_side_length,
@@ -1563,7 +1570,7 @@ impl Object {
 
       Object::AraneaEgg(aranea_egg) => MapComponent::AraneaEgg(AraneaEgg {
         id: aranea_egg.id,
-        collider: ColliderBuilder::ball(0.5)
+        collider: ColliderBuilder::ball(1.0)
           .translation(physics_translation_from_map(
             aranea_egg.x,
             aranea_egg.y,
