@@ -48,6 +48,7 @@ pub enum SimpleSpriteTextureKind {
   AraneaEgg,
   GravityParticle,
   Explosion(Easing<f32>),
+  SavePoint,
 }
 
 pub use SimpleSpriteTextureKind::*;
@@ -74,6 +75,7 @@ pub fn get_sprites_to_draw(
     AraneaEgg => aranea_egg(game_textures),
     GravityParticle => gravity_particle(game_textures),
     Explosion(easing) => explosion((easing.at(frame_count as f32) * 5.0) as i32, game_textures),
+    SavePoint => save_point((frame_count as i32 / 15) % 5, game_textures),
   }
 }
 
@@ -340,6 +342,20 @@ pub fn explosion(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> 
       offset: None,
     },
     &game_textures.effect_textures.explosion,
+  )
+}
+
+pub fn save_point(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  draw_from_sprite_sheet(
+    index,
+    SpriteSheetArgs {
+      num_sprites: 5,
+      num_columns: 2,
+      width: 24,
+      height: 24,
+      offset: None,
+    },
+    &game_textures.save_point_texture,
   )
 }
 

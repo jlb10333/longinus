@@ -324,7 +324,10 @@ fn load_new_map(
           id: save_point.player_spawn_id,
         })
         .insert(HealOnCollision { amount: 10000.0 })
-        .insert(GiveManaOnCollision { amount: 10000.0 }),
+        .insert(GiveManaOnCollision { amount: 10000.0 })
+        .insert(SimpleSprite {
+          kind: sprite::SavePoint,
+        }),
       label: "save".to_string(),
     })
     .collect::<Vec<_>>();

@@ -84,6 +84,7 @@ pub struct GameTextures {
   pub tiles_texture: Texture2D,
   pub player_texture: Texture2D,
   pub breakable_tile_texture: Texture2D,
+  pub save_point_texture: Texture2D,
   pub projectile_textures: ProjectileTextures,
   pub pickup_textures: PickupTextures,
   pub block_textures: BlockTextures,
@@ -173,11 +174,13 @@ async fn load_game_textures() -> GameTextures {
   let gravity_particle_texture =
     load_texture_with_filter("./assets/sprites/effects/gravity_particle.png").await;
   let explosion_texture = load_texture_with_filter("./assets/sprites/effects/explosion.png").await;
+  let save_point_texture = load_texture_with_filter("./assets/sprites/save_point.png").await;
 
   GameTextures {
     tiles_texture,
     player_texture,
     breakable_tile_texture,
+    save_point_texture,
     projectile_textures: ProjectileTextures {
       plasma: plasma_texture,
       missile: missile_texture,

@@ -6,10 +6,9 @@
     - Enemy art for all levels
     - All menus
     - Misc
-      - Save points
-      - Gravity
-      - Missile
-      - Enemy deaths
+      - Mana tanks
+      - Status effects
+      - UI elements
   - Core elements
     - 2nd boss
   - Full blocking
