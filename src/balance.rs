@@ -14,6 +14,7 @@ use crate::ecs::StatusEffectsBalancing;
 pub struct PlayerBalancing {
   pub size: f32,
   pub acceleration_mod: f32,
+  pub missile_explosion_strength: f32,
 }
 
 #[derive(Deserialize)]
@@ -132,6 +133,7 @@ pub struct SniperBalancing {
   pub projectile_damage: f32,
   pub shooting_force: f32,
   pub hold_force: f32,
+  pub collider_side_length: f32,
 }
 
 #[derive(Deserialize)]
@@ -206,6 +208,8 @@ pub struct GraphicsConfig {
   pub scaling_factor: f32,
   pub gravity_particle_effect_chance: f32,
   pub gravity_particle_effect_speed: f32,
+  pub gravity_particle_effect_lifetime: i32,
+  pub explosion_frames: i32,
 }
 
 impl GraphicsConfig {

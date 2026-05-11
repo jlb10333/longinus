@@ -287,12 +287,16 @@ fn base_output_from_weapon_type(weapon_output_type: WeaponOutputType) -> WeaponO
     },
     WeaponOutputType::Missile => WeaponOutput {
       damage: 15.0,
-      component_set: ComponentSet::new().insert(ExplodeOnCollision {
-        radius: 1.5,
-        strength: -3.5,
-        damage: 5.0,
-        interaction_groups: PLAYER_PROJECTILE_INTERACTION_GROUPS,
-      }),
+      component_set: ComponentSet::new()
+        .insert(ExplodeOnCollision {
+          radius: 1.5,
+          strength: BALANCING.player.missile_explosion_strength,
+          damage: 5.0,
+          interaction_groups: PLAYER_PROJECTILE_INTERACTION_GROUPS,
+        })
+        .insert(SimpleSprite {
+          kind: sprite::MissileProjectile,
+        }),
       offset: PhysicsVector::zero(),
       status_effects: list![],
       kind: WeaponOutputKind::Projectile(Projectile {

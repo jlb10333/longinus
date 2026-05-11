@@ -248,6 +248,19 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                   ))
                 }
               }
+              Enemy::Sniper(sniper) => {
+                if let EnemySniperState::Cooldown(frames_left) = sniper.state {
+                  Some(sprite::sniper(
+                    1 + ((BALANCING.enemies.sniper.cooldown_initial_frames - frames_left)
+                      / (BALANCING.enemies.sniper.cooldown_initial_frames / 3)),
+                    &ctx.input.textures,
+                  ))
+                } else if let EnemySniperState::Shooting = sniper.state {
+                  Some(sprite::sniper(5, &ctx.input.textures))
+                } else {
+                  Some(sprite::sniper(0, &ctx.input.textures))
+                }
+              }
               _ => None,
             }
           } else {
@@ -259,6 +272,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
             Some(get_sprites_to_draw(
               &sprite.kind,
+              physics_system.frame_count,
               ctx.input.textures.as_ref(),
             ))
           });

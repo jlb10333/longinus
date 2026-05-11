@@ -8,6 +8,7 @@ use macroquad::{
 
 use crate::{
   GameTextures,
+  easing::Easing,
   units::{PhysicsVector, UnitConvert2},
 };
 
@@ -33,8 +34,10 @@ impl<'a> SpriteToDraw {
 pub enum SimpleSpriteTextureKind {
   Player,
   PlasmaProjectile,
+  MissileProjectile,
   ImpProjectile,
   Beam(i32, PhysicsVector),
+  SniperProjectile,
   HealthTankPickup,
   WeaponModulePickup,
   BreakableTile,
@@ -44,19 +47,23 @@ pub enum SimpleSpriteTextureKind {
   LaserGate,
   AraneaEgg,
   GravityParticle,
+  Explosion(Easing<f32>),
 }
 
 pub use SimpleSpriteTextureKind::*;
 
 pub fn get_sprites_to_draw(
   kind: &SimpleSpriteTextureKind,
+  frame_count: i64,
   game_textures: &GameTextures,
 ) -> Vec<SpriteToDraw> {
   match kind {
     Player => player(game_textures),
     PlasmaProjectile => plasma_projectile(game_textures),
+    MissileProjectile => missile_projectile(game_textures),
     Beam(index, dimension) => beam(*index, dimension, game_textures),
     ImpProjectile => imp_projectile(game_textures),
+    SniperProjectile => sniper_projectile(game_textures),
     HealthTankPickup => health_tank_pickup(game_textures),
     WeaponModulePickup => weapon_module_pickup(game_textures),
     BreakableTile => breakable_tile(game_textures),
@@ -66,6 +73,7 @@ pub fn get_sprites_to_draw(
     LaserGate => laser_gate(game_textures),
     AraneaEgg => aranea_egg(game_textures),
     GravityParticle => gravity_particle(game_textures),
+    Explosion(easing) => explosion((easing.at(frame_count as f32) * 5.0) as i32, game_textures),
   }
 }
 
@@ -97,6 +105,20 @@ pub fn plasma_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   }]
 }
 
+pub fn missile_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw {
+    texture: Rc::new(game_textures.projectile_textures.missile.weak_clone()),
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: None,
+    material: None,
+  }]
+}
+
 pub fn beam(
   index: i32,
   dimensions: &PhysicsVector,
@@ -116,6 +138,20 @@ pub fn beam(
 pub fn imp_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw {
     texture: Rc::new(game_textures.projectile_textures.imp.weak_clone()),
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: None,
+    material: None,
+  }]
+}
+
+pub fn sniper_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw {
+    texture: Rc::new(game_textures.projectile_textures.sniper.weak_clone()),
     source: Rect {
       x: 0.0,
       y: 0.0,
@@ -277,6 +313,34 @@ pub fn aranea_egg(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
     offset: None,
     material: None,
   }]
+}
+
+pub fn sniper(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  draw_from_sprite_sheet(
+    index,
+    SpriteSheetArgs {
+      num_sprites: 5,
+      num_columns: 2,
+      width: 16,
+      height: 16,
+      offset: None,
+    },
+    &game_textures.enemy_textures.sniper,
+  )
+}
+
+pub fn explosion(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  draw_from_sprite_sheet(
+    index,
+    SpriteSheetArgs {
+      num_sprites: 5,
+      num_columns: 2,
+      width: 32,
+      height: 32,
+      offset: None,
+    },
+    &game_textures.effect_textures.explosion,
+  )
 }
 
 pub fn gravity_particle(game_textures: &GameTextures) -> Vec<SpriteToDraw> {

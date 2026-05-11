@@ -1603,9 +1603,12 @@ impl EnemySniper {
             BALANCING.enemies.sniper.shooting_force / collider.mass(),
           ) {
             vec![WeaponOutput {
+              component_set: ComponentSet::new().insert(SimpleSprite {
+                  kind: sprite::SniperProjectile
+              }),
               damage: BALANCING.enemies.sniper.projectile_damage,
               ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
-                initial_impulse: PhysicsVector::from_vec(
+                  initial_impulse: PhysicsVector::from_vec(
                   lead_direction * BALANCING.enemies.sniper.shooting_force,
                 ),
                 ..Projectile::default(collider)
@@ -1624,8 +1627,11 @@ impl EnemySniper {
       },
       EnemySniperState::Cooldown(frames_left) => {
         if frames_left > 0 {
+          let target_angle = (self_rigid_body.translation() - player_translation).angle(&vector![1.0, 0.0]);
+          let angvel = rotate_to_target(1.0, self_rigid_body, target_angle);
           EnemyDecision {
             movement_force,
+            angvel: Some(angvel),
             ..EnemyDecision::default(
               handle,
               Enemy::Sniper(Self {
@@ -1868,7 +1874,6 @@ pub fn rotate_to_target(force_mod: f32, rigid_body: &RigidBody, target_angle: f3
   };
 
   let angular_difference = target_angle - current_angle;
-  println!("{angular_difference}");
 
   if angular_difference.abs() < force_mod / 60.0 {
     0.0

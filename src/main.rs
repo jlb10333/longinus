@@ -43,8 +43,10 @@ pub struct Start;
 
 pub struct ProjectileTextures {
   pub plasma: Texture2D,
+  pub missile: Texture2D,
   pub imp: Texture2D,
   pub beam: Texture2D,
+  pub sniper: Texture2D,
 }
 
 pub struct PickupTextures {
@@ -68,12 +70,14 @@ pub struct EnemyTextures {
   pub imp: Texture2D,
   pub aranea: Texture2D,
   pub aranea_egg: Texture2D,
+  pub sniper: Texture2D,
   pub laser_gate: Texture2D,
 }
 
 pub struct EffectTextures {
   pub noise: Texture2D,
   pub gravity_particle: Texture2D,
+  pub explosion: Texture2D,
 }
 
 pub struct GameTextures {
@@ -136,9 +140,12 @@ async fn load_game_textures() -> GameTextures {
   let tiles_texture = load_texture_with_filter("./assets/maps/tilesets/tiles.png").await;
   let player_texture = load_texture_with_filter("./assets/sprites/player.png").await;
   let plasma_texture = load_texture_with_filter("./assets/sprites/projectiles/plasma.png").await;
+  let missile_texture = load_texture_with_filter("./assets/sprites/projectiles/missile.png").await;
   let imp_projectile_texture =
     load_texture_with_filter("./assets/sprites/projectiles/imp_projectile.png").await;
   let beam_texture = load_texture_with_filter("./assets/sprites/projectiles/beam.png").await;
+  let sniper_projectile_texture =
+    load_texture_with_filter("./assets/sprites/projectiles/sniper_projectile.png").await;
   let health_tank_texture =
     load_texture_with_filter("./assets/sprites/pickups/health_tank.png").await;
   let weapon_module_texture =
@@ -159,11 +166,13 @@ async fn load_game_textures() -> GameTextures {
   let aranea_texture = load_texture_with_filter("./assets/sprites/enemies/aranea.png").await;
   let aranea_egg_texture =
     load_texture_with_filter("./assets/sprites/enemies/aranea_egg.png").await;
+  let sniper_texture = load_texture_with_filter("./assets/sprites/enemies/sniper.png").await;
   let laser_gate_texture =
     load_texture_with_filter("./assets/sprites/enemies/laser_gate.png").await;
   let noise_texture = load_texture_with_filter("./assets/sprites/noise.png").await;
   let gravity_particle_texture =
     load_texture_with_filter("./assets/sprites/effects/gravity_particle.png").await;
+  let explosion_texture = load_texture_with_filter("./assets/sprites/effects/explosion.png").await;
 
   GameTextures {
     tiles_texture,
@@ -171,8 +180,10 @@ async fn load_game_textures() -> GameTextures {
     breakable_tile_texture,
     projectile_textures: ProjectileTextures {
       plasma: plasma_texture,
+      missile: missile_texture,
       imp: imp_projectile_texture,
       beam: beam_texture,
+      sniper: sniper_projectile_texture,
     },
     pickup_textures: PickupTextures {
       health_tank: health_tank_texture,
@@ -192,11 +203,13 @@ async fn load_game_textures() -> GameTextures {
       imp: imp_texture,
       aranea: aranea_texture,
       aranea_egg: aranea_egg_texture,
+      sniper: sniper_texture,
       laser_gate: laser_gate_texture,
     },
     effect_textures: EffectTextures {
       noise: noise_texture,
       gravity_particle: gravity_particle_texture,
+      explosion: explosion_texture,
     },
   }
 }
