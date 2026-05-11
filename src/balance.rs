@@ -204,6 +204,8 @@ pub struct GraphicsConfig {
   pub hitstop_enabled: bool,
   pub rounding_factor: f32,
   pub scaling_factor: f32,
+  pub gravity_particle_effect_chance: f32,
+  pub gravity_particle_effect_speed: f32,
 }
 
 impl GraphicsConfig {

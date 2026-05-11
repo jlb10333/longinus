@@ -5,7 +5,7 @@ use rapier2d::{
   prelude::*,
 };
 use rpds::{HashTrieMap, HashTrieSet, List, ht_map, list};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, f32::consts::PI, rc::Rc};
 
 use crate::{
   GameInput,
@@ -17,7 +17,7 @@ use crate::{
     Activator, AddManaTankOnCollision, And, ChainMountArea, ChainSegment, ComponentSet, Damageable,
     Damager, DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, EnemyGate,
     Engine, Entity, EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision,
-    GiveManaOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision, Id,
+    GiveManaOnCollision, GivesItemOnCollision, GravityParticle, GravitySource, HealOnCollision, Id,
     IncreaseMaxHealthOnCollision, Locomotor, MapTransitionOnCollision, Not, OnDestroyEffect, Or,
     PersistDestruction, SaveMenuOnCollision, SimpleActivatable, SimpleSprite, StatusEffect, Switch,
     Terminal, TouchSensor,
@@ -29,9 +29,10 @@ use crate::{
     EnemySniperGenerator, EnemySystem,
   },
   load_map::{
-    COLLISION_GROUP_CHAIN, COLLISION_GROUP_PLAYER, COLLISION_GROUP_PLAYER_INTERACTIBLE,
-    COLLISION_GROUP_WALL, ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawnColliderHandles,
-    EnemySpawnEnemy, Map, MapAbilityType, MapSystem, MapTile, PLAYER_INTERACTION_GROUPS,
+    COLLISION_GROUP_CHAIN, COLLISION_GROUP_GRAVITY, COLLISION_GROUP_PLAYER,
+    COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, ENEMY_PROJECTILE_INTERACTION_GROUPS,
+    EnemySpawnColliderHandles, EnemySpawnEnemy, Map, MapAbilityType, MapSystem, MapTile,
+    PLAYER_INTERACTION_GROUPS,
   },
   sprite,
   system::System,
@@ -942,6 +943,9 @@ impl System for PhysicsSystem {
     let ability_system = ctx.get::<AbilitySystem>().unwrap();
     let enemy_system = ctx.get::<EnemySystem>().unwrap();
 
+    let rng = rand::RandGenerator::new();
+    rng.srand(self.frame_count as u64);
+
     let enemy_projectile_query_pipeline = self.broad_phase.as_query_pipeline(
       self.narrow_phase.query_dispatcher(),
       &self.rigid_body_set,
@@ -1037,6 +1041,118 @@ impl System for PhysicsSystem {
       rigid_body_set[self.player_handle].set_linvel(boost_force, true);
     }
 
+    /* MARK: Remove gravity particles */
+    let entities = entities
+      .into_iter()
+      .map(|(handle, entity)| {
+        if entity.components.get::<GravityParticle>().is_some() {
+          let colliding_gravity_sources = handle
+            .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+            .into_iter()
+            .filter(|&&collider_handle| {
+              entities
+                .get(&EntityHandle::Collider(collider_handle))
+                .and_then(|entity| entity.components.get::<GravitySource>())
+                .is_some()
+            })
+            .copied()
+            .collect_vec();
+
+          let out_of_range = colliding_gravity_sources.is_empty();
+          let hit_center = handle
+            .colliders(rigid_body_set)
+            .into_iter()
+            .any(|&collider_handle| {
+              colliding_gravity_sources
+                .iter()
+                .any(|&gravity_source_handle| {
+                  let particle_collider = &collider_set[collider_handle];
+                  let gravity_source_collider = &collider_set[gravity_source_handle];
+
+                  let distance = (particle_collider.translation()
+                    - gravity_source_collider.translation())
+                  .magnitude()
+                  .abs();
+
+                  distance == 0.0
+                })
+            });
+
+          if !(out_of_range || hit_center) {
+            (*handle, Rc::clone(entity))
+          } else {
+            (
+              *handle,
+              Rc::new(Entity {
+                components: entity.components.insert(Destroyed),
+                ..entity.as_ref().clone()
+              }),
+            )
+          }
+        } else {
+          (*handle, Rc::clone(entity))
+        }
+      })
+      .collect::<HashTrieMap<_, _>>();
+
+    /* MARK: Spawn new gravity particles */
+    let entities = entities
+      .into_iter()
+      .flat_map(|(handle, entity)| {
+        let new_particles = if let Some(gravity_source) = entity.components.get::<GravitySource>()
+          && let EntityHandle::Collider(collider_handle) = handle
+          && gravity_source.strength != 0.0
+          && rng.gen_range(0.0, 1.0) > BALANCING.graphics_config.gravity_particle_effect_chance
+        {
+          let collider = &collider_set[*collider_handle];
+          let ball = collider.shape().as_ball().unwrap();
+
+          let angle = rng.gen_range(0.0, 2.0 * PI);
+          let distance = if gravity_source.strength > 0.0 {
+            rng.gen_range(ball.radius * 0.8, ball.radius)
+          } else {
+            0.1
+          };
+
+          let translation =
+            collider.translation() + distance_projection_physics(angle, distance).into_vec();
+          let particle_collider =
+            ColliderBuilder::ball(0.25)
+              .mass(1.0)
+              .collision_groups(InteractionGroups::new(
+                COLLISION_GROUP_GRAVITY,
+                COLLISION_GROUP_GRAVITY,
+                InteractionTestMode::And,
+              ));
+          let particle_rigid_body = RigidBodyBuilder::dynamic()
+            .translation(translation)
+            .enabled(true);
+
+          let particle_handle = rigid_body_set.insert(particle_rigid_body);
+          collider_set.insert_with_parent(particle_collider, particle_handle, rigid_body_set);
+
+          let handle = EntityHandle::RigidBody(particle_handle);
+          let entity = Entity {
+            handle,
+            components: ComponentSet::new()
+              .insert(GravityParticle)
+              .insert(SimpleSprite {
+                kind: sprite::GravityParticle,
+              }),
+            label: "grav_particle".to_string(),
+          };
+
+          Some((handle, Rc::new(entity)))
+        } else {
+          None
+        };
+
+        vec![(*handle, Rc::clone(entity))]
+          .into_iter()
+          .chain(new_particles)
+      })
+      .collect::<HashTrieMap<_, _>>();
+
     /* MARK: Gravity source behavior */
     entities.iter().for_each(|(handle, entity)| {
       if let Some(gravity_source) = entity.components.get::<GravitySource>()
@@ -1078,7 +1194,23 @@ impl System for PhysicsSystem {
             let distance_squared = distance_vec.magnitude_squared();
             let gravity_intensity = strength / distance_squared;
 
-            if let Some(rigid_body_handle) = collider_set[other_handle].parent() {
+            let rigid_body_handle =
+              if let Some(rigid_body_handle) = collider_set[other_handle].parent() {
+                rigid_body_handle
+              } else {
+                return;
+              };
+
+            if let Some(entity) = entities.get(&EntityHandle::RigidBody(rigid_body_handle))
+              && entity.components.get::<GravityParticle>().is_some()
+            {
+              rigid_body_set[rigid_body_handle].set_linvel(
+                distance_vec
+                  * gravity_intensity
+                  * BALANCING.graphics_config.gravity_particle_effect_speed,
+                true,
+              );
+            } else {
               rigid_body_set[rigid_body_handle]
                 .apply_impulse(distance_vec * gravity_intensity, true);
             }
@@ -1542,9 +1674,6 @@ impl System for PhysicsSystem {
         }
       })
       .collect::<Vec<_>>();
-
-    let rng = rand::RandGenerator::new();
-    rng.srand(self.frame_count as u64);
 
     /* MARK: Drop health pickups from entities with 0 health marked as such */
     let entities = entities

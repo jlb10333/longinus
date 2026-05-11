@@ -418,6 +418,9 @@ pub struct OnDestroyEffect {
 }
 impl Component for OnDestroyEffect {}
 
+pub struct GravityParticle;
+impl Component for GravityParticle {}
+
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct Id {
   pub id: i32,

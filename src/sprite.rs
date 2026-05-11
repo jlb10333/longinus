@@ -43,6 +43,7 @@ pub enum SimpleSpriteTextureKind {
   ManaPickup,
   LaserGate,
   AraneaEgg,
+  GravityParticle,
 }
 
 pub use SimpleSpriteTextureKind::*;
@@ -64,6 +65,7 @@ pub fn get_sprites_to_draw(
     ManaPickup => mana_pickup(game_textures),
     LaserGate => laser_gate(game_textures),
     AraneaEgg => aranea_egg(game_textures),
+    GravityParticle => gravity_particle(game_textures),
   }
 }
 
@@ -271,6 +273,20 @@ pub fn aranea_egg(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       y: 0.0,
       w: 16.0,
       h: 16.0,
+    },
+    offset: None,
+    material: None,
+  }]
+}
+
+pub fn gravity_particle(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw {
+    texture: Rc::new(game_textures.effect_textures.gravity_particle.weak_clone()),
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 5.0,
+      h: 5.0,
     },
     offset: None,
     material: None,

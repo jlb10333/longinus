@@ -305,7 +305,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             );
             dissolve.set_texture(
               "NoiseTexture",
-              ctx.input.textures.noise_texture.weak_clone(),
+              ctx.input.textures.effect_textures.noise.weak_clone(),
             );
             dissolve
           }

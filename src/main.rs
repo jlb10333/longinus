@@ -71,6 +71,11 @@ pub struct EnemyTextures {
   pub laser_gate: Texture2D,
 }
 
+pub struct EffectTextures {
+  pub noise: Texture2D,
+  pub gravity_particle: Texture2D,
+}
+
 pub struct GameTextures {
   pub tiles_texture: Texture2D,
   pub player_texture: Texture2D,
@@ -80,7 +85,7 @@ pub struct GameTextures {
   pub block_textures: BlockTextures,
   pub activator_textures: ActivatorTextures,
   pub enemy_textures: EnemyTextures,
-  pub noise_texture: Texture2D,
+  pub effect_textures: EffectTextures,
 }
 
 impl Default for GameTextures {
@@ -157,6 +162,8 @@ async fn load_game_textures() -> GameTextures {
   let laser_gate_texture =
     load_texture_with_filter("./assets/sprites/enemies/laser_gate.png").await;
   let noise_texture = load_texture_with_filter("./assets/sprites/noise.png").await;
+  let gravity_particle_texture =
+    load_texture_with_filter("./assets/sprites/effects/gravity_particle.png").await;
 
   GameTextures {
     tiles_texture,
@@ -187,7 +194,10 @@ async fn load_game_textures() -> GameTextures {
       aranea_egg: aranea_egg_texture,
       laser_gate: laser_gate_texture,
     },
-    noise_texture,
+    effect_textures: EffectTextures {
+      noise: noise_texture,
+      gravity_particle: gravity_particle_texture,
+    },
   }
 }
 
