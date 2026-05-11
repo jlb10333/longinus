@@ -135,7 +135,7 @@
     "graphics_config": {
         "rounding_factor": 0.125,
         "hitstop_enabled": false,
-        "gravity_particle_effect_chance": 0.8,
+        "gravity_particle_effect_chance": 0.65,
         "gravity_particle_effect_speed": 20.0,
         "scaling_factor": 1.0
     },

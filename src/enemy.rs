@@ -24,6 +24,8 @@ pub struct EnemyDecision {
   pub angvel: Option<f32>,
   pub enemy: Enemy,
   pub enemies_to_spawn: Vec<EnemyDecisionEnemySpawn>,
+  pub colliders_sensor: bool,
+  pub hitboxes_disabled: bool,
 }
 
 #[derive(Clone)]
@@ -38,6 +40,8 @@ impl EnemyDecision {
       enemies_to_spawn: vec![],
       movement_force: vec_zero(),
       weapon_outputs: vec![],
+      colliders_sensor: false,
+      hitboxes_disabled: false,
     }
   }
 }
@@ -571,6 +575,8 @@ impl EnemyAranea {
           }
         } else {
           EnemyDecision {
+            colliders_sensor: true,
+            hitboxes_disabled: true,
             movement_force,
             ..EnemyDecision::default(
               handle,

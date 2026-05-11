@@ -3,19 +3,22 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "maps/generated/MP26.json",
+    "activeFile": "maps/generated/boost.json",
     "automapping.whileDrawing": true,
     "expandedProjectPaths": [
-        "maps/generated",
-        "maps/templates/enemies",
         ".",
         "maps/old",
-        "maps/generated/templates",
-        "maps",
         "maps/templates",
-        "maps/tilesets"
+        "maps/generated",
+        "maps/templates/enemies",
+        "maps/tilesets",
+        "maps",
+        "maps/generated/templates"
     ],
     "fileStates": {
+        "": {
+            "scaleInDock": 5.5
+        },
         ":/automap-tiles.tsx": {
             "scaleInDock": 1
         },
@@ -100,19 +103,19 @@
             }
         },
         "maps/generated/MP1.json": {
-            "scale": 0.75,
-            "selectedLayer": 3,
+            "scale": 4,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 119.99999999999997,
-                "y": 160
+                "x": 120.125,
+                "y": 160.125
             }
         },
         "maps/generated/MP11.json": {
             "scale": 0.5,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 320,
-                "y": 200
+                "x": 319,
+                "y": 199
             }
         },
         "maps/generated/MP14.json": {
@@ -148,27 +151,27 @@
             }
         },
         "maps/generated/MP2.json": {
-            "scale": 4,
-            "selectedLayer": 3,
+            "scale": 5.5,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 861.125,
-                "y": 247.125
+                "x": -173.72727272727272,
+                "y": 89.36363636363637
             }
         },
         "maps/generated/MP20.json": {
             "scale": 3,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 199.99999999999997,
-                "y": 121
+                "x": 200,
+                "y": 119.83333333333333
             }
         },
         "maps/generated/MP21.json": {
-            "scale": 1,
+            "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 120,
-                "y": 80
+                "x": 145.66666666666663,
+                "y": 1091
             }
         },
         "maps/generated/MP22.json": {
@@ -188,35 +191,35 @@
             }
         },
         "maps/generated/MP25.json": {
-            "scale": 5.5,
-            "selectedLayer": 2,
+            "scale": 2,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 200,
-                "y": 240
+                "x": 197.75,
+                "y": 1181.75
             }
         },
         "maps/generated/MP26.json": {
-            "scale": 0.75,
+            "scale": 2,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 347.33333333333326,
-                "y": -994
+                "x": 231.75,
+                "y": 756.75
             }
         },
         "maps/generated/MP28.json": {
             "scale": 2,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 432,
-                "y": 224
+                "x": 432.25,
+                "y": 224.25
             }
         },
         "maps/generated/MP3.json": {
-            "scale": 3,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 199.99999999999997,
-                "y": 200
+                "x": 494.625,
+                "y": 172.375
             }
         },
         "maps/generated/MP4.json": {
@@ -231,30 +234,30 @@
             }
         },
         "maps/generated/MP5.json": {
-            "scale": 0.75,
+            "scale": 3,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 496.66666666666674,
-                "y": 251.99999999999994
+                "x": 409.8333333333333,
+                "y": 109.83333333333331
             }
         },
         "maps/generated/MP6.json": {
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 2,
-            "selectedLayer": 2,
+            "scale": 3,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 217.75,
-                "y": 476.25
+                "x": 76.16666666666669,
+                "y": 525.8333333333333
             }
         },
         "maps/generated/MP7.json": {
-            "scale": 3,
+            "scale": 4,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": -163.5,
-                "y": 89.83333333333334
+                "x": -780.375,
+                "y": 1792.375
             }
         },
         "maps/generated/MP9.json": {
@@ -266,11 +269,14 @@
             }
         },
         "maps/generated/boost.json": {
-            "scale": 1.5,
-            "selectedLayer": 1,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 2,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 905.6666666666666,
-                "y": 488.33333333333326
+                "x": 526.25,
+                "y": 0.75
             }
         },
         "maps/generated/boss1.json": {
@@ -285,16 +291,16 @@
             "scale": 8,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 200,
-                "y": 192.375
+                "x": 200.0625,
+                "y": 200.0625
             }
         },
         "maps/generated/start.json": {
-            "scale": 4,
+            "scale": 3,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 160,
-                "y": 160
+                "x": 219.49999999999994,
+                "y": -363.16666666666663
             }
         },
         "maps/generated/start.json#colliders": {
@@ -460,23 +466,24 @@
         "maps/generated/MP7.json",
         "maps/generated/start.json",
         "maps/generated/MP25.json",
-        "maps/generated/rules.json"
+        "maps/generated/rules.json",
+        "maps/generated/MP5.json"
     ],
     "project": "project.tiled-project",
     "property.type": "string",
     "recentFiles": [
         "maps/generated/MP20.json",
         "maps/generated/MP11.json",
+        "maps/generated/MP26.json",
+        "maps/generated/MP1.json",
+        "maps/generated/MP2.json",
+        "maps/generated/MP21.json",
+        "maps/generated/MP3.json",
+        "maps/generated/MP28.json",
+        "maps/generated/MP5.json",
         "maps/generated/rules.json",
         "maps/generated/MP25.json",
-        "maps/generated/start.json",
-        "maps/generated/MP7.json",
-        "maps/generated/boost.json",
-        "maps/generated/MP28.json",
-        "maps/generated/MP3.json",
-        "maps/generated/MP21.json",
-        "maps/generated/MP2.json",
-        "maps/generated/MP1.json"
+        "maps/generated/start.json"
     ],
     "tileset.lastUsedFilter": "All Files (*)",
     "tileset.lastUsedFormat": "json",

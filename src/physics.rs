@@ -92,8 +92,10 @@ fn load_new_map(
 ) -> Rc<PhysicsSystem> {
   let mut rigid_body_set = RigidBodySet::new();
   let mut collider_set = ColliderSet::new();
-  let multibody_joint_set = MultibodyJointSet::new();
+  let mut multibody_joint_set = MultibodyJointSet::new();
   let mut impulse_joint_set = ImpulseJointSet::new();
+
+  let rng = rand::RandGenerator::new();
 
   let player_spawn = map
     .player_spawns
@@ -373,15 +375,59 @@ fn load_new_map(
   let gravity_sources = map
     .gravity_sources
     .iter()
-    .map(|gravity_source| Entity {
-      handle: EntityHandle::Collider(collider_set.insert(gravity_source.collider.clone())),
-      components: ComponentSet::new().insert(GravitySource {
-        strength: gravity_source.strength,
-        activator_id: gravity_source.activator_id,
-      }),
-      label: "grav".to_string(),
+    .flat_map(|gravity_source| {
+      let gravity_source_entity = Entity {
+        handle: EntityHandle::Collider(collider_set.insert(gravity_source.collider.clone())),
+        components: ComponentSet::new().insert(GravitySource {
+          strength: gravity_source.strength,
+          activator_id: gravity_source.activator_id,
+        }),
+        label: "grav".to_string(),
+      };
+
+      let ball = gravity_source.collider.shape().as_ball().unwrap();
+
+      let area = PI * ball.radius.powf(2.0);
+
+      let num_initial_particles = 0.1 * area;
+
+      (0..num_initial_particles as i32)
+        .map(|_| {
+          let angle = rng.gen_range(0.0, 2.0 * PI);
+          let distance = rng.gen_range(0.0, ball.radius);
+
+          let translation = gravity_source.collider.translation()
+            + distance_projection_physics(angle, distance).into_vec();
+          let particle_collider =
+            ColliderBuilder::ball(0.01)
+              .mass(0.2)
+              .collision_groups(InteractionGroups::new(
+                COLLISION_GROUP_GRAVITY,
+                COLLISION_GROUP_GRAVITY,
+                InteractionTestMode::And,
+              ));
+          let particle_rigid_body = RigidBodyBuilder::dynamic()
+            .translation(translation)
+            .enabled(true);
+
+          let particle_handle = rigid_body_set.insert(particle_rigid_body);
+          collider_set.insert_with_parent(particle_collider, particle_handle, &mut rigid_body_set);
+
+          let handle = EntityHandle::RigidBody(particle_handle);
+          Entity {
+            handle,
+            components: ComponentSet::new()
+              .insert(GravityParticle)
+              .insert(SimpleSprite {
+                kind: sprite::GravityParticle,
+              }),
+            label: "grav_particle".to_string(),
+          }
+        })
+        .chain(Some(gravity_source_entity))
+        .collect_vec()
     })
-    .collect::<Vec<_>>();
+    .collect_vec();
 
   /* Spawn ability pickups */
   let ability_pickups = map
@@ -767,10 +813,10 @@ fn load_new_map(
   /* MARK: Create other structures necessary for the simulation. */
   let integration_parameters = IntegrationParameters::default();
   let physics_pipeline = Rc::new(RefCell::new(PhysicsPipeline::new()));
-  let island_manager = IslandManager::new();
-  let broad_phase = DefaultBroadPhase::new();
-  let narrow_phase = NarrowPhase::new();
-  let ccd_solver: CCDSolver = CCDSolver::new();
+  let mut island_manager = IslandManager::new();
+  let mut broad_phase = DefaultBroadPhase::new();
+  let mut narrow_phase = NarrowPhase::new();
+  let mut ccd_solver: CCDSolver = CCDSolver::new();
   let entities = [player]
     .iter()
     .cloned()
@@ -867,6 +913,22 @@ fn load_new_map(
       );
     }
   });
+
+  /* MARK: Step physics */
+  physics_pipeline.borrow_mut().step(
+    &vector![0.0, 0.0],
+    &integration_parameters,
+    &mut island_manager,
+    &mut broad_phase,
+    &mut narrow_phase,
+    &mut rigid_body_set,
+    &mut collider_set,
+    &mut impulse_joint_set,
+    &mut multibody_joint_set,
+    &mut ccd_solver,
+    &(),
+    &(),
+  );
 
   Rc::new(PhysicsSystem {
     rigid_body_set,
@@ -1074,7 +1136,7 @@ impl System for PhysicsSystem {
                   .magnitude()
                   .abs();
 
-                  distance == 0.0
+                  distance < 0.1
                 })
             });
 
@@ -1101,7 +1163,7 @@ impl System for PhysicsSystem {
       .flat_map(|(handle, entity)| {
         let new_particles = if let Some(gravity_source) = entity.components.get::<GravitySource>()
           && let EntityHandle::Collider(collider_handle) = handle
-          && gravity_source.strength != 0.0
+          && gravity_source.strength.abs() > 0.01
           && rng.gen_range(0.0, 1.0) > BALANCING.graphics_config.gravity_particle_effect_chance
         {
           let collider = &collider_set[*collider_handle];
@@ -1117,8 +1179,8 @@ impl System for PhysicsSystem {
           let translation =
             collider.translation() + distance_projection_physics(angle, distance).into_vec();
           let particle_collider =
-            ColliderBuilder::ball(0.25)
-              .mass(1.0)
+            ColliderBuilder::ball(0.01)
+              .mass(0.2)
               .collision_groups(InteractionGroups::new(
                 COLLISION_GROUP_GRAVITY,
                 COLLISION_GROUP_GRAVITY,
@@ -1206,7 +1268,7 @@ impl System for PhysicsSystem {
             {
               rigid_body_set[rigid_body_handle].set_linvel(
                 distance_vec
-                  * gravity_intensity
+                  * (gravity_intensity)
                   * BALANCING.graphics_config.gravity_particle_effect_speed,
                 true,
               );
@@ -1287,6 +1349,20 @@ impl System for PhysicsSystem {
             }),
           )];
         };
+
+        if let Some(damager) = entity.components.get::<Damager>() {
+          damager.hitboxes.iter().for_each(|&collider_handle| {
+            collider_set[collider_handle].set_enabled(!relevant_decision.hitboxes_disabled);
+          });
+        }
+
+        entity
+          .handle
+          .colliders(rigid_body_set)
+          .into_iter()
+          .for_each(|&collider_handle| {
+            collider_set[collider_handle].set_sensor(relevant_decision.colliders_sensor);
+          });
 
         rigid_body_set[rigid_body_handle].apply_impulse(relevant_decision.movement_force, true);
         if let Some(angvel) = relevant_decision.angvel {
