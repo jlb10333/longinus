@@ -336,6 +336,24 @@ struct MapSavePoint {
   _class: MapSavePointClass,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize)]
+pub enum BlockVariant {
+  Draconic,
+  Angelic,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+enum MapBlockVariantClass {
+  Variant,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapBlockVariant {
+  #[serde(rename = "name")]
+  _name: MapBlockVariantClass,
+  value: BlockVariant,
+}
+
 #[derive(Clone, Debug, Deserialize)]
 enum MapBlockClass {
   Block,
@@ -348,6 +366,7 @@ struct MapBlock {
   y: f32,
   width: f32,
   height: f32,
+  properties: (MapBlockVariant,),
   #[serde(rename = "type")]
   _class: MapBlockClass,
 }
@@ -1339,6 +1358,7 @@ pub struct Block {
   pub id: i32,
   pub rigid_body: RigidBody,
   pub collider: Collider,
+  pub variant: BlockVariant,
 }
 
 #[derive(Clone)]
@@ -1697,6 +1717,7 @@ impl Object {
           ..Default::default()
         })
         .build(),
+        variant: block.properties.0.value,
       }),
 
       Object::TouchSensor(touch_sensor) => MapComponent::TouchSensor(TouchSensor {

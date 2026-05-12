@@ -186,6 +186,12 @@
                  "id":5,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Angelic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,

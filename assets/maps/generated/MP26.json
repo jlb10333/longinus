@@ -285,6 +285,12 @@
                  "id":1,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Angelic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -431,6 +437,12 @@
                  "id":7,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Angelic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -572,6 +584,12 @@
                  "id":17,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -584,6 +602,12 @@
                  "id":18,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -596,6 +620,12 @@
                  "id":19,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -608,6 +638,12 @@
                  "id":20,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -620,6 +656,12 @@
                  "id":21,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -632,6 +674,12 @@
                  "id":22,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -644,6 +692,12 @@
                  "id":23,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -656,6 +710,12 @@
                  "id":24,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -668,6 +728,12 @@
                  "id":25,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -680,6 +746,12 @@
                  "id":26,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Draconic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,

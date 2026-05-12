@@ -30,7 +30,7 @@ use crate::{
     EnemySniperGenerator, EnemySystem,
   },
   load_map::{
-    COLLISION_GROUP_CHAIN, COLLISION_GROUP_GRAVITY, COLLISION_GROUP_PLAYER,
+    BlockVariant, COLLISION_GROUP_CHAIN, COLLISION_GROUP_GRAVITY, COLLISION_GROUP_PLAYER,
     COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, ENEMY_PROJECTILE_INTERACTION_GROUPS,
     EnemySpawnColliderHandles, EnemySpawnEnemy, Map, MapAbilityType, MapSystem, MapTile,
     PLAYER_INTERACTION_GROUPS,
@@ -95,8 +95,6 @@ fn load_new_map(
   let mut collider_set = ColliderSet::new();
   let mut multibody_joint_set = MultibodyJointSet::new();
   let mut impulse_joint_set = ImpulseJointSet::new();
-
-  let rng = rand::RandGenerator::new();
 
   let player_spawn = map
     .player_spawns
@@ -343,14 +341,17 @@ fn load_new_map(
         rigid_body_handle,
         &mut rigid_body_set,
       );
+      let dimensions =
+        PhysicsVector::from_vec(block.collider.shape().as_cuboid().unwrap().half_extents * 2.0);
       Entity {
         handle: EntityHandle::RigidBody(rigid_body_handle),
         components: ComponentSet::new()
           .insert(Id { id: block.id })
           .insert(SimpleSprite {
-            kind: sprite::Block(PhysicsVector::from_vec(
-              block.collider.shape().as_cuboid().unwrap().half_extents * 2.0,
-            )),
+            kind: match block.variant {
+              BlockVariant::Angelic => sprite::AngelicBlock(dimensions),
+              BlockVariant::Draconic => sprite::Block(dimensions),
+            },
           }),
         label: format!("g{}", block.id),
       }

@@ -216,6 +216,12 @@
                  "id":3,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Angelic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -339,6 +345,12 @@
                  "id":8,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Angelic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -387,6 +399,12 @@
                  "id":11,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Angelic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -513,6 +531,12 @@
                  "id":17,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Angelic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -636,6 +660,12 @@
                  "id":22,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Angelic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,
@@ -1024,6 +1054,12 @@
                  "id":53,
                  "name":"Block",
                  "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Variant",
+                         "type":"string",
+                         "value":"Angelic"
+                        }],
                  "rotation":0,
                  "type":"Block",
                  "visible":true,

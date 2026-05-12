@@ -19,7 +19,7 @@ pub struct SpriteToDraw {
   pub material: Option<Material>,
 }
 
-impl<'a> SpriteToDraw {
+impl SpriteToDraw {
   pub fn with_material(&self, material: Option<Material>) -> Self {
     Self {
       material,
@@ -42,6 +42,7 @@ pub enum SimpleSpriteTextureKind {
   WeaponModulePickup,
   BreakableTile,
   Block(PhysicsVector),
+  AngelicBlock(PhysicsVector),
   HealthPickup,
   ManaPickup,
   LaserGate,
@@ -69,6 +70,7 @@ pub fn get_sprites_to_draw(
     WeaponModulePickup => weapon_module_pickup(game_textures),
     BreakableTile => breakable_tile(game_textures),
     Block(dimensions) => block(dimensions, game_textures),
+    AngelicBlock(dimensions) => angelic_block(dimensions, game_textures),
     HealthPickup => health_pickup(game_textures),
     ManaPickup => mana_pickup(game_textures),
     LaserGate => laser_gate(game_textures),
@@ -237,6 +239,17 @@ pub fn breakable_tile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
 
 pub fn block(dimensions: &PhysicsVector, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   tiled_sprites_to_draw(dimensions, &game_textures.block_textures.block, None)
+}
+
+pub fn angelic_block(
+  dimensions: &PhysicsVector,
+  game_textures: &GameTextures,
+) -> Vec<SpriteToDraw> {
+  tiled_sprites_to_draw(
+    dimensions,
+    &game_textures.block_textures.angelic_block,
+    None,
+  )
 }
 
 pub fn touch_sensor_activated(

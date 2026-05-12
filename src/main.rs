@@ -58,6 +58,7 @@ pub struct PickupTextures {
 
 pub struct BlockTextures {
   pub block: Texture2D,
+  pub angelic_block: Texture2D,
 }
 
 pub struct ActivatorTextures {
@@ -158,6 +159,8 @@ async fn load_game_textures() -> GameTextures {
   let breakable_tile_texture =
     load_texture_with_filter("./assets/sprites/breakable_tile.png").await;
   let block_texture = load_texture_with_filter("./assets/sprites/blocks/block.png").await;
+  let angelic_block_texture =
+    load_texture_with_filter("./assets/sprites/blocks/angelic_block.png").await;
   let touch_sensor_deactivated_texture =
     load_texture_with_filter("./assets/sprites/activators/touch_sensor_deactivated.png").await;
   let touch_sensor_activated_texture =
@@ -196,6 +199,7 @@ async fn load_game_textures() -> GameTextures {
     },
     block_textures: BlockTextures {
       block: block_texture,
+      angelic_block: angelic_block_texture,
     },
     activator_textures: ActivatorTextures {
       touch_sensor_activated: touch_sensor_activated_texture,
