@@ -108,8 +108,10 @@ impl AraneaQueenBalancing {
 #[derive(Deserialize)]
 pub struct DefenderBalancing {
   pub damage: f32,
+  pub shoot_force: f32,
   pub aggro_range: f32,
   pub hold_force: f32,
+  pub waking_up_frames: i32,
   pub cooldown_initial_frames: i32,
   pub ease_period: f32,
 }

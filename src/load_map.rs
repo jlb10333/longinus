@@ -1217,6 +1217,10 @@ impl EnemySpawn {
           chance_health: 0.3,
           mana_amount: 1.0,
           chance_mana: 0.2,
+        })
+        .insert(OnDestroyEffect {
+          effect_kind: effects::NoiseDissolve,
+          duration: BALANCING.enemies.goblin.destroy_effect_duration,
         }),
       EnemySpawnEnemy::Seeker => ComponentSet::new()
         .insert(Damageable {
@@ -1277,6 +1281,10 @@ impl EnemySpawn {
           chance_health: 0.3,
           mana_amount: 1.0,
           chance_mana: 0.2,
+        })
+        .insert(OnDestroyEffect {
+          effect_kind: effects::NoiseDissolve,
+          duration: BALANCING.enemies.goblin.destroy_effect_duration,
         }),
       EnemySpawnEnemy::SniperGenerator => ComponentSet::new()
         .insert(Damageable {

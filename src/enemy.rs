@@ -1,5 +1,6 @@
 use std::{f32::consts::PI, rc::Rc};
 
+use itertools::Itertools;
 use macroquad::{prelude::rand, rand::RandGenerator};
 use rapier2d::{na::Vector2, prelude::*};
 use rpds::{List, list};
@@ -1320,13 +1321,14 @@ impl EnemyAraneaQueen {
 #[derive(Clone)]
 pub enum EnemyDefenderState {
   Idle,
+  WakingUp(i32),
   Shooting(i32),
   Cooldown(i32, i32),
 }
 
 #[derive(Clone)]
 pub struct EnemyDefender {
-  state: EnemyDefenderState,
+  pub state: EnemyDefenderState,
 }
 
 impl EnemyDefender {
@@ -1367,7 +1369,7 @@ impl EnemyDefender {
             ..EnemyDecision::default(
               handle,
               Enemy::Defender(Self {
-                state: EnemyDefenderState::Shooting(0),
+                state: EnemyDefenderState::WakingUp(BALANCING.enemies.defender.waking_up_frames),
               }),
             )
           }
@@ -1383,33 +1385,46 @@ impl EnemyDefender {
           }
         }
       }
+      EnemyDefenderState::WakingUp(frames_left) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            movement_force,
+            ..EnemyDecision::default(handle, Enemy::Defender(Self{state: EnemyDefenderState::WakingUp(frames_left - 1)}))
+          }
+        } else {
+          EnemyDecision  {
+            movement_force,
+            ..EnemyDecision::default(handle, Enemy::Defender(Self{state: EnemyDefenderState::Shooting(0)}))
+          }
+        }
+      }
       EnemyDefenderState::Shooting(count) => {
-        let ease = easing::ease_in_out_sine() * 2.0 * PI;
+        let ease_ddt = easing::ease_in_out_sine_ddt() * 2.0 * PI;
 
         let x = count as f32 / BALANCING.enemies.defender.ease_period;
 
-        let angle = ease.at(x);
+        let angvel = ease_ddt.at(x);
+        let angle = self_rigid_body.rotation().angle();
 
         let weapon_output = |offset: f32| WeaponOutput {
           damage: BALANCING.enemies.defender.damage,
+          component_set: ComponentSet::new().insert(SimpleSprite {kind: sprite::SniperProjectile}),
           ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
-            initial_impulse: distance_projection_physics(offset + angle, 0.7),
+            initial_impulse: distance_projection_physics(offset + angle, BALANCING.enemies.defender.shoot_force),
             ..Projectile::default(
-              ColliderBuilder::ball(0.2)
+              ColliderBuilder::ball(0.1)
                 .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
                 .build(),
             )
           }))
         };
 
+        let weapon_outputs = (0..8).map(|offset| weapon_output(offset as f32 * PI / 4.0)).collect_vec();
+
         EnemyDecision {
+          angvel: Some(angvel),
           movement_force,
-          weapon_outputs: vec![
-            weapon_output(0.0),
-            weapon_output(PI / 2.0),
-            weapon_output(PI),
-            weapon_output(PI + (PI / 2.0)),
-          ],
+          weapon_outputs,
           ..EnemyDecision::default(
             handle,
             Enemy::Defender(EnemyDefender {
@@ -1422,8 +1437,15 @@ impl EnemyDefender {
         }
       }
       EnemyDefenderState::Cooldown(count, frames_left) => {
+        let ease = easing::ease_in_out_sine_ddt() * 2.0 * PI;
+
+        let x = count as f32 / BALANCING.enemies.defender.ease_period;
+
+        let angvel = ease.at(x);
+
         if frames_left > 0 {
           EnemyDecision {
+          angvel: Some(angvel),
             movement_force,
             ..EnemyDecision::default(
               handle,
@@ -1434,6 +1456,7 @@ impl EnemyDefender {
           }
         } else {
           EnemyDecision {
+          angvel: Some(angvel),
             movement_force,
             ..EnemyDecision::default(
               handle,

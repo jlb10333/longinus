@@ -1124,56 +1124,84 @@ impl System for PhysicsSystem {
       .flat_map(|(handle, entity)| {
         let new_particles = if let Some(gravity_source) = entity.components.get::<GravitySource>()
           && let EntityHandle::Collider(collider_handle) = handle
-          && gravity_source.strength.abs() > 0.01
         {
-          let collider = &collider_set[*collider_handle];
-          let ball = collider.shape().as_ball().unwrap();
-
-          let area = PI * ball.radius.powf(2.0);
-
-          if rng.gen_range(0.0, 1.0)
-            > BALANCING.graphics_config.gravity_particle_effect_chance * 200.0 / area
+          let activation = if let Some(target_activator_id) = gravity_source.activator_id
+            && let Some((_, entity)) = entities.iter().find(|(_, entity)| {
+              if let Some(id) = entity.components.get::<Id>()
+                && id.id == target_activator_id
+              {
+                true
+              } else {
+                false
+              }
+            })
+            && let Some(activator) = entity.components.get::<Activator>()
           {
-            None
+            activator.activation
           } else {
-            let angle = rng.gen_range(0.0, 2.0 * PI);
-            let distance = rng.gen_range(0.1, ball.radius);
+            1.0
+          };
+          if activation <= 0.1 {
+            vec![]
+          } else {
+            let collider = collider_set[*collider_handle].clone();
+            let ball = collider.shape().as_ball().unwrap();
 
-            let translation =
-              collider.translation() + distance_projection_physics(angle, distance).into_vec();
-            let particle_collider =
-              ColliderBuilder::ball(0.01)
-                .mass(0.2)
-                .collision_groups(InteractionGroups::new(
-                  COLLISION_GROUP_GRAVITY,
-                  COLLISION_GROUP_GRAVITY,
-                  InteractionTestMode::And,
-                ));
-            let particle_rigid_body = RigidBodyBuilder::dynamic()
-              .translation(translation)
-              .enabled(true);
+            let area = PI * ball.radius.powf(2.0);
 
-            let particle_handle = rigid_body_set.insert(particle_rigid_body);
-            collider_set.insert_with_parent(particle_collider, particle_handle, rigid_body_set);
+            let rate = area as i32 / 250;
 
-            let handle = EntityHandle::RigidBody(particle_handle);
-            let entity = Entity {
-              handle,
-              components: ComponentSet::new()
-                .insert(GravityParticle)
-                .insert(DestroyAfterFrames {
-                  frames: BALANCING.graphics_config.gravity_particle_effect_lifetime,
-                })
-                .insert(SimpleSprite {
-                  kind: sprite::GravityParticle,
-                }),
-              label: "grav_particle".to_string(),
+            let remainder = self.frame_count % 10;
+            let extra_particle = if ((rate * 10) % 10) < remainder as i32 {
+              1
+            } else {
+              0
             };
 
-            Some((handle, Rc::new(entity)))
+            let rate = rate + extra_particle;
+
+            (0..rate)
+              .map(|_| {
+                let angle = rng.gen_range(0.0, 2.0 * PI);
+                let distance = rng.gen_range(0.1, ball.radius);
+
+                let translation =
+                  collider.translation() + distance_projection_physics(angle, distance).into_vec();
+                let particle_collider =
+                  ColliderBuilder::ball(0.01)
+                    .mass(0.2)
+                    .collision_groups(InteractionGroups::new(
+                      COLLISION_GROUP_GRAVITY,
+                      COLLISION_GROUP_GRAVITY,
+                      InteractionTestMode::And,
+                    ));
+                let particle_rigid_body = RigidBodyBuilder::dynamic()
+                  .translation(translation)
+                  .enabled(true);
+
+                let particle_handle = rigid_body_set.insert(particle_rigid_body);
+                collider_set.insert_with_parent(particle_collider, particle_handle, rigid_body_set);
+
+                let handle = EntityHandle::RigidBody(particle_handle);
+                let entity = Entity {
+                  handle,
+                  components: ComponentSet::new()
+                    .insert(GravityParticle)
+                    .insert(DestroyAfterFrames {
+                      frames: BALANCING.graphics_config.gravity_particle_effect_lifetime,
+                    })
+                    .insert(SimpleSprite {
+                      kind: sprite::GravityParticle,
+                    }),
+                  label: "grav_particle".to_string(),
+                };
+
+                (handle, Rc::new(entity))
+              })
+              .collect_vec()
           }
         } else {
-          None
+          vec![]
         };
 
         vec![(*handle, Rc::clone(entity))]

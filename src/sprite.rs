@@ -344,6 +344,20 @@ pub fn sniper(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )
 }
 
+pub fn defender(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  draw_from_sprite_sheet(
+    index,
+    SpriteSheetArgs {
+      num_sprites: 11,
+      num_columns: 3,
+      width: 24,
+      height: 24,
+      offset: None,
+    },
+    &game_textures.enemy_textures.defender,
+  )
+}
+
 pub fn explosion(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,

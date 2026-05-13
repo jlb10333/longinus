@@ -84,8 +84,10 @@
         },
         "defender": {
             "damage": 15,
+            "shoot_force": 0.3,
             "aggro_range": 20,
             "hold_force": 0.2,
+            "waking_up_frames": 60,
             "cooldown_initial_frames": 35,
             "ease_period": 15
         },
@@ -140,7 +142,7 @@
         "gravity_particle_effect_chance": 0.65,
         "gravity_particle_effect_speed": 20,
         "gravity_particle_effect_lifetime": 60,
-        "scaling_factor": 1.0,
+        "scaling_factor": 0.9,
         "explosion_frames": 15
     },
     "debug": {

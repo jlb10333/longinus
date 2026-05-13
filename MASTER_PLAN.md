@@ -9,10 +9,12 @@
       - Mana tanks
       - Status effects
       - UI elements
+      - Damaging tiles
   - Core elements
     - 2nd boss
   - Full blocking
     - Add level layout leading to 2nd boss, accessible via chain
+      - Add a section where you have to navigate through a tight corrider of damaging tiles
     - Settle on distribution and selection of upgrade modules/mana bars/health bars
   - Polish
     - Bugs

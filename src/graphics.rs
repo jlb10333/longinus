@@ -19,7 +19,7 @@ use crate::{
     OnDestroyEffect, SimpleSprite, TouchSensor,
   },
   effects::{Effect, EffectKind},
-  enemy::{EnemyAraneaState, EnemyImpState, EnemySniperState},
+  enemy::{EnemyAraneaState, EnemyDefenderState, EnemyImpState, EnemySniperState},
   graphics_utils::{draw_collider, draw_label},
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
@@ -163,6 +163,8 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
           let rotation = -(rotation * (16.0 / PI)).round() / (16.0 / PI);
 
+          let game_textures = &ctx.input.textures;
+
           let sprites_override = if entity.components.get::<TouchSensor>().is_some()
             && let Some(activator) = entity.components.get::<Activator>()
           {
@@ -177,9 +179,9 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                   );
 
                   if activator.activation >= 0.5 {
-                    sprite::touch_sensor_activated(dimensions, &ctx.input.textures)
+                    sprite::touch_sensor_activated(dimensions, game_textures)
                   } else {
-                    sprite::touch_sensor_deactivated(dimensions, &ctx.input.textures)
+                    sprite::touch_sensor_deactivated(dimensions, game_textures)
                   }
                 })
                 .collect::<Vec<_>>(),
@@ -188,7 +190,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             match enemy.as_ref() {
               Enemy::Goblin(_goblin) => Some(sprite::goblin(
                 (physics_system.frame_count / 15) as i32,
-                &ctx.input.textures,
+                game_textures,
               )),
               Enemy::Imp(imp) => match imp.state {
                 EnemyImpState::Moving(frames_left, _) => {
@@ -198,7 +200,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                   {
                     Some(sprite::imp(
                       (physics_system.frame_count / 15) as i32 % 2,
-                      &ctx.input.textures,
+                      game_textures,
                     ))
                   } else if frames_left > BALANCING.enemies.imp.sprite_ball_frame_count {
                     Some(sprite::imp(
@@ -206,59 +208,75 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                         / BALANCING.enemies.imp.sprite_to_ball_frame_count)
                         % 2
                         + 2,
-                      &ctx.input.textures,
+                      game_textures,
                     ))
                   } else {
-                    Some(sprite::imp(4, &ctx.input.textures))
+                    Some(sprite::imp(4, game_textures))
                   }
                 }
                 EnemyImpState::ShootingCooldown(frames_left) => {
                   if BALANCING.enemies.imp.shooting_cooldown_initial_frames - frames_left < 7 {
-                    Some(sprite::imp(5, &ctx.input.textures))
+                    Some(sprite::imp(5, game_textures))
                   } else {
                     Some(sprite::imp(
                       (physics_system.frame_count / 15) as i32 % 2,
-                      &ctx.input.textures,
+                      game_textures,
                     ))
                   }
                 }
                 _ => Some(sprite::imp(
                   (physics_system.frame_count / 15) as i32 % 2,
-                  &ctx.input.textures,
+                  game_textures,
                 )),
               },
               Enemy::Aranea(aranea) => {
                 if let EnemyAraneaState::Idle = aranea.state {
-                  Some(sprite::aranea(0, &ctx.input.textures))
+                  Some(sprite::aranea(0, game_textures))
                 } else if let EnemyAraneaState::Detaching(frames_left, _, _) = aranea.state {
                   Some(sprite::aranea(
                     ((1 + BALANCING.enemies.aranea.detaching_initial_frames - frames_left) as f32
                       / (BALANCING.enemies.aranea.detaching_initial_frames as f32 / 5.0))
                       as i32,
-                    &ctx.input.textures,
+                    game_textures,
                   ))
                 } else if let EnemyAraneaState::Cooldown(frames_left) = aranea.state
                   && (BALANCING.enemies.aranea.cooldown_initial_frames - frames_left) < 8
                 {
-                  Some(sprite::aranea(6, &ctx.input.textures))
+                  Some(sprite::aranea(6, game_textures))
                 } else {
                   Some(sprite::aranea(
                     4 + ((physics_system.frame_count / 20) % 2) as i32,
-                    &ctx.input.textures,
+                    game_textures,
                   ))
                 }
               }
               Enemy::Sniper(sniper) => {
                 if let EnemySniperState::Cooldown(frames_left) = sniper.state {
                   Some(sprite::sniper(
-                    1 + ((BALANCING.enemies.sniper.cooldown_initial_frames - frames_left)
-                      / (BALANCING.enemies.sniper.cooldown_initial_frames / 3)),
-                    &ctx.input.textures,
+                    0 + ((BALANCING.enemies.sniper.cooldown_initial_frames - frames_left)
+                      / (BALANCING.enemies.sniper.cooldown_initial_frames / 4)),
+                    game_textures,
                   ))
                 } else if let EnemySniperState::Shooting = sniper.state {
-                  Some(sprite::sniper(5, &ctx.input.textures))
+                  Some(sprite::sniper(5, game_textures))
                 } else {
-                  Some(sprite::sniper(0, &ctx.input.textures))
+                  Some(sprite::sniper(0, game_textures))
+                }
+              }
+              Enemy::Defender(defender) => {
+                if let EnemyDefenderState::Idle = defender.state {
+                  Some(sprite::defender(0, game_textures))
+                } else if let EnemyDefenderState::WakingUp(frames_left) = defender.state {
+                  Some(sprite::defender(
+                    1 + ((BALANCING.enemies.defender.waking_up_frames - frames_left)
+                      / (BALANCING.enemies.defender.waking_up_frames / 4)),
+                    game_textures,
+                  ))
+                } else {
+                  Some(sprite::defender(
+                    5 + ((physics_system.frame_count / 20) % 6) as i32,
+                    game_textures,
+                  ))
                 }
               }
               _ => None,
