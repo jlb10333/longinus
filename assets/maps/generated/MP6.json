@@ -885,20 +885,6 @@
                  "y":80
                 }, 
                 {
-                 "id":33,
-                 "name":"Imp",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":192,
-                 "y":224
-                }, 
-                {
-                 "id":34,
-                 "name":"Goblin",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":320,
-                 "y":144
-                }, 
-                {
                  "id":35,
                  "name":"Imp",
                  "template":"templates\/EnemySpawn.tx",
@@ -911,13 +897,6 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":240,
                  "y":320
-                }, 
-                {
-                 "id":37,
-                 "name":"Imp",
-                 "template":"templates\/EnemySpawn.tx",
-                 "x":408,
-                 "y":80
                 }, 
                 {
                  "id":38,

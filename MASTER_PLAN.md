@@ -20,15 +20,20 @@
     - Bugs
       - Fix bug causing menu update from item acquisition to not be consumed by physics
       - Fix player movement (normalize diagonal)
-      - Make map transitions solid for enemies
     - Visual explainability
       - Show all health tank and mana tanks in inventory
   - Testing
     - Test at different frame rates
   
 - Mechanical prototype v3
-  - Cleanup
-    - Finish replacing all balancing consts with references to BALANCING
+  - Intro cutscene
+    - Overhead view of the solar system
+    - Zooms into where earth would be to see that there's a very long and thin object in its place, along with a bunch of scattered asteroids and dust
+    - Zooms in further on the long and thin object, but specifically on one of its ends, 
+    - We zoom in past the structure to finally halt on our player character in an enclosed larger vessel against the backdrop of space, zooming stars 
+    - Player character is movable in this scene but is unable to break out of the enclosure
+    - After watching the larger vessel zoom past stars for a while, it slams into the side of another, much larger structure (presumably the long and thin object from before), throwing the player object around inside
+    - Doors on the side of the larger vessel open up and allow the player to access the structure, and the game begins
   - Enemies
     - Time slow effect on killing an enemy
   - Ability

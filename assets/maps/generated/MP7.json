@@ -290,7 +290,7 @@
                         {
                          "name":"TargetActivation",
                          "type":"float",
-                         "value":1
+                         "value":0.6
                         }],
                  "rotation":0,
                  "type":"TouchSensor",
