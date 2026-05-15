@@ -10,6 +10,7 @@
       - Status effects
       - UI elements
       - Damaging tiles
+      - Locomotor
   - Core elements
     - 2nd boss
   - Full blocking
@@ -39,6 +40,7 @@
   - Ability
     - Ability that stops all momentum and reflects any objects in range
       - Costs mana proportional to the total MOMENTUM of objects reflected with a baseline 
+    - Ability similar to metroid 2's spider ball (stick to and roll along walls)
   - Modules
     - Add upgrades that affect projectile speed
 - Messy experiments in variety

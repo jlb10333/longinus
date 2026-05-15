@@ -1579,6 +1579,14 @@ impl EnemySniper {
     let self_translation = self_rigid_body.translation();
     let direction_to_player = player_translation - self_translation;
     let movement_force = stop_linvel(BALANCING.enemies.sniper.hold_force, self_rigid_body);
+    let player_relative_velocity = *player_rigid_body.linvel() - *self_rigid_body.linvel();
+    let lead_direction = calculate_lead_direction(
+      direction_to_player,
+      player_relative_velocity,
+      BALANCING.enemies.sniper.shooting_force / BALANCING.enemies.sniper.collider_mass,
+    ).unwrap_or(vector![1.0, 0.0]);
+    let target_angle = PI - lead_direction.angle(&vector![1.0, 0.0]) * if (lead_direction.y > 0.0) { -1.0 } else {1.0};
+    let angvel = rotate_to_target(BALANCING.enemies.sniper.rotation_force, self_rigid_body, target_angle);
 
     match self.state {
       EnemySniperState::Idle => {
@@ -1612,34 +1620,27 @@ impl EnemySniper {
       }
       EnemySniperState::Shooting => EnemyDecision {
         movement_force,
+            angvel: Some(angvel),
         weapon_outputs: {
           let collider = ColliderBuilder::ball(0.08)
-            .mass(1.0)
+            .mass(BALANCING.enemies.sniper.collider_mass)
             .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
             .build();
 
-          let player_relative_velocity = *player_rigid_body.linvel() - *self_rigid_body.linvel();
+          let angle = PI - self_rigid_body.rotation().angle();
 
-          if let Some(lead_direction) = calculate_lead_direction(
-            direction_to_player,
-            player_relative_velocity,
-            BALANCING.enemies.sniper.shooting_force / collider.mass(),
-          ) {
-            vec![WeaponOutput {
+          vec![WeaponOutput {            
               component_set: ComponentSet::new().insert(SimpleSprite {
                   kind: sprite::SniperProjectile
               }),
               damage: BALANCING.enemies.sniper.projectile_damage,
               ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
                   initial_impulse: PhysicsVector::from_vec(
-                  lead_direction * BALANCING.enemies.sniper.shooting_force,
+                  distance_projection_physics(angle, BALANCING.enemies.sniper.shooting_force).into_vec(),
                 ),
                 ..Projectile::default(collider)
               }))
             }]
-          } else {
-            vec![]
-          }
         },
         ..EnemyDecision::default(
           handle,
@@ -1650,8 +1651,6 @@ impl EnemySniper {
       },
       EnemySniperState::Cooldown(frames_left) => {
         if frames_left > 0 {
-          let target_angle = (self_rigid_body.translation() - player_translation).angle(&vector![1.0, 0.0]);
-          let angvel = rotate_to_target(1.0, self_rigid_body, target_angle);
           EnemyDecision {
             movement_force,
             angvel: Some(angvel),
@@ -1665,6 +1664,7 @@ impl EnemySniper {
         } else {
           EnemyDecision {
             movement_force,
+            angvel: Some(angvel),
             ..EnemyDecision::default(
               handle,
               Enemy::Sniper(Self {

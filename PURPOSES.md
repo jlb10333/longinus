@@ -1,0 +1,10 @@
+- Defender
+  - Area denial
+  - Very strong at close-mid range
+  - Player keeps distance to dodge shots
+  - Strongly affected by gravity
+- Sniper
+  - Very weak at close range due to slow rotation speed if player can maneuver around sniper
+  - Very strong in a spot with low maneuverability like a corner, or at mid range
+  - Moderate at long range, player can react to and dodge shots or bait em out
+  - Almost unaffected by gravity

@@ -105,7 +105,9 @@
             "projectile_damage": 20,
             "shooting_force": 15,
             "collider_side_length": 1,
-            "hold_force": 0.2
+            "hold_force": 0.2,
+            "rotation_force": 1,
+            "collider_mass": 1
         },
         "sniper_generator": {
             "generating_initial_frames": 60,

@@ -136,6 +136,8 @@ pub struct SniperBalancing {
   pub shooting_force: f32,
   pub hold_force: f32,
   pub collider_side_length: f32,
+  pub collider_mass: f32,
+  pub rotation_force: f32,
 }
 
 #[derive(Deserialize)]
