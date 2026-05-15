@@ -211,7 +211,9 @@ impl System for AbilitySystem {
           if new_tank.rechargeable {
             mana_tanks.with_rechargeable_tank()
           } else {
-            mana_tanks.with_non_rechargeable_tank()
+            mana_tanks
+              .with_non_rechargeable_tank()
+              .with(BALANCING.abilities.mana_tanks.capacity)
           }
         });
 
