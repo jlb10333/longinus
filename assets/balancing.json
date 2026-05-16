@@ -144,10 +144,12 @@
         "gravity_particle_effect_chance": 0.65,
         "gravity_particle_effect_speed": 20,
         "gravity_particle_effect_lifetime": 60,
-        "scaling_factor": 0.9,
-        "explosion_frames": 15
+        "scaling_factor": 0.8,
+        "explosion_frames": 15,
+        "color_palette_override": null,
+        "color_palette_preset": "Default"
     },
     "debug": {
-        "show_colliders": false
+        "show_colliders": true
     }
 }

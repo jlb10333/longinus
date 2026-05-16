@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use balance::BALANCING;
 use macroquad::prelude::*;
-use shaders::{DISSOLVE_FRAGMENT_SHADER, IDENTITY_VERTEX_SHADER};
+use shaders::{COLOR_MAP_FRAGMENT_SHADER, DISSOLVE_FRAGMENT_SHADER, IDENTITY_VERTEX_SHADER};
 use system::ProcessContextOptions;
 
 use crate::ability::AbilitySystem;
@@ -103,6 +103,7 @@ impl Default for GameTextures {
 
 pub struct GameMaterials {
   pub dissolve: Material,
+  pub color_map: Material,
 }
 
 impl Default for GameMaterials {
@@ -244,8 +245,30 @@ fn load_game_materials() -> GameMaterials {
   )
   .unwrap();
 
+  let color_map_material = load_material(
+    ShaderSource::Glsl {
+      vertex: IDENTITY_VERTEX_SHADER,
+      fragment: COLOR_MAP_FRAGMENT_SHADER,
+    },
+    MaterialParams {
+      uniforms: vec![
+        UniformDesc::new("COLOR_1", UniformType::Float4),
+        UniformDesc::new("COLOR_2", UniformType::Float4),
+        UniformDesc::new("COLOR_3", UniformType::Float4),
+        UniformDesc::new("COLOR_4", UniformType::Float4),
+        UniformDesc::new("MAPPED_COLOR_1", UniformType::Float4),
+        UniformDesc::new("MAPPED_COLOR_2", UniformType::Float4),
+        UniformDesc::new("MAPPED_COLOR_3", UniformType::Float4),
+        UniformDesc::new("MAPPED_COLOR_4", UniformType::Float4),
+      ],
+      ..Default::default()
+    },
+  )
+  .unwrap();
+
   GameMaterials {
     dissolve: dissolve_material,
+    color_map: color_map_material,
   }
 }
 

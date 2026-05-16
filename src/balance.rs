@@ -1,8 +1,12 @@
 use std::{env::current_dir, fs, path::Path, sync::LazyLock};
 
+use macroquad::{color::Color, math::Vec4};
 use serde::Deserialize;
 
-use crate::ecs::StatusEffectsBalancing;
+use crate::{
+  ecs::StatusEffectsBalancing,
+  graphics::{ColorPalette, ColorPalettePresets},
+};
 
 /**
  * Loads balancing data from assets/balancing.json
@@ -206,6 +210,25 @@ pub struct AbilityBalancing {
 }
 
 #[derive(Deserialize)]
+pub struct ColorPaletteConfig {
+  pub color_1: [f32; 4],
+  pub color_2: [f32; 4],
+  pub color_3: [f32; 4],
+  pub color_4: [f32; 4],
+}
+
+impl ColorPaletteConfig {
+  pub fn to_color_palette(&self) -> ColorPalette {
+    ColorPalette {
+      color_1: Color::from_vec(Vec4::from_array(self.color_1)),
+      color_2: Color::from_vec(Vec4::from_array(self.color_2)),
+      color_3: Color::from_vec(Vec4::from_array(self.color_3)),
+      color_4: Color::from_vec(Vec4::from_array(self.color_4)),
+    }
+  }
+}
+
+#[derive(Deserialize)]
 pub struct GraphicsConfig {
   pub hitstop_enabled: bool,
   pub rounding_factor: f32,
@@ -214,6 +237,8 @@ pub struct GraphicsConfig {
   pub gravity_particle_effect_speed: f32,
   pub gravity_particle_effect_lifetime: i32,
   pub explosion_frames: i32,
+  pub color_palette_override: Option<ColorPaletteConfig>,
+  pub color_palette_preset: ColorPalettePresets,
 }
 
 impl GraphicsConfig {

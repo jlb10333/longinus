@@ -3,10 +3,11 @@ use std::{cmp::Ordering, f32::consts::PI, marker::PhantomData, rc::Rc};
 use itertools::Itertools;
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
+use serde::Deserialize;
 
 use crate::{
   ability::AbilitySystem,
-  balance::BALANCING,
+  balance::{BALANCING, ColorPaletteConfig},
   camera::CameraSystem,
   combat::{
     CombatSystem, Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind,
@@ -37,29 +38,115 @@ const SHOW_SLOTS: bool = true;
 
 /* Colors */
 pub const COLOR_1: Color = Color {
-  r: 214.0 / 255.0,
-  g: 246.0 / 255.0,
-  b: 214.0 / 255.0,
+  r: 224.0 / 255.0,
+  g: 248.0 / 255.0,
+  b: 208.0 / 255.0,
   a: 1.0,
 };
 pub const COLOR_2: Color = Color {
-  r: 107.0 / 255.0,
-  g: 165.0 / 255.0,
-  b: 107.0 / 255.0,
+  r: 136.0 / 255.0,
+  g: 192.0 / 255.0,
+  b: 112.0 / 255.0,
   a: 1.0,
 };
 pub const COLOR_3: Color = Color {
-  r: 29.0 / 255.0,
-  g: 88.0 / 255.0,
-  b: 73.0 / 255.0,
+  r: 52.0 / 255.0,
+  g: 104.0 / 255.0,
+  b: 86.0 / 255.0,
   a: 1.0,
 };
 pub const COLOR_4: Color = Color {
-  r: 0.0 / 255.0,
-  g: 18.0 / 255.0,
-  b: 25.0 / 255.0,
+  r: 8.0 / 255.0,
+  g: 24.0 / 255.0,
+  b: 32.0 / 255.0,
   a: 1.0,
 };
+
+#[derive(Clone)]
+pub struct ColorPalette {
+  pub color_1: Color,
+  pub color_2: Color,
+  pub color_3: Color,
+  pub color_4: Color,
+}
+
+pub const BASE_COLORS: ColorPalette = ColorPalette {
+  color_1: COLOR_1,
+  color_2: COLOR_2,
+  color_3: COLOR_3,
+  color_4: COLOR_4,
+};
+
+pub const GRAYSCALE_COLORS: ColorPalette = ColorPalette {
+  color_1: Color {
+    r: 248.0 / 255.0,
+    g: 248.0 / 255.0,
+    b: 248.0 / 255.0,
+    a: 1.0,
+  },
+  color_2: Color {
+    r: 168.0 / 255.0,
+    g: 168.0 / 255.0,
+    b: 168.0 / 255.0,
+    a: 1.0,
+  },
+  color_3: Color {
+    r: 96.0 / 255.0,
+    g: 96.0 / 255.0,
+    b: 96.0 / 255.0,
+    a: 1.0,
+  },
+  color_4: Color {
+    r: 0.0,
+    g: 0.0,
+    b: 0.0,
+    a: 1.0,
+  },
+};
+
+pub const SUPER_GREEN_COLORS: ColorPalette = ColorPalette {
+  color_1: Color {
+    r: 155.0 / 255.0,
+    g: 188.0 / 255.0,
+    b: 15.0 / 255.0,
+    a: 1.0,
+  },
+  color_2: Color {
+    r: 139.0 / 255.0,
+    g: 172.0 / 255.0,
+    b: 15.0 / 255.0,
+    a: 1.0,
+  },
+  color_3: Color {
+    r: 48.0 / 255.0,
+    g: 98.0 / 255.0,
+    b: 48.0 / 255.0,
+    a: 1.0,
+  },
+  color_4: Color {
+    r: 15.0 / 255.0,
+    g: 56.0 / 255.0,
+    b: 15.0 / 255.0,
+    a: 1.0,
+  },
+};
+
+#[derive(Deserialize, Clone, Copy)]
+pub enum ColorPalettePresets {
+  Default,
+  Grayscale,
+  SuperGreen,
+}
+
+impl ColorPalettePresets {
+  fn to_color_palette(&self) -> ColorPalette {
+    match self {
+      Self::Default => BASE_COLORS,
+      Self::Grayscale => GRAYSCALE_COLORS,
+      Self::SuperGreen => SUPER_GREEN_COLORS,
+    }
+  }
+}
 
 #[derive(Clone)]
 pub struct GraphicsSystem<Input> {
@@ -253,8 +340,8 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
               Enemy::Sniper(sniper) => {
                 if let EnemySniperState::Cooldown(frames_left) = sniper.state {
                   Some(sprite::sniper(
-                    0 + ((BALANCING.enemies.sniper.cooldown_initial_frames - frames_left)
-                      / (BALANCING.enemies.sniper.cooldown_initial_frames / 4)),
+                    (BALANCING.enemies.sniper.cooldown_initial_frames - frames_left)
+                      / (BALANCING.enemies.sniper.cooldown_initial_frames / 4),
                     game_textures,
                   ))
                 } else if let EnemySniperState::Shooting = sniper.state {
@@ -675,7 +762,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         0.0,
         10.0,
         max_rechargeable_mana,
-        COLOR_4.with_alpha(0.75),
+        COLOR_4,
       );
       draw_arc(
         player_screen_pos.x(),
@@ -685,7 +772,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         0.0,
         10.0,
         rechargeable_mana_percent_filled * max_rechargeable_mana,
-        COLOR_2.with_alpha(0.75),
+        COLOR_2,
       );
 
       let unrechargeable_mana_percent_filled =
@@ -756,6 +843,33 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         .iter()
         .rev()
         .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
+
+      let material = ctx.input.materials.color_map.clone();
+      material.set_uniform("COLOR_1", COLOR_1.to_vec());
+      material.set_uniform("COLOR_2", COLOR_2.to_vec());
+      material.set_uniform("COLOR_3", COLOR_3.to_vec());
+      material.set_uniform("COLOR_4", COLOR_4.to_vec());
+
+      let mapped_color_palette = BALANCING
+        .graphics_config
+        .color_palette_override
+        .as_ref()
+        .map(ColorPaletteConfig::to_color_palette)
+        .unwrap_or(
+          BALANCING
+            .graphics_config
+            .color_palette_preset
+            .to_color_palette(),
+        );
+
+      material.set_uniform("MAPPED_COLOR_1", mapped_color_palette.color_1.to_vec());
+      material.set_uniform("MAPPED_COLOR_2", mapped_color_palette.color_2.to_vec());
+      material.set_uniform("MAPPED_COLOR_3", mapped_color_palette.color_3.to_vec());
+      material.set_uniform("MAPPED_COLOR_4", mapped_color_palette.color_4.to_vec());
+
+      gl_use_material(&material);
+      draw_rectangle(0.0, 0.0, screen_width(), screen_height(), WHITE);
+      gl_use_default_material();
 
       return Rc::new(GraphicsSystem {
         effects,

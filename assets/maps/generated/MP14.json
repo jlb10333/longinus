@@ -411,9 +411,9 @@
                          "type":"object",
                          "value":18
                         }],
-                 "rotation":-180,
+                 "rotation":0,
                  "template":"templates\/EnemySpawn.tx",
-                 "x":256,
+                 "x":248,
                  "y":280
                 }, 
                 {
@@ -433,7 +433,7 @@
                         }],
                  "rotation":180,
                  "template":"templates\/EnemySpawn.tx",
-                 "x":224,
+                 "x":232,
                  "y":240
                 }, 
                 {
@@ -454,7 +454,7 @@
                  "rotation":-90,
                  "template":"templates\/EnemySpawn.tx",
                  "x":152,
-                 "y":104
+                 "y":112
                 }, 
                 {
                  "id":22,
