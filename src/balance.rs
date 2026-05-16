@@ -19,6 +19,7 @@ pub struct PlayerBalancing {
   pub size: f32,
   pub acceleration_mod: f32,
   pub missile_explosion_strength: f32,
+  pub missile_damage: f32,
 }
 
 #[derive(Deserialize)]

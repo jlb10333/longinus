@@ -244,7 +244,7 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":4
+                         "value":7
                         }, 
                         {
                          "name":"ReverseDirection",
@@ -267,13 +267,13 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":7
+                         "value":1
                         }],
                  "rotation":0,
                  "type":"Gate",
                  "visible":true,
                  "width":0,
-                 "x":56,
+                 "x":80,
                  "y":24
                 }, 
                 {
@@ -346,19 +346,19 @@
                         {
                          "name":"Activator1Id",
                          "type":"object",
-                         "value":1
+                         "value":4
                         }, 
                         {
                          "name":"Activator2Id",
                          "type":"object",
-                         "value":6
+                         "value":41
                         }],
                  "rotation":0,
                  "type":"Or",
                  "visible":true,
                  "width":0,
-                 "x":72,
-                 "y":24
+                 "x":56,
+                 "y":16
                 }, 
                 {
                  "height":16,
@@ -414,7 +414,7 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":12
+                         "value":13
                         }, 
                         {
                          "name":"ReverseDirection",
@@ -480,14 +480,14 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":13
+                         "value":8
                         }],
                  "rotation":0,
                  "type":"Gate",
                  "visible":true,
                  "width":0,
                  "x":192,
-                 "y":40
+                 "y":48
                 }, 
                 {
                  "height":0,
@@ -498,19 +498,19 @@
                         {
                          "name":"Activator1Id",
                          "type":"object",
-                         "value":1
+                         "value":42
                         }, 
                         {
                          "name":"Activator2Id",
                          "type":"object",
-                         "value":8
+                         "value":12
                         }],
                  "rotation":0,
                  "type":"Or",
                  "visible":true,
                  "width":0,
-                 "x":168,
-                 "y":40
+                 "x":192,
+                 "y":24
                 }, 
                 {
                  "height":6,
@@ -832,14 +832,14 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":4
+                         "value":41
                         }],
                  "rotation":0,
                  "type":"Not",
                  "visible":true,
                  "width":0,
-                 "x":32,
-                 "y":24
+                 "x":40,
+                 "y":0
                 }, 
                 {
                  "height":0,
@@ -868,7 +868,7 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":4
+                         "value":41
                         }, 
                         {
                          "name":"Radius",
@@ -930,6 +930,42 @@
                  "template":"templates\/EnemySpawn.tx",
                  "x":156,
                  "y":237
+                }, 
+                {
+                 "height":0,
+                 "id":41,
+                 "name":"Gate",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":6
+                        }],
+                 "rotation":0,
+                 "type":"Gate",
+                 "visible":true,
+                 "width":0,
+                 "x":48,
+                 "y":40
+                }, 
+                {
+                 "height":0,
+                 "id":42,
+                 "name":"Gate",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"ActivatorId",
+                         "type":"object",
+                         "value":1
+                        }],
+                 "rotation":0,
+                 "type":"Gate",
+                 "visible":true,
+                 "width":0,
+                 "x":160,
+                 "y":24
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -938,7 +974,7 @@
          "y":0
         }],
  "nextlayerid":5,
- "nextobjectid":41,
+ "nextobjectid":43,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

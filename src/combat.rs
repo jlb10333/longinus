@@ -286,7 +286,7 @@ fn base_output_from_weapon_type(weapon_output_type: WeaponOutputType) -> WeaponO
       }),
     },
     WeaponOutputType::Missile => WeaponOutput {
-      damage: 15.0,
+      damage: BALANCING.player.missile_damage,
       component_set: ComponentSet::new()
         .insert(ExplodeOnCollision {
           radius: 1.5,

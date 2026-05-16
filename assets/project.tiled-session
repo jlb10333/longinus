@@ -127,11 +127,11 @@
             }
         },
         "maps/generated/MP15.json": {
-            "scale": 2,
-            "selectedLayer": 2,
+            "scale": 1,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 628.75,
-                "y": 13.25
+                "x": 184.5,
+                "y": 129.5
             }
         },
         "maps/generated/MP17.json": {
@@ -279,11 +279,11 @@
             }
         },
         "maps/generated/MP9.json": {
-            "scale": 8,
-            "selectedLayer": 0,
+            "scale": 4,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": -70.5625,
-                "y": 275.0625
+                "x": -605.875,
+                "y": 40.125
             }
         },
         "maps/generated/boost.json": {

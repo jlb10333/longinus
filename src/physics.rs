@@ -2783,9 +2783,7 @@ fn fold_damageable_damage_taken(
     let (hitstop_frames, entity) = {
       let damageable = entity.components.get::<Damageable>();
 
-      if damageable.is_some() {
-        let damageable = damageable.unwrap();
-
+      if let Some(damageable) = damageable {
         if damageable.current_hitstun > 0.0 {
           (
             0,
@@ -2812,11 +2810,18 @@ fn fold_damageable_damage_taken(
                     .and_then(|rigid_body_handle| {
                       entities.get(&EntityHandle::RigidBody(rigid_body_handle))
                     })
+                    .filter(|other_entity| {
+                      !damageable.visited_damagers.contains(&other_entity.handle)
+                    })
                     .and_then(|entity| {
                       if let Some(damager) = entity.components.get::<Damager>()
                         && damager.hitboxes.contains(&collider_handle)
                       {
-                        Some((damager, entity.components.get::<Damageable>()))
+                        Some((
+                          damager,
+                          entity.handle,
+                          entity.components.get::<Damageable>(),
+                        ))
                       } else {
                         None
                       }
@@ -2826,21 +2831,23 @@ fn fold_damageable_damage_taken(
             })
             .collect::<Vec<_>>();
 
-          let incoming_damage =
-            colliding_damager_entities
-              .iter()
-              .fold(0.0, |sum, (damager, maybe_damageable)| {
-                let weakness_modifier = maybe_damageable
-                  .as_ref()
-                  .map(|damageable| {
-                    WEAKNESS_INTENSITY.powi(
-                      damageable.get_applied_status_effect_count(StatusEffect::Weakness) as i32,
-                    )
-                  })
-                  .unwrap_or(1.0);
+          let (incoming_damage, visited_damagers) = colliding_damager_entities.iter().fold(
+            (0.0, HashTrieSet::new()),
+            |(sum, visited_damagers), (damager, handle, maybe_damageable)| {
+              let weakness_modifier = maybe_damageable
+                .as_ref()
+                .map(|damageable| {
+                  WEAKNESS_INTENSITY
+                    .powi(damageable.get_applied_status_effect_count(StatusEffect::Weakness) as i32)
+                })
+                .unwrap_or(1.0);
 
-                sum + (damager.damage * weakness_modifier)
-              });
+              (
+                sum + (damager.damage * weakness_modifier),
+                visited_damagers.insert(*handle),
+              )
+            },
+          );
 
           let num_active_deterioration_effects = damageable
             .applied_status_effects
@@ -2861,7 +2868,7 @@ fn fold_damageable_damage_taken(
 
           let building_status_effects = colliding_damager_entities
             .iter()
-            .flat_map(|(damager, _)| damager.status_effects.iter())
+            .flat_map(|(damager, _, _)| damager.status_effects.iter())
             .fold(
               damageable.building_status_effects.clone(),
               |building_status_effects, (status_effect, application_amount)| {
@@ -2876,6 +2883,13 @@ fn fold_damageable_damage_taken(
               },
             );
 
+          let visited_damagers = damageable
+            .visited_damagers
+            .iter()
+            .chain(&visited_damagers)
+            .copied()
+            .collect::<HashTrieSet<_>>();
+
           if incoming_damage == 0.0 {
             (
               0,
@@ -2884,6 +2898,7 @@ fn fold_damageable_damage_taken(
                   current_hitstun: (damageable.current_hitstun - 1.0).max(0.0),
                   damaged: false,
                   building_status_effects,
+                  visited_damagers,
                   ..(*damageable).clone()
                 }),
                 ..entity.as_ref().clone()
@@ -2904,6 +2919,7 @@ fn fold_damageable_damage_taken(
                   current_hitstun: damageable.max_hitstun,
                   damaged: true,
                   building_status_effects,
+                  visited_damagers,
                   ..(*damageable).clone()
                 }),
                 ..entity.as_ref().clone()
@@ -2942,6 +2958,11 @@ fn spawn_explosion(
   Entity {
     handle: EntityHandle::RigidBody(rigid_body_handle),
     components: ComponentSet::new()
+      .insert(Damager {
+        damage: explosion.damage,
+        hitboxes: vec![hitbox_handle],
+        ..Default::default()
+      })
       .insert(GravitySource {
         strength: explosion.strength,
         activator_id: None,

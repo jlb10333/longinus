@@ -599,7 +599,7 @@
                         {
                          "name":"Radius",
                          "type":"float",
-                         "value":10
+                         "value":20
                         }, 
                         {
                          "name":"Strength",
@@ -738,7 +738,7 @@
                         {
                          "name":"Radius",
                          "type":"float",
-                         "value":10
+                         "value":20
                         }, 
                         {
                          "name":"Strength",

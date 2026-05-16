@@ -7,7 +7,7 @@ use rapier2d::{
     RigidBodyHandle, RigidBodySet,
   },
 };
-use rpds::{HashTrieMap, List};
+use rpds::{HashTrieMap, HashTrieSet, List};
 use serde::Deserialize;
 use struct_record::record;
 
@@ -221,7 +221,9 @@ pub struct Damageable {
   pub building_status_effects: HashTrieMap<StatusEffect, f32>,
   pub applied_status_effects: List<(StatusEffect, i32)>,
   pub status_resistances: Vec<(StatusEffect, i32)>,
+  pub visited_damagers: HashTrieSet<EntityHandle>,
 }
+
 impl Component for Damageable {}
 
 impl Damageable {
