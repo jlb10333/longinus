@@ -20,7 +20,9 @@ use crate::{
     OnDestroyEffect, SimpleSprite, TouchSensor,
   },
   effects::{Effect, EffectKind},
-  enemy::{EnemyAraneaState, EnemyDefenderState, EnemyImpState, EnemySniperState},
+  enemy::{
+    EnemyAraneaState, EnemyDefenderState, EnemyImpState, EnemySniperState, FramesLeft, aranea_queen,
+  },
   graphics_utils::{draw_collider, draw_label},
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
@@ -336,6 +338,76 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                     game_textures,
                   ))
                 }
+              }
+              Enemy::AraneaQueen(aranea_queen) => {
+                let launch_substate_dispatch = |launch_substate: &aranea_queen::LaunchSubstate| {
+                  if let aranea_queen::LaunchSubstate::Starting(_, FramesLeft(frames_left)) =
+                    launch_substate
+                  {
+                    if *frames_left < 5 {
+                      Some(sprite::aranea_queen(4, game_textures))
+                    } else {
+                      Some(sprite::aranea_queen(
+                        2 + ((BALANCING.enemies.aranea_queen.launch_starting_frames - frames_left)
+                          as f32
+                          / (BALANCING.enemies.aranea_queen.launch_starting_frames as f32 / 2.0))
+                          as i32,
+                        game_textures,
+                      ))
+                    }
+                  } else {
+                    None
+                  }
+                };
+
+                let launch_to_egg_substate_dispatch =
+                  |launch_to_egg_substate: &aranea_queen::LaunchToEggSubstate| {
+                    match launch_to_egg_substate {
+                      aranea_queen::LaunchToEggSubstate::Launch(launch_substate) => {
+                        launch_substate_dispatch(launch_substate)
+                      }
+                      aranea_queen::LaunchToEggSubstate::Spraying(FramesLeft(frames_left)) => {
+                        if frames_left % BALANCING.enemies.aranea_queen.spray_interval < 3 {
+                          Some(sprite::aranea_queen(2, game_textures))
+                        } else {
+                          None
+                        }
+                      }
+                    }
+                  };
+
+                let special_sprite = match &aranea_queen.state {
+                  aranea_queen::State::FirstLaunch(launch_to_egg_substate) => {
+                    launch_to_egg_substate_dispatch(launch_to_egg_substate)
+                  }
+                  aranea_queen::State::Phase1(phase_1_substate) => match phase_1_substate {
+                    aranea_queen::Phase1Substate::LaunchToEgg(launch_to_egg_substate) => {
+                      launch_to_egg_substate_dispatch(launch_to_egg_substate)
+                    }
+                    aranea_queen::Phase1Substate::LaunchToPlayer(launch_substate) => {
+                      launch_substate_dispatch(launch_substate)
+                    }
+                    _ => None,
+                  },
+                  aranea_queen::State::Phase2(phase_2_subsate) => match phase_2_subsate {
+                    aranea_queen::Phase2Substate::BounceOffWalls(_, launch_substate) => {
+                      launch_substate_dispatch(launch_substate)
+                    }
+                    aranea_queen::Phase2Substate::LaunchToEgg(launch_to_egg_substate) => {
+                      launch_to_egg_substate_dispatch(launch_to_egg_substate)
+                    }
+                    aranea_queen::Phase2Substate::LaunchToPlayer(launch_substate) => {
+                      launch_substate_dispatch(launch_substate)
+                    }
+                    _ => None,
+                  },
+                  _ => None,
+                };
+
+                special_sprite.or(Some(sprite::aranea_queen(
+                  (physics_system.frame_count / 20) as i32 % 2,
+                  game_textures,
+                )))
               }
               Enemy::Sniper(sniper) => {
                 if let EnemySniperState::Cooldown(frames_left) = sniper.state {

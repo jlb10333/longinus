@@ -2,8 +2,6 @@
 ## Gameplay
 - Mechanical prototype v2
   - Graphics
-    - Basic tile layers for all levels
-    - Enemy art for all levels
     - All menus
     - Misc
       - Mana tanks
@@ -11,6 +9,9 @@
       - UI elements
       - Damaging tiles
       - Locomotor
+      - Ability pickup
+      - Chain
+      - Boost?
   - Core elements
     - 2nd boss
   - Full blocking

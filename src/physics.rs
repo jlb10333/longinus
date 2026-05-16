@@ -2942,11 +2942,6 @@ fn spawn_explosion(
   Entity {
     handle: EntityHandle::RigidBody(rigid_body_handle),
     components: ComponentSet::new()
-      .insert(Damager {
-        damage: explosion.damage,
-        hitboxes: vec![hitbox_handle],
-        ..Default::default()
-      })
       .insert(GravitySource {
         strength: explosion.strength,
         activator_id: None,

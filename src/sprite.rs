@@ -36,6 +36,7 @@ pub enum SimpleSpriteTextureKind {
   PlasmaProjectile,
   MissileProjectile,
   ImpProjectile,
+  AraneaQueenProjectile,
   Beam(i32, PhysicsVector),
   SniperProjectile,
   HealthTankPickup,
@@ -65,6 +66,7 @@ pub fn get_sprites_to_draw(
     MissileProjectile => missile_projectile(game_textures),
     Beam(index, dimension) => beam(*index, dimension, game_textures),
     ImpProjectile => imp_projectile(game_textures),
+    AraneaQueenProjectile => aranea_queen_projectile(game_textures),
     SniperProjectile => sniper_projectile(game_textures),
     HealthTankPickup => health_tank_pickup(game_textures),
     WeaponModulePickup => weapon_module_pickup(game_textures),
@@ -142,6 +144,20 @@ pub fn beam(
 pub fn imp_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw {
     texture: Rc::new(game_textures.projectile_textures.imp.weak_clone()),
+    source: Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 8.0,
+      h: 8.0,
+    },
+    offset: None,
+    material: None,
+  }]
+}
+
+pub fn aranea_queen_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw {
+    texture: Rc::new(game_textures.projectile_textures.aranea_queen.weak_clone()),
     source: Rect {
       x: 0.0,
       y: 0.0,
@@ -313,6 +329,20 @@ pub fn aranea(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       offset: None,
     },
     &game_textures.enemy_textures.aranea,
+  )
+}
+
+pub fn aranea_queen(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  draw_from_sprite_sheet(
+    index,
+    SpriteSheetArgs {
+      num_sprites: 5,
+      num_columns: 2,
+      width: 48,
+      height: 48,
+      offset: None,
+    },
+    &game_textures.enemy_textures.aranea_queen,
   )
 }
 

@@ -60,23 +60,24 @@
             "hold_force": 0.3
         },
         "aranea_queen": {
-            "max_health": 5000,
+            "max_health": 3000,
             "status_effect_threshold": 30,
-            "contact_damage": 20,
+            "contact_damage": 25,
             "colliders_side_length": 1.5,
+            "launch_starting_frames": 20,
             "launch_force": 300,
-            "stopping_frames": 10,
+            "stopping_frames": 30,
             "spraying_speed": 1,
             "num_spraying": 5,
             "spray_interval": 10,
             "first_launch_spraying_frames": 360,
             "first_launch_cooldown_frames": 100,
-            "phase_1_chance_of_egg_launch": 0.3,
+            "phase_1_chance_of_egg_launch": 0.2,
             "phase_1_spraying_frames": 240,
             "phase_1_launch_to_egg_cooldown_frames": 80,
             "phase_1_launch_to_player_cooldown_frames": 60,
             "phase_2_chance_of_egg_launch": 0.2,
-            "phase_2_spraying_frames": 360,
+            "phase_2_spraying_frames": 300,
             "phase_2_launch_to_egg_cooldown_frames": 100,
             "phase_2_launch_to_player_cooldown_frames": 120,
             "phase_2_bounce_cooldown_frames": 0,
@@ -147,9 +148,9 @@
         "scaling_factor": 0.8,
         "explosion_frames": 15,
         "color_palette_override": null,
-        "color_palette_preset": "Default"
+        "color_palette_preset": "Grayscale"
     },
     "debug": {
-        "show_colliders": true
+        "show_colliders": false
     }
 }

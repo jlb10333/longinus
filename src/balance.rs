@@ -84,6 +84,7 @@ pub struct AraneaQueenBalancing {
   pub status_effect_threshold: f32,
   pub contact_damage: f32,
   pub colliders_side_length: f32,
+  pub launch_starting_frames: i32,
   pub launch_force: f32,
   pub stopping_frames: i32,
   pub spraying_speed: f32,

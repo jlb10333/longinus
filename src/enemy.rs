@@ -30,7 +30,7 @@ pub struct EnemyDecision {
 }
 
 #[derive(Clone)]
-pub struct FramesLeft(i32);
+pub struct FramesLeft(pub i32);
 
 impl EnemyDecision {
   pub fn default(handle: RigidBodyHandle, enemy: Enemy) -> Self {
@@ -739,16 +739,16 @@ pub mod aranea_queen {
 
   #[derive(Clone)]
   pub enum LaunchSubstate {
-    Root(Vector2<f32>),
-    Launching(FramesLeft),
+    Starting(Vector2<f32>, FramesLeft),
+    Cruising(FramesLeft),
     Stopping(FramesLeft),
   }
 
   impl Debug for LaunchSubstate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       match self {
-        Self::Root(target) => write!(f, "Root({})", *target),
-        Self::Launching(FramesLeft(frames_left)) => write!(f, "Launching({})", frames_left),
+        Self::Starting(target, FramesLeft(frames_left)) => write!(f, "Starting({}, {})", *target, frames_left),
+        Self::Cruising(FramesLeft(frames_left)) => write!(f, "Cruising({})", frames_left),
         Self::Stopping(FramesLeft(frames_left)) => write!(f, "Stopping({})", frames_left),
       }
     }
@@ -833,7 +833,7 @@ pub mod aranea_queen {
 
 #[derive(Clone)]
 pub struct EnemyAraneaQueen {
-  state: aranea_queen::State,
+  pub state: aranea_queen::State,
   egg_handle: ColliderHandle,
 }
 
@@ -875,7 +875,7 @@ impl EnemyAraneaQueen {
               Enemy::AraneaQueen(Self {
                 egg_handle: self.egg_handle,
                 state: aranea_queen::State::FirstLaunch(aranea_queen::LaunchToEggSubstate::Launch(
-                  aranea_queen::LaunchSubstate::Root(*egg_translation),
+                  aranea_queen::LaunchSubstate::Starting(*egg_translation, FramesLeft(BALANCING.enemies.aranea_queen.launch_starting_frames)),
                 )),
               }),
             )
@@ -929,8 +929,9 @@ impl EnemyAraneaQueen {
                 Enemy::AraneaQueen(Self {
                   egg_handle: self.egg_handle,
                   state: aranea_queen::State::Phase1(aranea_queen::Phase1Substate::LaunchToEgg(
-                    aranea_queen::LaunchToEggSubstate::Launch(aranea_queen::LaunchSubstate::Root(
+                    aranea_queen::LaunchToEggSubstate::Launch(aranea_queen::LaunchSubstate::Starting(
                       *egg_translation,
+                      FramesLeft(BALANCING.enemies.aranea_queen.launch_starting_frames)
                     )),
                   )),
                 }),
@@ -944,7 +945,7 @@ impl EnemyAraneaQueen {
                 Enemy::AraneaQueen(Self {
                   egg_handle: self.egg_handle,
                   state: aranea_queen::State::Phase1(aranea_queen::Phase1Substate::LaunchToPlayer(
-                    aranea_queen::LaunchSubstate::Root(*player_translation),
+                    aranea_queen::LaunchSubstate::Starting(*player_translation, FramesLeft(BALANCING.enemies.aranea_queen.launch_starting_frames)),
                   )),
                 }),
               )
@@ -1009,8 +1010,8 @@ impl EnemyAraneaQueen {
                 Enemy::AraneaQueen(Self {
                   egg_handle: self.egg_handle,
                   state: aranea_queen::State::Phase2(aranea_queen::Phase2Substate::LaunchToEgg(
-                    aranea_queen::LaunchToEggSubstate::Launch(aranea_queen::LaunchSubstate::Root(
-                      *egg_translation,
+                    aranea_queen::LaunchToEggSubstate::Launch(aranea_queen::LaunchSubstate::Starting(
+                      *egg_translation, FramesLeft(BALANCING.enemies.aranea_queen.launch_starting_frames)
                     )),
                   )),
                 }),
@@ -1031,7 +1032,7 @@ impl EnemyAraneaQueen {
                   egg_handle: self.egg_handle,
                   state: aranea_queen::State::Phase2(aranea_queen::Phase2Substate::BounceOffWalls(
                     num_bounces,
-                    aranea_queen::LaunchSubstate::Root(target_translation),
+                    aranea_queen::LaunchSubstate::Starting(target_translation, FramesLeft(0)),
                   )),
                 }),
               )
@@ -1098,7 +1099,7 @@ impl EnemyAraneaQueen {
               Rc::new(aranea_queen::State::Phase2(
                 aranea_queen::Phase2Substate::BounceOffWalls(
                   aranea_queen::BouncesLeft(bounces_left - 1),
-                  aranea_queen::LaunchSubstate::Root(target_translation),
+                  aranea_queen::LaunchSubstate::Starting(target_translation, FramesLeft(BALANCING.enemies.aranea_queen.launch_starting_frames)),
                 ),
               )),
               FramesLeft(
@@ -1111,7 +1112,7 @@ impl EnemyAraneaQueen {
           } else {
             aranea_queen::State::Cooldown(
               Rc::new(aranea_queen::State::Phase2(
-                aranea_queen::Phase2Substate::LaunchToPlayer(aranea_queen::LaunchSubstate::Root(*player_translation)),
+                aranea_queen::Phase2Substate::LaunchToPlayer(aranea_queen::LaunchSubstate::Starting(*player_translation, FramesLeft(BALANCING.enemies.aranea_queen.launch_starting_frames))),
               )),
               FramesLeft(
                 BALANCING
@@ -1181,6 +1182,7 @@ impl EnemyAraneaQueen {
             angles
               .map(|angle| WeaponOutput {
                 damage: BALANCING.enemies.defender.damage,
+                component_set: ComponentSet::new().insert(SimpleSprite { kind: sprite::AraneaQueenProjectile }),
                 ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
                   initial_impulse: distance_projection_physics(angle, 0.7),
                   ..Projectile::default(
@@ -1231,7 +1233,15 @@ impl EnemyAraneaQueen {
     next_state: aranea_queen::State,
   ) -> EnemyDecision {
     match launch_state {
-      aranea_queen::LaunchSubstate::Root(target_translation) => {
+      aranea_queen::LaunchSubstate::Starting(target_translation, FramesLeft(frames_left)) => {
+        if frames_left > 0 {
+          EnemyDecision {
+            ..EnemyDecision::default(handle, Enemy::AraneaQueen(Self {
+              egg_handle: self.egg_handle,
+              state: outer_state(aranea_queen::LaunchSubstate::Starting(target_translation, FramesLeft(frames_left - 1)))
+            }))
+          }
+        } else {
         let self_translation = self_rigid_body.translation();
 
         let vector_to_target = target_translation - self_translation;
@@ -1249,21 +1259,21 @@ impl EnemyAraneaQueen {
             handle,
             Enemy::AraneaQueen(Self {
               egg_handle: self.egg_handle,
-              state: outer_state(aranea_queen::LaunchSubstate::Launching(FramesLeft(
+              state: outer_state(aranea_queen::LaunchSubstate::Cruising(FramesLeft(
                 launch_frames,
               ))),
             }),
           )
-        }
+        }}
       }
-      aranea_queen::LaunchSubstate::Launching(FramesLeft(frames_left)) => {
+      aranea_queen::LaunchSubstate::Cruising(FramesLeft(frames_left)) => {
         if frames_left > 0 {
           EnemyDecision {
             ..EnemyDecision::default(
               handle,
               Enemy::AraneaQueen(Self {
                 egg_handle: self.egg_handle,
-                state: outer_state(aranea_queen::LaunchSubstate::Launching(FramesLeft(
+                state: outer_state(aranea_queen::LaunchSubstate::Cruising(FramesLeft(
                   frames_left - 1,
                 ))),
               }),
@@ -1286,7 +1296,7 @@ impl EnemyAraneaQueen {
       aranea_queen::LaunchSubstate::Stopping(FramesLeft(frames_left)) => {
         if frames_left > 0 {
           EnemyDecision {
-            movement_force: self_rigid_body.linvel()
+            movement_force: self_rigid_body.linvel().normalize()
               * -1.0
               * BALANCING.enemies.aranea_queen.stopping_force(),
             ..EnemyDecision::default(
