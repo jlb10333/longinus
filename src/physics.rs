@@ -2119,26 +2119,30 @@ impl System for PhysicsSystem {
 
       let rotation_angle = -angle_from_vec(PhysicsVector::from_vec(unit_to_mount_point));
 
-      let initial_chain_segment_handle = rigid_body_set.insert(
-        RigidBodyBuilder::dynamic()
-          .translation(
-            player_translation + (unit_to_mount_point * initial_chain_segment_length / 2.0),
-          )
-          .rotation(rotation_angle)
-          .angular_damping(CHAIN_ANGULAR_DAMPING)
-          .build(),
+      let initial_chain_segment_shape = ColliderShape::cuboid(
+        initial_chain_segment_length / 2.0,
+        CHAIN_SEGMENT_HEIGHT / 2.0,
+      );
+
+      let initial_chain_segment = (
+        rigid_body_set.insert(
+          RigidBodyBuilder::dynamic()
+            .translation(
+              player_translation + (unit_to_mount_point * initial_chain_segment_length / 2.0),
+            )
+            .rotation(rotation_angle)
+            .angular_damping(CHAIN_ANGULAR_DAMPING)
+            .build(),
+        ),
+        initial_chain_segment_shape.clone(),
       );
       collider_set.insert_with_parent(
-        ColliderBuilder::cuboid(
-          initial_chain_segment_length / 2.0,
-          CHAIN_SEGMENT_HEIGHT / 2.0,
-        )
-        .collision_groups(InteractionGroups {
+        ColliderBuilder::new(initial_chain_segment_shape).collision_groups(InteractionGroups {
           memberships: COLLISION_GROUP_CHAIN,
           filter: Group::empty(),
           ..Default::default()
         }),
-        initial_chain_segment_handle,
+        initial_chain_segment.0,
         rigid_body_set,
       );
 
@@ -2156,23 +2160,24 @@ impl System for PhysicsSystem {
               .angular_damping(CHAIN_ANGULAR_DAMPING)
               .build(),
           );
+          let collider_shape =
+            ColliderShape::cuboid(CHAIN_SEGMENT_LENGTH / 2.0, CHAIN_SEGMENT_HEIGHT / 2.0);
           collider_set.insert_with_parent(
-            ColliderBuilder::cuboid(CHAIN_SEGMENT_LENGTH / 2.0, CHAIN_SEGMENT_HEIGHT / 2.0)
-              .collision_groups(InteractionGroups {
-                memberships: COLLISION_GROUP_CHAIN,
-                filter: Group::empty(),
-                ..Default::default()
-              }),
+            ColliderBuilder::new(collider_shape.clone()).collision_groups(InteractionGroups {
+              memberships: COLLISION_GROUP_CHAIN,
+              filter: Group::empty(),
+              ..Default::default()
+            }),
             chain_segment_handle,
             rigid_body_set,
           );
-          chain_segment_handle
+          (chain_segment_handle, collider_shape)
         })
         .collect::<List<_>>();
 
       impulse_joint_set.insert(
         self.player_handle,
-        initial_chain_segment_handle,
+        initial_chain_segment.0,
         RevoluteJointBuilder::new()
           .local_anchor1(vector![0.0, 0.0].into())
           .local_anchor2(
@@ -2195,10 +2200,10 @@ impl System for PhysicsSystem {
 
       chain_segment_handles
         .first()
-        .map(|&standard_segment_handle| {
+        .map(|(standard_segment_handle, _)| {
           impulse_joint_set.insert(
-            initial_chain_segment_handle,
-            standard_segment_handle,
+            initial_chain_segment.0,
+            *standard_segment_handle,
             RevoluteJointBuilder::new()
               .local_anchor1(
                 vector![
@@ -2215,25 +2220,25 @@ impl System for PhysicsSystem {
 
       chain_segment_handles
         .iter()
-        .reduce(|&segment_a_handle, segment_b_handle| {
+        .reduce(|(segment_a_handle, _), segment_b| {
           impulse_joint_set.insert(
-            segment_a_handle,
-            *segment_b_handle,
+            *segment_a_handle,
+            segment_b.0,
             RevoluteJointBuilder::new()
               .local_anchor1(left_segment_anchor)
               .local_anchor2(right_segment_anchor),
             //              .limits(CHAIN_SEGMENT_LIMITS),
             true,
           );
-          segment_b_handle
+          segment_b
         });
 
-      if let Some(&last_segment_handle) = chain_segment_handles
-        .push_front(initial_chain_segment_handle)
+      if let Some(last_segment_handle) = chain_segment_handles
+        .push_front(initial_chain_segment.clone())
         .last()
       {
         impulse_joint_set.insert(
-          last_segment_handle,
+          last_segment_handle.0,
           mount_point,
           RevoluteJointBuilder::new()
             .local_anchor1(left_segment_anchor)
@@ -2243,15 +2248,25 @@ impl System for PhysicsSystem {
       };
 
       chain_segment_handles
-        .push_front(initial_chain_segment_handle)
+        .push_front(initial_chain_segment)
         .iter()
-        .map(|&handle| {
-          let handle = EntityHandle::RigidBody(handle);
+        .map(|(handle, shape)| {
+          let handle = EntityHandle::RigidBody(*handle);
           (
             handle,
             Rc::new(Entity {
               handle,
-              components: ComponentSet::new().insert(ChainSegment),
+              components: ComponentSet::new()
+                .insert(ChainSegment)
+                .insert(SimpleSprite {
+                  kind: sprite::Chain(PhysicsVector::from_vec(
+                    shape.as_cuboid().unwrap().half_extents * 2.0,
+                  )),
+                })
+                .insert(OnDestroyEffect {
+                  duration: 20,
+                  effect_kind: effects::NoiseDissolve,
+                }),
               label: "".to_string(),
             }),
           )

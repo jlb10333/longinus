@@ -1197,6 +1197,10 @@ impl EnemySpawn {
           chance_health: 1.0,
           mana_amount: 0.0,
           chance_mana: 0.0,
+        })
+        .insert(OnDestroyEffect {
+          duration: BALANCING.enemies.aranea_queen.destroy_effect_duration,
+          effect_kind: effects::NoiseDissolve,
         }),
       EnemySpawnEnemy::Defender => ComponentSet::new()
         .insert(Damageable {

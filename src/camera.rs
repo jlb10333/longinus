@@ -15,13 +15,12 @@ use crate::{
   units::{PhysicsVector, ScreenVector, UnitConvert2, vec_zero},
 };
 
-const CAMERA_SCREEN_MARGIN: f32 = 0.4;
 fn camera_screen_bounds() -> Rect {
   Rect {
-    x: CAMERA_SCREEN_MARGIN * screen_width(),
-    y: CAMERA_SCREEN_MARGIN * screen_height(),
-    w: (1.0 - (2.0 * CAMERA_SCREEN_MARGIN)) * screen_width(),
-    h: (1.0 - (2.0 * CAMERA_SCREEN_MARGIN)) * screen_height(),
+    x: BALANCING.graphics_config.camera_deadzone * screen_width(),
+    y: BALANCING.graphics_config.camera_deadzone * screen_height(),
+    w: (1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * screen_width(),
+    h: (1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * screen_height(),
   }
 }
 

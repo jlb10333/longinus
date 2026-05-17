@@ -103,6 +103,7 @@ pub struct AraneaQueenBalancing {
   pub phase_2_launch_to_player_cooldown_frames: i32,
   pub phase_2_bounce_cooldown_frames: i32,
   pub phase_2_max_num_bounces: i32,
+  pub destroy_effect_duration: i32,
 }
 
 impl AraneaQueenBalancing {
@@ -241,6 +242,7 @@ pub struct GraphicsConfig {
   pub explosion_frames: i32,
   pub color_palette_override: Option<ColorPaletteConfig>,
   pub color_palette_preset: ColorPalettePresets,
+  pub camera_deadzone: f32,
 }
 
 impl GraphicsConfig {

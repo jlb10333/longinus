@@ -16,13 +16,14 @@ use crate::{
   controls::ControlsSystem,
   easing::{self, ease_out_cubic},
   ecs::{
-    Activator, Damageable, Damager, Destroyed, Enemy, EntityHandle, GravitySource, Id,
+    Activator, Damageable, Damager, Destroyed, Enemy, Entity, EntityHandle, GravitySource, Id,
     OnDestroyEffect, SimpleSprite, TouchSensor,
   },
   effects::{Effect, EffectKind},
   enemy::{
     EnemyAraneaState, EnemyDefenderState, EnemyImpState, EnemySniperState, FramesLeft, aranea_queen,
   },
+  f::partition,
   graphics_utils::{draw_collider, draw_label},
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
@@ -222,20 +223,11 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         )
         .collect::<Vec<_>>();
 
-      let new_effects: Vec<Effect> = sorted_entities
+      let game_textures = &ctx.input.textures;
+
+      let entities_with_sprites: Vec<(Rc<Entity>, Vec<SpriteToDraw>)> = sorted_entities
         .iter()
         .filter_map(|(handle, entity)| {
-          let (physics_translation, rotation) = match *handle {
-            EntityHandle::Collider(collider_handle) => {
-              let collider = &physics_system.collider_set[*collider_handle];
-              (collider.translation(), collider.rotation().angle())
-            }
-            EntityHandle::RigidBody(rigid_body_handle) => {
-              let rigid_body = &physics_system.rigid_body_set[*rigid_body_handle];
-              (rigid_body.translation(), rigid_body.rotation().angle())
-            }
-          };
-
           if let Some(damageable) = entity.components.get::<Damageable>()
             && (damageable.damaged
               || damageable.current_hitstun % 10.0 == 1.0
@@ -246,13 +238,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           {
             return None;
           }
-
-          let translation =
-            PhysicsVector::from_vec(*physics_translation).into_pos(camera_system.translation);
-
-          let rotation = -(rotation * (16.0 / PI)).round() / (16.0 / PI);
-
-          let game_textures = &ctx.input.textures;
 
           let sprites_override = if entity.components.get::<TouchSensor>().is_some()
             && let Some(activator) = entity.components.get::<Activator>()
@@ -456,11 +441,27 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
           let sprites_to_draw = sprites_to_draw?;
 
-          draw_sprites(&sprites_to_draw, translation, rotation);
+          Some((Rc::clone(*entity), sprites_to_draw))
+        })
+        .collect::<Vec<_>>();
 
+      let new_effects = entities_with_sprites
+        .iter()
+        .flat_map(|(entity, sprites_to_draw)| {
           if entity.components.get::<Destroyed>().is_some()
             && let Some(destroy_effect) = entity.components.get::<OnDestroyEffect>()
           {
+            let (physics_translation, rotation) = match entity.handle {
+              EntityHandle::Collider(collider_handle) => {
+                let collider = &physics_system.collider_set[collider_handle];
+                (collider.translation(), collider.rotation().angle())
+              }
+              EntityHandle::RigidBody(rigid_body_handle) => {
+                let rigid_body = &physics_system.rigid_body_set[rigid_body_handle];
+                (rigid_body.translation(), rigid_body.rotation().angle())
+              }
+            };
+
             let easing = easing::linear()
               .scale(destroy_effect.duration as f32)
               .offset(physics_system.frame_count as f32);
@@ -468,7 +469,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             Some(Effect {
               easing,
               kind: destroy_effect.effect_kind,
-              sprites_to_draw: Rc::new(sprites_to_draw),
+              sprites_to_draw: Rc::new(sprites_to_draw.clone()),
               translation: PhysicsVector::from_vec(*physics_translation),
               rotation,
             })
@@ -476,7 +477,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             None
           }
         })
-        .collect::<Vec<_>>();
+        .collect_vec();
 
       let effects = self
         .effects
@@ -486,7 +487,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         .filter(|effect| effect.easing.at(physics_system.frame_count as f32) <= 1.0)
         .collect::<Vec<_>>();
 
-      effects.iter().for_each(|effect| {
+      let effect_sprites = effects.iter().map(|effect| {
         let material = match &effect.kind {
           EffectKind::NoiseDissolve => {
             let dissolve = ctx.input.materials.dissolve.clone();
@@ -502,24 +503,144 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           }
         };
 
-        let sprites_to_draw = effect
+        effect
           .sprites_to_draw
           .iter()
           .map(|sprite_to_draw| {
             let material = material.clone();
-            sprite_to_draw.with_material(Some(material))
+            (
+              sprite_to_draw.with_material(Some(material)),
+              effect.translation,
+              effect.rotation,
+            )
           })
-          .collect::<Vec<_>>();
-
-        draw_sprites(
-          &sprites_to_draw,
-          effect.translation.into_pos(camera_system.translation),
-          effect.rotation,
-        );
+          .collect::<Vec<_>>()
       });
+
+      let mount_point_selection_sprite = {
+        let player_translation =
+          physics_system.rigid_body_set[physics_system.player_handle].translation();
+        let closest_mount_point =
+          physics_system
+            .mount_points_in_range
+            .iter()
+            .fold(None, |acc, mount_point| {
+              let closest_point = if let Some(closest_point) = acc {
+                closest_point
+              } else {
+                return Some(mount_point);
+              };
+
+              if (physics_system.rigid_body_set[*closest_point].translation() - player_translation)
+                .magnitude()
+                > (physics_system.rigid_body_set[*mount_point].translation() - player_translation)
+                  .magnitude()
+              {
+                Some(mount_point)
+              } else {
+                Some(closest_point)
+              }
+            });
+
+        closest_mount_point
+          .map(|mount_point| {
+            let rigid_body = &physics_system.rigid_body_set[*mount_point];
+            let sprites_to_draw = sprite::chain_mount_point_selection(
+              (physics_system.frame_count / 20) as i32 % 2,
+              game_textures,
+            );
+
+            sprites_to_draw
+              .into_iter()
+              .map(|sprite| {
+                (
+                  sprite,
+                  PhysicsVector::from_vec(*rigid_body.translation()),
+                  rigid_body.rotation().angle(),
+                )
+              })
+              .collect_vec()
+          })
+          .unwrap_or(vec![])
+      };
+
+      let sprites_to_draw = entities_with_sprites
+        .into_iter()
+        .map(|(entity, sprites)| {
+          let (physics_translation, rotation) = match entity.handle {
+            EntityHandle::Collider(collider_handle) => {
+              let collider = &physics_system.collider_set[collider_handle];
+              (collider.translation(), collider.rotation().angle())
+            }
+            EntityHandle::RigidBody(rigid_body_handle) => {
+              let rigid_body = &physics_system.rigid_body_set[rigid_body_handle];
+              (rigid_body.translation(), rigid_body.rotation().angle())
+            }
+          };
+
+          sprites
+            .into_iter()
+            .map(|sprite| {
+              (
+                sprite,
+                PhysicsVector::from_vec(*physics_translation),
+                rotation,
+              )
+            })
+            .collect_vec()
+        })
+        .chain(effect_sprites)
+        .flatten()
+        .chain(mount_point_selection_sprite)
+        .sorted_by(|(sprite_a, _, _), (sprite_b, _, _)| {
+          let z_position_a = sprite_a.z_position;
+          let z_position_b = sprite_b.z_position;
+
+          match (z_position_a, z_position_b) {
+            (Some(_), None) => Ordering::Greater,
+            (None, Some(_)) => Ordering::Less,
+            (Some(z_a), Some(z_b)) => {
+              if z_a < z_b {
+                Ordering::Less
+              } else {
+                Ordering::Greater
+              }
+            }
+            _ => Ordering::Equal,
+          }
+        })
+        .collect_vec();
+
+      let (below_tiles, above_tiles): (Vec<_>, Vec<_>) =
+        partition(sprites_to_draw, |(sprite_to_draw, _, _)| {
+          sprite_to_draw
+            .z_position
+            .map(|z_position| z_position < 0.0)
+            .unwrap_or(false)
+        });
+
+      below_tiles
+        .into_iter()
+        .for_each(|(sprite, physics_translation, rotation)| {
+          draw_sprites(
+            &[sprite],
+            physics_translation.into_pos(camera_system.translation),
+            -((rotation * 16.0 / PI).round() / (16.0 / PI)),
+          );
+        });
 
       let tile_layer = map_system.raw_map.tile_layer();
       draw_tile_layer(tile_layer, tiles_texture, &camera_system);
+
+      above_tiles
+        .into_iter()
+        .for_each(|(sprite, physics_translation, rotation)| {
+          draw_sprites(
+            &[sprite],
+            physics_translation.into_pos(camera_system.translation),
+            -(rotation * (16.0 / PI).round() / (16.0 / PI)),
+          );
+        });
 
       /* Debug */
       if BALANCING.debug.show_colliders {

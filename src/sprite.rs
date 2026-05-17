@@ -12,20 +12,30 @@ use crate::{
   units::{PhysicsVector, UnitConvert2},
 };
 
+#[derive(Clone)]
 pub struct SpriteToDraw {
   pub texture: Rc<Texture2D>,
   pub source: Rect,
   pub offset: Option<Vec2>,
   pub material: Option<Material>,
+  pub z_position: Option<f32>,
 }
 
 impl SpriteToDraw {
+  pub fn default(texture: &Texture2D, source: Rect) -> Self {
+    Self {
+      texture: Rc::new(texture.weak_clone()),
+      source,
+      offset: None,
+      material: None,
+      z_position: None,
+    }
+  }
+
   pub fn with_material(&self, material: Option<Material>) -> Self {
     Self {
       material,
-      offset: self.offset,
-      source: self.source,
-      texture: Rc::clone(&self.texture),
+      ..self.clone()
     }
   }
 }
@@ -51,6 +61,7 @@ pub enum SimpleSpriteTextureKind {
   GravityParticle,
   Explosion(Easing<f32>),
   SavePoint,
+  Chain(PhysicsVector),
 }
 
 pub use SimpleSpriteTextureKind::*;
@@ -80,49 +91,44 @@ pub fn get_sprites_to_draw(
     GravityParticle => gravity_particle(game_textures),
     Explosion(easing) => explosion((easing.at(frame_count as f32) * 5.0) as i32, game_textures),
     SavePoint => save_point((frame_count as i32 / 15) % 5, game_textures),
+    Chain(dimensions) => chain(dimensions, game_textures),
   }
 }
 
 pub fn player(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.player_texture.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.player_texture,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn plasma_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.projectile_textures.plasma.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.projectile_textures.plasma,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn missile_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.projectile_textures.missile.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.projectile_textures.missile,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn beam(
@@ -138,123 +144,108 @@ pub fn beam(
     dimensions,
     &game_textures.projectile_textures.beam,
     Some(offset),
+    None,
   )
 }
 
 pub fn imp_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.projectile_textures.imp.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.projectile_textures.imp,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn aranea_queen_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.projectile_textures.aranea_queen.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.projectile_textures.aranea_queen,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn sniper_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.projectile_textures.sniper.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.projectile_textures.sniper,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn health_tank_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.pickup_textures.health_tank.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.pickup_textures.health_tank,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 16.0,
       h: 16.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn weapon_module_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.pickup_textures.weapon_module.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.pickup_textures.weapon_module,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 16.0,
       h: 16.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn health_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.pickup_textures.health.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.pickup_textures.health,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn mana_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.pickup_textures.mana.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.pickup_textures.mana,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn breakable_tile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.breakable_tile_texture.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.breakable_tile_texture,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn block(dimensions: &PhysicsVector, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  tiled_sprites_to_draw(dimensions, &game_textures.block_textures.block, None)
+  tiled_sprites_to_draw(dimensions, &game_textures.block_textures.block, None, None)
 }
 
 pub fn angelic_block(
@@ -265,6 +256,31 @@ pub fn angelic_block(
     dimensions,
     &game_textures.block_textures.angelic_block,
     None,
+    None,
+  )
+}
+
+pub fn chain(dimensions: &PhysicsVector, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  tiled_sprites_to_draw(
+    dimensions,
+    &game_textures.ability_textures.chain,
+    None,
+    Some(-10.0),
+  )
+}
+
+pub fn chain_mount_point_selection(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  draw_from_sprite_sheet(
+    index,
+    SpriteSheetArgs {
+      num_sprites: 6,
+      num_columns: 2,
+      width: 24,
+      height: 24,
+      offset: None,
+      z_position: Some(-10.0),
+    },
+    &game_textures.ability_textures.chain_mount_point_selection,
   )
 }
 
@@ -276,6 +292,7 @@ pub fn touch_sensor_activated(
     dimensions,
     &game_textures.activator_textures.touch_sensor_activated,
     None,
+    None,
   )
 }
 
@@ -286,6 +303,7 @@ pub fn touch_sensor_deactivated(
   tiled_sprites_to_draw(
     dimensions,
     &game_textures.activator_textures.touch_sensor_deactivated,
+    None,
     None,
   )
 }
@@ -299,6 +317,7 @@ pub fn goblin(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       width: 16,
       height: 16,
       offset: None,
+      z_position: None,
     },
     &game_textures.enemy_textures.goblin,
   )
@@ -313,6 +332,7 @@ pub fn imp(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       width: 32,
       height: 32,
       offset: None,
+      z_position: None,
     },
     &game_textures.enemy_textures.imp,
   )
@@ -327,6 +347,7 @@ pub fn aranea(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       width: 32,
       height: 32,
       offset: None,
+      z_position: None,
     },
     &game_textures.enemy_textures.aranea,
   )
@@ -341,23 +362,22 @@ pub fn aranea_queen(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDra
       width: 48,
       height: 48,
       offset: None,
+      z_position: None,
     },
     &game_textures.enemy_textures.aranea_queen,
   )
 }
 
 pub fn aranea_egg(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.enemy_textures.aranea_egg.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.enemy_textures.aranea_egg,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 16.0,
       h: 16.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn sniper(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
@@ -369,6 +389,7 @@ pub fn sniper(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       width: 16,
       height: 16,
       offset: None,
+      z_position: None,
     },
     &game_textures.enemy_textures.sniper,
   )
@@ -383,6 +404,7 @@ pub fn defender(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       width: 24,
       height: 24,
       offset: None,
+      z_position: None,
     },
     &game_textures.enemy_textures.defender,
   )
@@ -397,6 +419,7 @@ pub fn explosion(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> 
       width: 32,
       height: 32,
       offset: None,
+      z_position: None,
     },
     &game_textures.effect_textures.explosion,
   )
@@ -411,37 +434,34 @@ pub fn save_point(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw>
       width: 24,
       height: 24,
       offset: None,
+      z_position: None,
     },
     &game_textures.save_point_texture,
   )
 }
 
 pub fn gravity_particle(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.effect_textures.gravity_particle.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.effect_textures.gravity_particle,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 5.0,
       h: 5.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 pub fn laser_gate(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw {
-    texture: Rc::new(game_textures.enemy_textures.laser_gate.weak_clone()),
-    source: Rect {
+  vec![SpriteToDraw::default(
+    &game_textures.enemy_textures.laser_gate,
+    Rect {
       x: 0.0,
       y: 0.0,
       w: 8.0,
       h: 8.0,
     },
-    offset: None,
-    material: None,
-  }]
+  )]
 }
 
 struct SpriteSheetArgs {
@@ -450,6 +470,7 @@ struct SpriteSheetArgs {
   width: i32,
   height: i32,
   offset: Option<Vec2>,
+  z_position: Option<f32>,
 }
 fn draw_from_sprite_sheet(
   index: i32,
@@ -465,15 +486,17 @@ fn draw_from_sprite_sheet(
   let y = (target_row * args.height) as f32;
 
   vec![SpriteToDraw {
-    texture: Rc::new(texture.weak_clone()),
-    source: Rect {
-      x,
-      y,
-      w: args.width as f32,
-      h: args.height as f32,
-    },
     offset: args.offset,
-    material: None,
+    z_position: args.z_position,
+    ..SpriteToDraw::default(
+      texture,
+      Rect {
+        x,
+        y,
+        w: args.width as f32,
+        h: args.height as f32,
+      },
+    )
   }]
 }
 
@@ -481,6 +504,7 @@ fn tiled_sprites_to_draw(
   dimensions: &PhysicsVector,
   texture: &Texture2D,
   source_offset: Option<Vec2>,
+  z_offset: Option<f32>,
 ) -> Vec<SpriteToDraw> {
   let texture = &Rc::new(texture.weak_clone());
 
@@ -496,250 +520,238 @@ fn tiled_sprites_to_draw(
     .map(|source_offset| source_offset.y)
     .unwrap_or(0.0);
 
+  let construct_sprite = |source: Rect, offset: Vec2| SpriteToDraw {
+    offset: Some(offset),
+    z_position: z_offset,
+    ..SpriteToDraw::default(texture, source)
+  };
+
   let full_tiles = (0..num_full_tiles_x).flat_map(move |x| {
-    (0..num_full_tiles_y).map(move |y| SpriteToDraw {
-      texture: Rc::clone(texture),
-      source: Rect {
-        x: 8.0 + source_offset_x,
-        y: 8.0 + source_offset_y,
-        w: 8.0,
-        h: 8.0,
-      },
-      offset: Some(Vec2 {
-        x: x as f32 * 8.0 - (map_dimensions.x / 2.0) + 4.0,
-        y: y as f32 * 8.0 - (map_dimensions.y / 2.0) + 4.0,
-      }),
-      material: None,
+    (0..num_full_tiles_y).map(move |y| {
+      construct_sprite(
+        Rect {
+          x: 8.0 + source_offset_x,
+          y: 8.0 + source_offset_y,
+          w: 8.0,
+          h: 8.0,
+        },
+        Vec2 {
+          x: x as f32 * 8.0 - (map_dimensions.x / 2.0) + 4.0,
+          y: y as f32 * 8.0 - (map_dimensions.y / 2.0) + 4.0,
+        },
+      )
     })
   });
 
   let partial_tile_x = (map_dimensions.x as i32 % 8) as f32;
   let partial_tile_y = (map_dimensions.y as i32 % 8) as f32;
 
-  let bottom_row = (0..num_full_tiles_x).map(move |x| SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
-      x: 8.0 + source_offset_x,
-      y: 8.0 + source_offset_y,
-      w: 8.0,
-      h: partial_tile_y,
-    },
-    offset: Some(Vec2 {
-      x: x as f32 * 8.0 - (map_dimensions.x / 2.0) + 4.0,
-      y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y / 2.0),
-    }),
-    material: None,
+  let bottom_row = (0..num_full_tiles_x).map(move |x| {
+    construct_sprite(
+      Rect {
+        x: 8.0 + source_offset_x,
+        y: 8.0 + source_offset_y,
+        w: 8.0,
+        h: partial_tile_y,
+      },
+      Vec2 {
+        x: x as f32 * 8.0 - (map_dimensions.x / 2.0) + 4.0,
+        y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y / 2.0),
+      },
+    )
   });
 
-  let right_column = (0..num_full_tiles_y).map(move |y| SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
+  let right_column = (0..num_full_tiles_y).map(move |y| {
+    construct_sprite(
+      Rect {
+        x: 8.0 + source_offset_x,
+        y: 8.0 + source_offset_y,
+        w: partial_tile_x,
+        h: 8.0,
+      },
+      Vec2 {
+        x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x / 2.0),
+        y: y as f32 * 8.0 - (map_dimensions.y / 2.0) + 4.0,
+      },
+    )
+  });
+
+  let bottom_right_tile = construct_sprite(
+    Rect {
       x: 8.0 + source_offset_x,
       y: 8.0 + source_offset_y,
       w: partial_tile_x,
-      h: 8.0,
-    },
-    offset: Some(Vec2 {
-      x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x / 2.0),
-      y: y as f32 * 8.0 - (map_dimensions.y / 2.0) + 4.0,
-    }),
-    material: None,
-  });
-
-  let bottom_right_tile = SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
-      x: 8.0 + source_offset_x,
-      y: 8.0 + source_offset_y,
-      w: partial_tile_x,
       h: partial_tile_y,
     },
-    offset: Some(Vec2 {
+    Vec2 {
       x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x / 2.0),
       y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y / 2.0),
-    }),
-    material: None,
-  };
-
-  let left_edge = (0..num_full_tiles_y).map(move |y| SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
-      x: 0.0 + source_offset_x,
-      y: 8.0 + source_offset_y,
-      w: 8.0,
-      h: 8.0,
     },
-    offset: Some(Vec2 {
-      x: -(map_dimensions.x / 2.0) - 4.0,
-      y: y as f32 * 8.0 - (map_dimensions.y / 2.0) + 4.0,
-    }),
-    material: None,
+  );
+
+  let left_edge = (0..num_full_tiles_y).map(move |y| {
+    construct_sprite(
+      Rect {
+        x: 0.0 + source_offset_x,
+        y: 8.0 + source_offset_y,
+        w: 8.0,
+        h: 8.0,
+      },
+      Vec2 {
+        x: -(map_dimensions.x / 2.0) - 4.0,
+        y: y as f32 * 8.0 - (map_dimensions.y / 2.0) + 4.0,
+      },
+    )
   });
 
-  let right_edge = (0..num_full_tiles_y).map(move |y| SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
-      x: 16.0 + source_offset_x,
-      y: 8.0 + source_offset_y,
-      w: 8.0,
-      h: 8.0,
-    },
-    offset: Some(Vec2 {
-      x: (map_dimensions.x / 2.0) + 4.0,
-      y: y as f32 * 8.0 - (map_dimensions.y / 2.0) + 4.0,
-    }),
-    material: None,
+  let right_edge = (0..num_full_tiles_y).map(move |y| {
+    construct_sprite(
+      Rect {
+        x: 16.0 + source_offset_x,
+        y: 8.0 + source_offset_y,
+        w: 8.0,
+        h: 8.0,
+      },
+      Vec2 {
+        x: (map_dimensions.x / 2.0) + 4.0,
+        y: y as f32 * 8.0 - (map_dimensions.y / 2.0) + 4.0,
+      },
+    )
   });
 
-  let left_edge_remainder = SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
+  let left_edge_remainder = construct_sprite(
+    Rect {
       x: 0.0 + source_offset_x,
       y: 8.0 + source_offset_y,
       w: 8.0,
       h: partial_tile_y,
     },
-    offset: Some(Vec2 {
+    Vec2 {
       x: -(map_dimensions.x / 2.0) - 4.0,
       y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y / 2.0),
-    }),
-    material: None,
-  };
+    },
+  );
 
-  let right_edge_remainder = SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
+  let right_edge_remainder = construct_sprite(
+    Rect {
       x: 16.0 + source_offset_x,
       y: 8.0 + source_offset_y,
       w: 8.0,
       h: partial_tile_y,
     },
-    offset: Some(Vec2 {
+    Vec2 {
       x: (map_dimensions.x / 2.0) + 4.0,
       y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y / 2.0),
-    }),
-    material: None,
-  };
-
-  let top_edge = (0..num_full_tiles_x).map(move |x| SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
-      x: 8.0 + source_offset_x,
-      y: 0.0 + source_offset_y,
-      w: 8.0,
-      h: 8.0,
     },
-    offset: Some(Vec2 {
-      x: x as f32 * 8.0 - (map_dimensions.x / 2.0) + 4.0,
-      y: -(map_dimensions.y / 2.0) - 4.0,
-    }),
-    material: None,
+  );
+
+  let top_edge = (0..num_full_tiles_x).map(move |x| {
+    construct_sprite(
+      Rect {
+        x: 8.0 + source_offset_x,
+        y: 0.0 + source_offset_y,
+        w: 8.0,
+        h: 8.0,
+      },
+      Vec2 {
+        x: x as f32 * 8.0 - (map_dimensions.x / 2.0) + 4.0,
+        y: -(map_dimensions.y / 2.0) - 4.0,
+      },
+    )
   });
 
-  let bottom_edge = (0..num_full_tiles_x).map(move |x| SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
-      x: 8.0 + source_offset_x,
-      y: 16.0 + source_offset_y,
-      w: 8.0,
-      h: 8.0,
-    },
-    offset: Some(Vec2 {
-      x: x as f32 * 8.0 - (map_dimensions.x / 2.0) + 4.0,
-      y: (map_dimensions.y / 2.0) + 4.0,
-    }),
-    material: None,
+  let bottom_edge = (0..num_full_tiles_x).map(move |x| {
+    construct_sprite(
+      Rect {
+        x: 8.0 + source_offset_x,
+        y: 16.0 + source_offset_y,
+        w: 8.0,
+        h: 8.0,
+      },
+      Vec2 {
+        x: x as f32 * 8.0 - (map_dimensions.x / 2.0) + 4.0,
+        y: (map_dimensions.y / 2.0) + 4.0,
+      },
+    )
   });
 
-  let top_edge_remainder = SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
+  let top_edge_remainder = construct_sprite(
+    Rect {
       x: 8.0 + source_offset_x,
       y: 0.0 + source_offset_y,
       w: partial_tile_x,
       h: 8.0,
     },
-    offset: Some(Vec2 {
+    Vec2 {
       x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x / 2.0),
       y: -(map_dimensions.y / 2.0) - 4.0,
-    }),
-    material: None,
-  };
+    },
+  );
 
-  let bottom_edge_remainder = SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
+  let bottom_edge_remainder = construct_sprite(
+    Rect {
       x: 8.0 + source_offset_x,
       y: 16.0 + source_offset_y,
       w: partial_tile_x,
       h: 8.0,
     },
-    offset: Some(Vec2 {
+    Vec2 {
       x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x / 2.0),
       y: (map_dimensions.y / 2.0) + 4.0,
-    }),
-    material: None,
-  };
+    },
+  );
 
-  let top_left_corner = SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
+  let top_left_corner = construct_sprite(
+    Rect {
       x: 0.0 + source_offset_x,
       y: 0.0 + source_offset_y,
       w: 8.0,
       h: 8.0,
     },
-    offset: Some(Vec2 {
+    Vec2 {
       x: -(map_dimensions.x / 2.0) - 4.0,
       y: -(map_dimensions.y / 2.0) - 4.0,
-    }),
-    material: None,
-  };
+    },
+  );
 
-  let bottom_right_corner = SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
+  let bottom_right_corner = construct_sprite(
+    Rect {
       x: 16.0 + source_offset_x,
       y: 16.0 + source_offset_y,
       w: 8.0,
       h: 8.0,
     },
-    offset: Some(Vec2 {
+    Vec2 {
       x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x) + 4.0,
       y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y) + 4.0,
-    }),
-    material: None,
-  };
+    },
+  );
 
-  let top_right_corner = SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
+  let top_right_corner = construct_sprite(
+    Rect {
       x: 16.0 + source_offset_x,
       y: 0.0 + source_offset_y,
       w: 8.0,
       h: 8.0,
     },
-    offset: Some(Vec2 {
+    Vec2 {
       x: num_full_tiles_x as f32 * 8.0 - (map_dimensions.x / 2.0) + (partial_tile_x) + 4.0,
       y: -(map_dimensions.y / 2.0) - 4.0,
-    }),
-    material: None,
-  };
+    },
+  );
 
-  let bottom_left_corner = SpriteToDraw {
-    texture: Rc::clone(texture),
-    source: Rect {
+  let bottom_left_corner = construct_sprite(
+    Rect {
       x: 0.0 + source_offset_x,
       y: 16.0 + source_offset_y,
       w: 8.0,
       h: 8.0,
     },
-    offset: Some(Vec2 {
+    Vec2 {
       x: -(map_dimensions.x / 2.0) - 4.0,
       y: num_full_tiles_y as f32 * 8.0 - (map_dimensions.y / 2.0) + (partial_tile_y) + 4.0,
-    }),
-    material: None,
-  };
+    },
+  );
 
   full_tiles
     .chain(bottom_row)

@@ -27,6 +27,14 @@
   - Testing
     - Test at different frame rates
   
+Message queue idea
+- MessageProducer
+  - List of messages tagged with unique IDs, probably based on the timestamp or random or something
+  - For performance, messages are probably deleted after some amount of time
+- MessageConsumer
+  - List of IDs of received messages
+  - Each step of the consuming system, check if the corresponding producer has any messages with IDs not already consumed. If so, return the new messages, and add their IDs to the list
+  
 - Mechanical prototype v3
   - Intro cutscene
     - Overhead view of the solar system

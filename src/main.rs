@@ -84,6 +84,11 @@ pub struct EffectTextures {
   pub explosion: Texture2D,
 }
 
+pub struct AbilityTextures {
+  pub chain: Texture2D,
+  pub chain_mount_point_selection: Texture2D,
+}
+
 pub struct GameTextures {
   pub tiles_texture: Texture2D,
   pub player_texture: Texture2D,
@@ -95,6 +100,7 @@ pub struct GameTextures {
   pub activator_textures: ActivatorTextures,
   pub enemy_textures: EnemyTextures,
   pub effect_textures: EffectTextures,
+  pub ability_textures: AbilityTextures,
 }
 
 impl Default for GameTextures {
@@ -187,6 +193,9 @@ async fn load_game_textures() -> GameTextures {
     load_texture_with_filter("./assets/sprites/effects/gravity_particle.png").await;
   let explosion_texture = load_texture_with_filter("./assets/sprites/effects/explosion.png").await;
   let save_point_texture = load_texture_with_filter("./assets/sprites/save_point.png").await;
+  let chain_texture = load_texture_with_filter("./assets/sprites/abilities/chain.png").await;
+  let chain_mount_point_selection_texture =
+    load_texture_with_filter("./assets/sprites/abilities/chain_mount_point_selection.png").await;
 
   GameTextures {
     tiles_texture,
@@ -229,6 +238,10 @@ async fn load_game_textures() -> GameTextures {
       noise: noise_texture,
       gravity_particle: gravity_particle_texture,
       explosion: explosion_texture,
+    },
+    ability_textures: AbilityTextures {
+      chain: chain_texture,
+      chain_mount_point_selection: chain_mount_point_selection_texture,
     },
   }
 }
