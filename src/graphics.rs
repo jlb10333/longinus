@@ -191,6 +191,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       let physics_system = ctx.get::<PhysicsSystem>().unwrap();
       let map_system = ctx.get::<MapSystem>().unwrap();
       let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
+      let ability_system = ctx.get::<AbilitySystem>().unwrap();
 
       let tiles_texture = &ctx.input.textures.tiles_texture;
 
@@ -518,50 +519,55 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       });
 
       let mount_point_selection_sprite = {
-        let player_translation =
-          physics_system.rigid_body_set[physics_system.player_handle].translation();
-        let closest_mount_point =
-          physics_system
-            .mount_points_in_range
-            .iter()
-            .fold(None, |acc, mount_point| {
-              let closest_point = if let Some(closest_point) = acc {
-                closest_point
-              } else {
-                return Some(mount_point);
-              };
+        if !ability_system.acquired_chain {
+          vec![]
+        } else {
+          let player_translation =
+            physics_system.rigid_body_set[physics_system.player_handle].translation();
+          let closest_mount_point =
+            physics_system
+              .mount_points_in_range
+              .iter()
+              .fold(None, |acc, mount_point| {
+                let closest_point = if let Some(closest_point) = acc {
+                  closest_point
+                } else {
+                  return Some(mount_point);
+                };
 
-              if (physics_system.rigid_body_set[*closest_point].translation() - player_translation)
-                .magnitude()
-                > (physics_system.rigid_body_set[*mount_point].translation() - player_translation)
+                if (physics_system.rigid_body_set[*closest_point].translation()
+                  - player_translation)
                   .magnitude()
-              {
-                Some(mount_point)
-              } else {
-                Some(closest_point)
-              }
-            });
+                  > (physics_system.rigid_body_set[*mount_point].translation() - player_translation)
+                    .magnitude()
+                {
+                  Some(mount_point)
+                } else {
+                  Some(closest_point)
+                }
+              });
 
-        closest_mount_point
-          .map(|mount_point| {
-            let rigid_body = &physics_system.rigid_body_set[*mount_point];
-            let sprites_to_draw = sprite::chain_mount_point_selection(
-              (physics_system.frame_count / 20) as i32 % 2,
-              game_textures,
-            );
+          closest_mount_point
+            .map(|mount_point| {
+              let rigid_body = &physics_system.rigid_body_set[*mount_point];
+              let sprites_to_draw = sprite::chain_mount_point_selection(
+                (physics_system.frame_count / 20) as i32 % 2,
+                game_textures,
+              );
 
-            sprites_to_draw
-              .into_iter()
-              .map(|sprite| {
-                (
-                  sprite,
-                  PhysicsVector::from_vec(*rigid_body.translation()),
-                  rigid_body.rotation().angle(),
-                )
-              })
-              .collect_vec()
-          })
-          .unwrap_or(vec![])
+              sprites_to_draw
+                .into_iter()
+                .map(|sprite| {
+                  (
+                    sprite,
+                    PhysicsVector::from_vec(*rigid_body.translation()),
+                    rigid_body.rotation().angle(),
+                  )
+                })
+                .collect_vec()
+            })
+            .unwrap_or(vec![])
+        }
       };
 
       let sprites_to_draw = entities_with_sprites
