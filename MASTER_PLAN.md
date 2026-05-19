@@ -10,7 +10,6 @@
       - Damaging tiles
       - Locomotor
       - Ability pickup
-      - Chain
       - Boost?
   - Core elements
     - 2nd boss

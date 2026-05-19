@@ -145,12 +145,12 @@
         "rounding_factor": 0.125,
         "hitstop_enabled": false,
         "gravity_particle_effect_chance": 0.65,
-        "gravity_particle_effect_speed": 20,
+        "gravity_particle_effect_speed": 40,
         "gravity_particle_effect_lifetime": 60,
-        "scaling_factor": 0.8,
+        "scaling_factor": 1.0,
         "explosion_frames": 15,
         "color_palette_override": null,
-        "color_palette_preset": "Default",
+        "color_palette_preset": "Grayscale",
         "camera_deadzone": 0.45
     },
     "debug": {

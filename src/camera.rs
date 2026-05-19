@@ -9,6 +9,7 @@ use rapier2d::{na::Vector2, prelude::*};
 use crate::{
   GameInput,
   balance::BALANCING,
+  graphics::{VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
   load_map::MapSystem,
   physics::PhysicsSystem,
   system::System,
@@ -17,10 +18,10 @@ use crate::{
 
 fn camera_screen_bounds() -> Rect {
   Rect {
-    x: BALANCING.graphics_config.camera_deadzone * screen_width(),
-    y: BALANCING.graphics_config.camera_deadzone * screen_height(),
-    w: (1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * screen_width(),
-    h: (1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * screen_height(),
+    x: BALANCING.graphics_config.camera_deadzone * VIRTUAL_SCREEN_WIDTH,
+    y: BALANCING.graphics_config.camera_deadzone * VIRTUAL_SCREEN_HEIGHT,
+    w: (1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * VIRTUAL_SCREEN_WIDTH,
+    h: (1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * VIRTUAL_SCREEN_HEIGHT,
   }
 }
 
@@ -68,7 +69,7 @@ impl System for CameraSystem {
         .translation
         .into_pos(vec_zero())
         .into_vec()
-        - vector![screen_width() / 2.0, screen_height() / 2.0],
+        - vector![VIRTUAL_SCREEN_WIDTH / 2.0, VIRTUAL_SCREEN_HEIGHT / 2.0],
       map_top_left: map.top_left,
       map_bottom_right: map.bottom_right,
     })
@@ -92,7 +93,7 @@ impl System for CameraSystem {
           .translation
           .into_pos(vec_zero())
           .into_vec()
-          - vector![screen_width() / 2.0, screen_height() / 2.0],
+          - vector![VIRTUAL_SCREEN_WIDTH / 2.0, VIRTUAL_SCREEN_HEIGHT / 2.0],
         map_top_left: map.top_left,
         map_bottom_right: map.bottom_right,
       });
@@ -112,10 +113,10 @@ impl System for CameraSystem {
     let map_bottom_right =
       PhysicsVector::from_vec(self.map_bottom_right).into_pos(attempted_translation);
 
-    let width = screen_width().min(map_bottom_right.x() - map_top_left.x());
-    let x_offset = (screen_width() - width) / 2.0;
-    let height = screen_height().min(map_bottom_right.y() - map_top_left.y());
-    let y_offset = (screen_height() - height) / 2.0;
+    let width = VIRTUAL_SCREEN_WIDTH.min(map_bottom_right.x() - map_top_left.x());
+    let x_offset = (VIRTUAL_SCREEN_WIDTH - width) / 2.0;
+    let height = VIRTUAL_SCREEN_HEIGHT.min(map_bottom_right.y() - map_top_left.y());
+    let y_offset = (VIRTUAL_SCREEN_HEIGHT - height) / 2.0;
 
     let map_bounds_offset_left = (map_top_left.x() - x_offset).max(0.0);
     let map_bounds_offset_right = (map_bottom_right.x() - width - x_offset).min(0.0);
@@ -130,20 +131,7 @@ impl System for CameraSystem {
     let new_translation =
       self.translation + get_camera_translation_change(player_translation) + map_bounds_offset;
 
-    let rounded_translation = vector![
-      ((new_translation.x)
-        * BALANCING.graphics_config.rounding_factor
-        * BALANCING.graphics_config.adjusted_scaling())
-      .round()
-        / (BALANCING.graphics_config.rounding_factor
-          * BALANCING.graphics_config.adjusted_scaling()),
-      ((new_translation.y)
-        * BALANCING.graphics_config.rounding_factor
-        * BALANCING.graphics_config.adjusted_scaling())
-      .round()
-        / (BALANCING.graphics_config.rounding_factor
-          * BALANCING.graphics_config.adjusted_scaling())
-    ];
+    let rounded_translation = vector![new_translation.x.round(), new_translation.y.round()];
 
     Rc::new(Self {
       translation: rounded_translation,

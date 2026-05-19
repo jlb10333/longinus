@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::{
   ecs::StatusEffectsBalancing,
-  graphics::{ColorPalette, ColorPalettePresets},
+  graphics::{ColorPalette, ColorPalettePresets, VIRTUAL_PIXEL_FACTOR},
 };
 
 /**
@@ -247,7 +247,7 @@ pub struct GraphicsConfig {
 
 impl GraphicsConfig {
   pub fn adjusted_scaling(&self) -> f32 {
-    self.scaling_factor * 64.0
+    8.0 * VIRTUAL_PIXEL_FACTOR
   }
 }
 

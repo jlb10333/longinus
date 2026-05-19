@@ -6,6 +6,7 @@ use rapier2d::prelude::*;
 use serde::Deserialize;
 
 use crate::{
+  Start,
   ability::AbilitySystem,
   balance::{BALANCING, ColorPaletteConfig},
   camera::CameraSystem,
@@ -29,6 +30,7 @@ use crate::{
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
   save::SaveSystem,
+  shaders::{COLOR_MAP_FRAGMENT_SHADER, DISSOLVE_FRAGMENT_SHADER, IDENTITY_VERTEX_SHADER},
   sprite::{self, SpriteToDraw, get_sprites_to_draw},
   system::System,
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
@@ -134,6 +136,20 @@ pub const SUPER_GREEN_COLORS: ColorPalette = ColorPalette {
   },
 };
 
+pub const TEXT_FONT_FOREGROUND_COLOR: Color = Color {
+  r: 224.0 / 255.0,
+  g: 248.0 / 255.0,
+  b: 207.0 / 255.0,
+  a: 1.0,
+};
+
+pub const TEXT_FONT_BACKGROUND_COLOR: Color = Color {
+  r: 0.0 / 255.0,
+  g: 0.0 / 255.0,
+  b: 0.0 / 255.0,
+  a: 1.0,
+};
+
 #[derive(Deserialize, Clone, Copy)]
 pub enum ColorPalettePresets {
   Default,
@@ -142,7 +158,7 @@ pub enum ColorPalettePresets {
 }
 
 impl ColorPalettePresets {
-  fn to_color_palette(&self) -> ColorPalette {
+  fn to_color_palette(self) -> ColorPalette {
     match self {
       Self::Default => BASE_COLORS,
       Self::Grayscale => GRAYSCALE_COLORS,
@@ -154,6 +170,8 @@ impl ColorPalettePresets {
 #[derive(Clone)]
 pub struct GraphicsSystem<Input> {
   effects: Vec<Effect>,
+  materials: Rc<GameMaterials>,
+  camera: Rc<Camera2D>,
   _phantom_data: PhantomData<Input>,
 }
 
@@ -163,6 +181,10 @@ const MINI_MAP_TILE_HEIGHT: f32 = 2.0;
 const TILEMAP_TILE_WIDTH: f32 = 8.0;
 const TILEMAP_TILE_HEIGHT: f32 = 8.0;
 
+pub const VIRTUAL_PIXEL_FACTOR: f32 = 8.0;
+pub const VIRTUAL_SCREEN_WIDTH: f32 = 160.0 * VIRTUAL_PIXEL_FACTOR;
+pub const VIRTUAL_SCREEN_HEIGHT: f32 = 144.0 * VIRTUAL_PIXEL_FACTOR;
+
 impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   type Input = Input;
 
@@ -170,8 +192,22 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   where
     Self: Sized,
   {
+    let render_target = render_target(VIRTUAL_SCREEN_WIDTH as u32, VIRTUAL_SCREEN_HEIGHT as u32);
+    render_target.texture.set_filter(FilterMode::Nearest);
+
+    let mut camera = Camera2D::from_display_rect(Rect {
+      x: 0.0,
+      y: 0.0,
+      w: VIRTUAL_SCREEN_WIDTH,
+      h: VIRTUAL_SCREEN_HEIGHT,
+    });
+    camera.render_target = Some(render_target);
+    let camera = camera;
+
     Rc::new(GraphicsSystem {
       effects: vec![],
+      materials: Rc::new(load_game_materials()),
+      camera: Rc::new(camera),
       _phantom_data: PhantomData,
     })
   }
@@ -180,6 +216,10 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
     &self,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
+    // 426×320
+
+    set_camera(self.camera.as_ref());
+
     /* Background */
     clear_background(COLOR_1);
 
@@ -491,7 +531,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       let effect_sprites = effects.iter().map(|effect| {
         let material = match &effect.kind {
           EffectKind::NoiseDissolve => {
-            let dissolve = ctx.input.materials.dissolve.clone();
+            let dissolve = self.materials.dissolve.clone();
             dissolve.set_uniform(
               "Progress",
               effect.easing.at(physics_system.frame_count as f32),
@@ -518,12 +558,19 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           .collect::<Vec<_>>()
       });
 
+      let player_translation =
+        physics_system.rigid_body_set[physics_system.player_handle].translation();
+      println!(
+        "{}",
+        PhysicsVector::from_vec(*player_translation)
+          .into_pos(camera_system.translation)
+          .into_vec()
+      );
+
       let mount_point_selection_sprite = {
         if !ability_system.acquired_chain {
           vec![]
         } else {
-          let player_translation =
-            physics_system.rigid_body_set[physics_system.player_handle].translation();
           let closest_mount_point =
             physics_system
               .mount_points_in_range
@@ -632,6 +679,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             &[sprite],
             physics_translation.into_pos(camera_system.translation),
             -((rotation * 16.0 / PI).round() / (16.0 / PI)),
+            false,
           );
         });
 
@@ -645,6 +693,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             &[sprite],
             physics_translation.into_pos(camera_system.translation),
             -(rotation * (16.0 / PI).round() / (16.0 / PI)),
+            false,
           );
         });
 
@@ -927,16 +976,21 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       let player_damageable = player.components.get::<Damageable>().unwrap();
 
-      draw_text(
+      draw_game_text(
         &format!(
           "HP {}/{}",
           player_damageable.health.round(),
           player_damageable.max_health.round()
         ),
-        screen_width() * 0.01,
-        screen_height() * 0.8,
-        40.0,
-        COLOR_4,
+        &ctx.input.text_font,
+        vec2(
+          16.0 * VIRTUAL_PIXEL_FACTOR,
+          VIRTUAL_SCREEN_HEIGHT - (24.0 * VIRTUAL_PIXEL_FACTOR),
+        ),
+        GameTextParams {
+          ..Default::default()
+        },
+        &self.materials,
       );
 
       let ability_system = ctx.get::<AbilitySystem>().unwrap();
@@ -998,7 +1052,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         COLOR_3,
       );
 
-      draw_text(
+      draw_game_text(
         &format!(
           "MANA {}/{}",
           ability_system.mana_tanks.rechargeable_mana_level as i32,
@@ -1007,13 +1061,18 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             .capacity
             .max_rechargeable_mana_level() as i32
         ),
-        screen_width() * 0.01,
-        screen_height() * 0.85,
-        40.0,
-        COLOR_4,
+        &ctx.input.text_font,
+        vec2(
+          16.0 * VIRTUAL_PIXEL_FACTOR,
+          VIRTUAL_SCREEN_HEIGHT - (16.0 * VIRTUAL_PIXEL_FACTOR),
+        ),
+        GameTextParams {
+          ..Default::default()
+        },
+        &self.materials,
       );
 
-      draw_text(
+      draw_game_text(
         &format!(
           "MANA Backup {}/{}",
           ability_system.mana_tanks.non_rechargeable_mana_level as i32,
@@ -1022,56 +1081,40 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             .capacity
             .max_non_rechargeable_mana_level() as i32
         ),
-        screen_width() * 0.01,
-        screen_height() * 0.9,
-        40.0,
-        COLOR_4,
+        &ctx.input.text_font,
+        vec2(
+          16.0 * VIRTUAL_PIXEL_FACTOR,
+          VIRTUAL_SCREEN_HEIGHT - (8.0 * VIRTUAL_PIXEL_FACTOR),
+        ),
+        GameTextParams {
+          ..Default::default()
+        },
+        &self.materials,
       );
 
       /* Draw the scuffed menu */
       let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
       let save_system = ctx.get::<SaveSystem<_>>().unwrap();
 
-      menu_system
-        .active_main_menus
-        .iter()
-        .rev()
-        .for_each(|menu| draw_main_menu(menu, &save_system.available_save_data));
+      menu_system.active_main_menus.iter().rev().for_each(|menu| {
+        draw_main_menu(
+          menu,
+          &ctx.input.text_font,
+          &save_system.available_save_data,
+          self.materials.as_ref(),
+        )
+      });
       menu_system
         .active_menus
         .iter()
         .rev()
         .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
 
-      let material = ctx.input.materials.color_map.clone();
-      material.set_uniform("COLOR_1", COLOR_1.to_vec());
-      material.set_uniform("COLOR_2", COLOR_2.to_vec());
-      material.set_uniform("COLOR_3", COLOR_3.to_vec());
-      material.set_uniform("COLOR_4", COLOR_4.to_vec());
-
-      let mapped_color_palette = BALANCING
-        .graphics_config
-        .color_palette_override
-        .as_ref()
-        .map(ColorPaletteConfig::to_color_palette)
-        .unwrap_or(
-          BALANCING
-            .graphics_config
-            .color_palette_preset
-            .to_color_palette(),
-        );
-
-      material.set_uniform("MAPPED_COLOR_1", mapped_color_palette.color_1.to_vec());
-      material.set_uniform("MAPPED_COLOR_2", mapped_color_palette.color_2.to_vec());
-      material.set_uniform("MAPPED_COLOR_3", mapped_color_palette.color_3.to_vec());
-      material.set_uniform("MAPPED_COLOR_4", mapped_color_palette.color_4.to_vec());
-
-      gl_use_material(&material);
-      draw_rectangle(0.0, 0.0, screen_width(), screen_height(), WHITE);
-      gl_use_default_material();
-
+      draw_render_target(&self.materials, &self.camera);
       return Rc::new(GraphicsSystem {
         effects,
+        materials: Rc::clone(&self.materials),
+        camera: Rc::clone(&self.camera),
         _phantom_data: PhantomData,
       });
     }
@@ -1080,19 +1123,27 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
     let save_system = ctx.get::<SaveSystem<_>>().unwrap();
 
-    menu_system
-      .active_main_menus
-      .iter()
-      .rev()
-      .for_each(|menu| draw_main_menu(menu, &save_system.available_save_data));
-    menu_system
-      .active_menus
-      .iter()
-      .rev()
-      .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
+    if let Some(ctx) = ctx.downcast::<Start>() {
+      menu_system.active_main_menus.iter().rev().for_each(|menu| {
+        draw_main_menu(
+          menu,
+          &ctx.input.text_font,
+          &save_system.available_save_data,
+          self.materials.as_ref(),
+        )
+      });
+      menu_system
+        .active_menus
+        .iter()
+        .rev()
+        .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
+    }
 
+    draw_render_target(&self.materials, &self.camera);
     Rc::new(GraphicsSystem {
       effects: self.effects.clone(),
+      materials: Rc::clone(&self.materials),
+      camera: Rc::clone(&self.camera),
       _phantom_data: PhantomData,
     })
   }
@@ -1103,6 +1154,70 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   ) -> Rc<dyn System<Input = Self::Input>> {
     Rc::new(self.clone())
   }
+}
+
+fn virtual_screen_scale() -> f32 {
+  f32::min(
+    screen_width() / VIRTUAL_SCREEN_WIDTH,
+    screen_height() / VIRTUAL_SCREEN_HEIGHT,
+  )
+  .round()
+}
+
+fn draw_render_target(materials: &GameMaterials, camera: &Camera2D) {
+  let scale = virtual_screen_scale();
+
+  let material = materials.color_map.clone();
+  material.set_uniform("COLOR_1", COLOR_1.to_vec());
+  material.set_uniform("COLOR_2", COLOR_2.to_vec());
+  material.set_uniform("COLOR_3", COLOR_3.to_vec());
+  material.set_uniform("COLOR_4", COLOR_4.to_vec());
+
+  let mapped_color_palette = BALANCING
+    .graphics_config
+    .color_palette_override
+    .as_ref()
+    .map(ColorPaletteConfig::to_color_palette)
+    .unwrap_or(
+      BALANCING
+        .graphics_config
+        .color_palette_preset
+        .to_color_palette(),
+    );
+
+  material.set_uniform("MAPPED_COLOR_1", mapped_color_palette.color_1.to_vec());
+  material.set_uniform("MAPPED_COLOR_2", mapped_color_palette.color_2.to_vec());
+  material.set_uniform("MAPPED_COLOR_3", mapped_color_palette.color_3.to_vec());
+  material.set_uniform("MAPPED_COLOR_4", mapped_color_palette.color_4.to_vec());
+
+  println!(
+    "{} {}",
+    camera.render_target.as_ref().unwrap().texture.width(),
+    camera.render_target.as_ref().unwrap().texture.height()
+  );
+
+  set_default_camera();
+  gl_use_material(&material);
+  draw_texture_ex(
+    &camera.render_target.as_ref().unwrap().texture,
+    (screen_width() - (VIRTUAL_SCREEN_WIDTH * scale)) * 0.5,
+    (screen_height() - (VIRTUAL_SCREEN_HEIGHT * scale)) * 0.5,
+    WHITE,
+    DrawTextureParams {
+      dest_size: Some(vec2(
+        VIRTUAL_SCREEN_WIDTH * scale,
+        VIRTUAL_SCREEN_HEIGHT * scale,
+      )),
+      source: Some(Rect {
+        x: 0.0,
+        y: 0.0,
+        w: VIRTUAL_SCREEN_WIDTH,
+        h: VIRTUAL_SCREEN_HEIGHT,
+      }),
+      ..Default::default()
+    },
+  );
+  gl_use_default_material();
 }
 
 fn draw_tile_layer(
@@ -1147,8 +1262,8 @@ fn draw_tile_layer(
         WHITE,
         DrawTextureParams {
           dest_size: Some(Vec2 {
-            x: 64.0 * BALANCING.graphics_config.scaling_factor,
-            y: 64.0 * BALANCING.graphics_config.scaling_factor,
+            x: TILEMAP_TILE_WIDTH * VIRTUAL_PIXEL_FACTOR,
+            y: TILEMAP_TILE_WIDTH * VIRTUAL_PIXEL_FACTOR,
           }),
           source: Some(source),
           rotation: 0.0,
@@ -1160,18 +1275,26 @@ fn draw_tile_layer(
     });
 }
 
-fn draw_main_menu(menu: &MainMenu, available_sava_data: &[String]) {
+fn draw_main_menu(
+  menu: &MainMenu,
+  text_font: &Texture2D,
+  available_sava_data: &[String],
+  materials: &GameMaterials,
+) {
   match menu.kind.clone() {
     /* MARK: Menu Main */
     crate::menu::MainMenuKind::Main(should_include_continue_option) => {
       draw_rectangle(0.0, 0.0, screen_width(), screen_height(), COLOR_4);
 
-      draw_text(
+      draw_game_text(
         "LONGINUS",
-        screen_width() * 0.2,
-        screen_height() * 0.3,
-        40.0,
-        COLOR_1,
+        text_font,
+        vec2(screen_width() * 0.2, screen_height() * 0.3),
+        GameTextParams {
+          color: GameColor::Color1,
+          ..Default::default()
+        },
+        materials,
       );
 
       draw_text(
@@ -1479,7 +1602,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
             .for_each(|(index, text)| {
               draw_text(
                 text,
-                0.5 * screen_width(),
+                screen_width(),
                 (0.8 + (index as f32 * 0.02)) * screen_height(),
                 25.0,
                 COLOR_1,
@@ -1750,7 +1873,7 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         .for_each(|(index, line)| {
           draw_text(
             line,
-            0.265 * screen_width(),
+            0. * screen_width(),
             (0.35 + (0.025 * index as f32)) * screen_height(),
             25.0,
             COLOR_1,
@@ -1835,20 +1958,21 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
   }
 }
 
-pub fn draw_sprites(sprites_to_draw: &[SpriteToDraw], translation: ScreenVector, rotation: f32) {
+pub fn draw_sprites(
+  sprites_to_draw: &[SpriteToDraw],
+  translation: ScreenVector,
+  rotation: f32,
+  flip_y: bool,
+) {
   sprites_to_draw.iter().for_each(|sprite_to_draw| {
-    let adjusted_width = sprite_to_draw.source.w * 8.0 * BALANCING.graphics_config.scaling_factor;
-    let adjusted_height = sprite_to_draw.source.h * 8.0 * BALANCING.graphics_config.scaling_factor;
+    let adjusted_width = sprite_to_draw.source.w * VIRTUAL_PIXEL_FACTOR;
+    let adjusted_height = sprite_to_draw.source.h * VIRTUAL_PIXEL_FACTOR;
 
-    let offset_x = sprite_to_draw
-      .offset
-      .map(|offset| offset.x * 8.0 * BALANCING.graphics_config.scaling_factor)
-      .unwrap_or(0.0);
+    let offset_x =
+      sprite_to_draw.offset.map(|offset| offset.x).unwrap_or(0.0) * VIRTUAL_PIXEL_FACTOR;
 
-    let offset_y = sprite_to_draw
-      .offset
-      .map(|offset| offset.y * 8.0 * BALANCING.graphics_config.scaling_factor)
-      .unwrap_or(0.0);
+    let offset_y =
+      sprite_to_draw.offset.map(|offset| offset.y).unwrap_or(0.0) * VIRTUAL_PIXEL_FACTOR;
 
     let new_offset_x = offset_x * rotation.cos() - offset_y * rotation.sin();
     let new_offset_y = offset_x * rotation.sin() + offset_y * rotation.cos();
@@ -1888,11 +2012,177 @@ pub fn draw_sprites(sprites_to_draw: &[SpriteToDraw], translation: ScreenVector,
         source: Some(sprite_to_draw.source),
         rotation,
         flip_x: false,
-        flip_y: false,
+        flip_y,
         pivot: None,
       },
     );
 
     gl_use_default_material();
   });
+}
+
+struct GameTextParams {
+  color: GameColor,
+  wrap: Option<u32>,
+}
+
+impl Default for GameTextParams {
+  fn default() -> Self {
+    Self {
+      color: GameColor::Color4,
+      wrap: None,
+    }
+  }
+}
+
+fn draw_game_text(
+  text: &str,
+  text_font: &Texture2D,
+  dest: Vec2,
+  params: GameTextParams,
+  game_materials: &GameMaterials,
+) {
+  let color_replace_material = match params.color {
+    GameColor::Color1 => game_materials.text_color_materials.color_1.clone(),
+    GameColor::Color2 => game_materials.text_color_materials.color_2.clone(),
+    GameColor::Color3 => game_materials.text_color_materials.color_3.clone(),
+    GameColor::Color4 => game_materials.text_color_materials.color_4.clone(),
+  };
+
+  let sprites = &sprite::text(text, params.wrap, text_font)
+    .iter()
+    .map(|sprite| sprite.with_material(Some(color_replace_material.clone())))
+    .collect_vec();
+
+  draw_sprites(
+    sprites,
+    ScreenVector::from_vec(vector![dest.x, dest.y]),
+    0.0,
+    true,
+  );
+}
+
+fn load_game_materials() -> GameMaterials {
+  let dissolve_material = load_material(
+    ShaderSource::Glsl {
+      vertex: IDENTITY_VERTEX_SHADER,
+      fragment: DISSOLVE_FRAGMENT_SHADER,
+    },
+    MaterialParams {
+      uniforms: vec![
+        UniformDesc::new("Progress", UniformType::Float1),
+        UniformDesc::new("PixelsX", UniformType::Float1),
+        UniformDesc::new("PixelsY", UniformType::Float1),
+        UniformDesc::new("TextureOffset", UniformType::Float2),
+        UniformDesc::new("TextureSize", UniformType::Float2),
+      ],
+      textures: vec!["NoiseTexture".to_string()],
+      ..Default::default()
+    },
+  )
+  .unwrap();
+
+  let color_map_material = load_material(
+    ShaderSource::Glsl {
+      vertex: IDENTITY_VERTEX_SHADER,
+      fragment: COLOR_MAP_FRAGMENT_SHADER,
+    },
+    MaterialParams {
+      uniforms: vec![
+        UniformDesc::new("COLOR_1", UniformType::Float4),
+        UniformDesc::new("COLOR_2", UniformType::Float4),
+        UniformDesc::new("COLOR_3", UniformType::Float4),
+        UniformDesc::new("COLOR_4", UniformType::Float4),
+        UniformDesc::new("MAPPED_COLOR_1", UniformType::Float4),
+        UniformDesc::new("MAPPED_COLOR_2", UniformType::Float4),
+        UniformDesc::new("MAPPED_COLOR_3", UniformType::Float4),
+        UniformDesc::new("MAPPED_COLOR_4", UniformType::Float4),
+        UniformDesc::new("PixelsX", UniformType::Float1),
+        UniformDesc::new("PixelsY", UniformType::Float1),
+        UniformDesc::new("TextureOffset", UniformType::Float2),
+        UniformDesc::new("TextureSize", UniformType::Float2),
+      ],
+      ..Default::default()
+    },
+  )
+  .unwrap();
+
+  let text_color_material = |game_color: GameColor| {
+    let material = load_material(
+      ShaderSource::Glsl {
+        vertex: IDENTITY_VERTEX_SHADER,
+        fragment: COLOR_MAP_FRAGMENT_SHADER,
+      },
+      MaterialParams {
+        uniforms: vec![
+          UniformDesc::new("COLOR_1", UniformType::Float4),
+          UniformDesc::new("COLOR_2", UniformType::Float4),
+          UniformDesc::new("COLOR_3", UniformType::Float4),
+          UniformDesc::new("COLOR_4", UniformType::Float4),
+          UniformDesc::new("MAPPED_COLOR_1", UniformType::Float4),
+          UniformDesc::new("MAPPED_COLOR_2", UniformType::Float4),
+          UniformDesc::new("MAPPED_COLOR_3", UniformType::Float4),
+          UniformDesc::new("MAPPED_COLOR_4", UniformType::Float4),
+          UniformDesc::new("PixelsX", UniformType::Float1),
+          UniformDesc::new("PixelsY", UniformType::Float1),
+          UniformDesc::new("TextureOffset", UniformType::Float2),
+          UniformDesc::new("TextureSize", UniformType::Float2),
+        ],
+        ..Default::default()
+      },
+    )
+    .unwrap();
+
+    let color = game_color.as_color();
+
+    material.set_uniform("COLOR_2", TEXT_FONT_FOREGROUND_COLOR.to_vec());
+    material.set_uniform("COLOR_1", TEXT_FONT_BACKGROUND_COLOR.to_vec());
+    material.set_uniform("MAPPED_COLOR_1", color.to_vec());
+    material.set_uniform("MAPPED_COLOR_2", BLUE.with_alpha(0.0).to_vec());
+
+    material
+  };
+
+  GameMaterials {
+    dissolve: dissolve_material,
+    color_map: color_map_material,
+    text_color_materials: TextColorMaterials {
+      color_1: text_color_material(GameColor::Color1),
+      color_2: text_color_material(GameColor::Color2),
+      color_3: text_color_material(GameColor::Color3),
+      color_4: text_color_material(GameColor::Color4),
+    },
+  }
+}
+
+pub struct TextColorMaterials {
+  pub color_1: Material,
+  pub color_2: Material,
+  pub color_3: Material,
+  pub color_4: Material,
+}
+
+pub struct GameMaterials {
+  pub dissolve: Material,
+  pub color_map: Material,
+  pub text_color_materials: TextColorMaterials,
+}
+
+#[derive(Clone, Copy)]
+pub enum GameColor {
+  Color1,
+  Color2,
+  Color3,
+  Color4,
+}
+
+impl GameColor {
+  pub fn as_color(self) -> Color {
+    match self {
+      GameColor::Color1 => COLOR_1,
+      GameColor::Color2 => COLOR_2,
+      GameColor::Color3 => COLOR_3,
+      GameColor::Color4 => COLOR_4,
+    }
+  }
 }

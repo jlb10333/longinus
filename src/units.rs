@@ -4,7 +4,7 @@ use derive_more::{Add, Div, Mul, Sub};
 use macroquad::window::screen_height;
 use rapier2d::{na::Vector2, prelude::*};
 
-use crate::balance::BALANCING;
+use crate::{balance::BALANCING, graphics::VIRTUAL_SCREEN_HEIGHT};
 
 pub fn vec_zero() -> Vector2<f32> {
   vector![0.0, 0.0]
@@ -95,7 +95,7 @@ impl UnitConvert2<PhysicsVector> for ScreenVector {
   }
   fn into_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
     PhysicsVector::from_vec(
-      vector![self.into_vec().x, screen_height() - self.into_vec().y]
+      vector![self.into_vec().x, VIRTUAL_SCREEN_HEIGHT - self.into_vec().y]
         .scale(1.0 / BALANCING.graphics_config.adjusted_scaling())
         + camera_position,
     )

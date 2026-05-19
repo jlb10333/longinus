@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, u32};
 
 use macroquad::{
   math::{Rect, Vec2},
@@ -462,6 +462,37 @@ pub fn laser_gate(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       h: 8.0,
     },
   )]
+}
+
+pub fn text(input_text: &str, wrap: Option<u32>, text_texture: &Texture2D) -> Vec<SpriteToDraw> {
+  let wrap = wrap.unwrap_or(u32::MAX);
+  input_text
+    .char_indices()
+    .flat_map(|(char_index, input_char)| {
+      let sprite_index = input_char as u32 - 32;
+
+      let sprite_y = sprite_index / 16;
+      let sprite_x = sprite_index % 16;
+      let adjusted_sprite_y = 13 - sprite_y;
+      let adjusted_sprite_index = sprite_x + adjusted_sprite_y * 16;
+
+      draw_from_sprite_sheet(
+        adjusted_sprite_index as i32,
+        SpriteSheetArgs {
+          width: 8,
+          height: 8,
+          num_columns: 16,
+          num_sprites: 224,
+          offset: Some(Vec2 {
+            x: (char_index as u32 % wrap) as f32 * 8.0,
+            y: (char_index as u32 / wrap) as f32 * 8.0,
+          }),
+          z_position: None,
+        },
+        text_texture,
+      )
+    })
+    .collect()
 }
 
 struct SpriteSheetArgs {

@@ -1210,6 +1210,14 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
+    entities.iter().for_each(|(handle, entity)| {
+      if entity.components.get::<GravityParticle>().is_some()
+        && let EntityHandle::RigidBody(rigid_body_handle) = handle
+      {
+        rigid_body_set[*rigid_body_handle].set_linvel(vec_zero(), true);
+      }
+    });
+
     /* MARK: Gravity source behavior */
     entities.iter().for_each(|(handle, entity)| {
       if let Some(gravity_source) = entity.components.get::<GravitySource>()
@@ -1261,10 +1269,13 @@ impl System for PhysicsSystem {
             if let Some(entity) = entities.get(&EntityHandle::RigidBody(rigid_body_handle))
               && entity.components.get::<GravityParticle>().is_some()
             {
+              let linvel = *rigid_body_set[rigid_body_handle].linvel();
+
               rigid_body_set[rigid_body_handle].set_linvel(
-                distance_vec
-                  * (gravity_intensity)
-                  * BALANCING.graphics_config.gravity_particle_effect_speed,
+                linvel
+                  + distance_vec
+                    * (gravity_intensity)
+                    * BALANCING.graphics_config.gravity_particle_effect_speed,
                 true,
               );
             } else {

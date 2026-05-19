@@ -2,7 +2,6 @@ use std::rc::Rc;
 
 use balance::BALANCING;
 use macroquad::prelude::*;
-use shaders::{COLOR_MAP_FRAGMENT_SHADER, DISSOLVE_FRAGMENT_SHADER, IDENTITY_VERTEX_SHADER};
 use system::ProcessContextOptions;
 
 use crate::ability::AbilitySystem;
@@ -38,8 +37,16 @@ mod sprite;
 mod system;
 mod units;
 
-#[derive(Clone, Default)]
-pub struct Start;
+#[derive(Clone)]
+pub struct Start {
+  text_font: Rc<Texture2D>,
+}
+
+impl Default for Start {
+  fn default() -> Self {
+    panic!()
+  }
+}
 
 pub struct ProjectileTextures {
   pub plasma: Texture2D,
@@ -103,28 +110,17 @@ pub struct GameTextures {
   pub ability_textures: AbilityTextures,
 }
 
-impl Default for GameTextures {
-  fn default() -> Self {
-    panic!()
-  }
-}
-
-pub struct GameMaterials {
-  pub dissolve: Material,
-  pub color_map: Material,
-}
-
-impl Default for GameMaterials {
-  fn default() -> Self {
-    panic!()
-  }
-}
-
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct GameInput {
   pub save_data: SaveData,
   pub textures: Rc<GameTextures>,
-  pub materials: Rc<GameMaterials>,
+  pub text_font: Rc<Texture2D>,
+}
+
+impl Default for GameInput {
+  fn default() -> Self {
+    panic!()
+  }
 }
 
 enum State {
@@ -246,86 +242,41 @@ async fn load_game_textures() -> GameTextures {
   }
 }
 
-fn load_game_materials() -> GameMaterials {
-  let dissolve_material = load_material(
-    ShaderSource::Glsl {
-      vertex: IDENTITY_VERTEX_SHADER,
-      fragment: DISSOLVE_FRAGMENT_SHADER,
-    },
-    MaterialParams {
-      uniforms: vec![
-        UniformDesc::new("Progress", UniformType::Float1),
-        UniformDesc::new("PixelsX", UniformType::Float1),
-        UniformDesc::new("PixelsY", UniformType::Float1),
-        UniformDesc::new("TextureOffset", UniformType::Float2),
-        UniformDesc::new("TextureSize", UniformType::Float2),
-      ],
-      textures: vec!["NoiseTexture".to_string()],
-      ..Default::default()
-    },
-  )
-  .unwrap();
-
-  let color_map_material = load_material(
-    ShaderSource::Glsl {
-      vertex: IDENTITY_VERTEX_SHADER,
-      fragment: COLOR_MAP_FRAGMENT_SHADER,
-    },
-    MaterialParams {
-      uniforms: vec![
-        UniformDesc::new("COLOR_1", UniformType::Float4),
-        UniformDesc::new("COLOR_2", UniformType::Float4),
-        UniformDesc::new("COLOR_3", UniformType::Float4),
-        UniformDesc::new("COLOR_4", UniformType::Float4),
-        UniformDesc::new("MAPPED_COLOR_1", UniformType::Float4),
-        UniformDesc::new("MAPPED_COLOR_2", UniformType::Float4),
-        UniformDesc::new("MAPPED_COLOR_3", UniformType::Float4),
-        UniformDesc::new("MAPPED_COLOR_4", UniformType::Float4),
-      ],
-      ..Default::default()
-    },
-  )
-  .unwrap();
-
-  GameMaterials {
-    dissolve: dissolve_material,
-    color_map: color_map_material,
-  }
-}
-
 #[macroquad::main(window_conf)]
 async fn main() {
   // Load textures async
   let textures = Rc::new(load_game_textures().await);
-  let materials = Rc::new(load_game_materials());
+  let text_font = Rc::new(load_texture_with_filter("./assets/sprites/ui/text_font.png").await);
 
   let mut state = State::MainMenu;
 
   loop {
     state = match state {
       State::MainMenu => {
-        let save_data = Process::new(&Start)
-          .add_system(ControlsSystem::start)
-          .add_system(SaveSystem::start)
-          .add_system(MenuSystem::start)
-          .add_system(GraphicsSystem::start)
-          .start(None)
-          .run(|ctx| {
-            ctx
-              .get::<MenuSystem<_>>()
-              .unwrap()
-              .save_to_load
-              .as_ref()
-              .map(load_save)
-          })
-          .await;
+        let save_data = Process::new(&Start {
+          text_font: Rc::clone(&text_font),
+        })
+        .add_system(ControlsSystem::start)
+        .add_system(SaveSystem::start)
+        .add_system(MenuSystem::start)
+        .add_system(GraphicsSystem::start)
+        .start(None)
+        .run(|ctx| {
+          ctx
+            .get::<MenuSystem<_>>()
+            .unwrap()
+            .save_to_load
+            .as_ref()
+            .map(load_save)
+        })
+        .await;
         State::Game(save_data)
       }
       State::Game(save_data) => {
         let game_input = GameInput {
           save_data,
           textures: Rc::clone(&textures),
-          materials: Rc::clone(&materials),
+          text_font: Rc::clone(&text_font),
         };
 
         let quit_decision = Process::new(&game_input)

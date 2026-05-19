@@ -39,7 +39,7 @@ precision lowp float;
 
 varying vec2 uv;
 
-uniform sampler2D _ScreenTexture;
+uniform sampler2D Texture;
 
 uniform vec4 COLOR_1;
 uniform vec4 COLOR_2;
@@ -53,7 +53,7 @@ uniform vec4 MAPPED_COLOR_4;
 
 void main() {
     vec2 adjusted_uv = vec2(uv.x, 1.0 - uv.y);
-    vec4 cur = texture2D(_ScreenTexture, adjusted_uv);
+    vec4 cur = texture2D(Texture, adjusted_uv);
 
     if (cur.rgb == COLOR_1.rgb) {
         cur = MAPPED_COLOR_1;
@@ -63,6 +63,10 @@ void main() {
         cur = MAPPED_COLOR_3;
     } else if (cur.rgb == COLOR_4.rgb) {
         cur = MAPPED_COLOR_4;
+    }
+
+    if (cur.a < 0.1) {
+        discard;
     }
 
     gl_FragColor = cur;

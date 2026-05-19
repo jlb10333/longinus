@@ -1,12 +1,16 @@
 use std::{cell::RefCell, f32::consts::PI, marker::PhantomData, rc::Rc};
 
 use gilrs::{Axis, Button, Gilrs};
-use macroquad::input::{KeyCode, MouseButton, is_key_down, is_mouse_button_down, mouse_position};
+use macroquad::{
+  input::{KeyCode, MouseButton, is_key_down, is_mouse_button_down, mouse_position},
+  window::{screen_height, screen_width},
+};
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
   GameInput,
   camera::CameraSystem,
+  graphics::{VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
   physics::PhysicsSystem,
   system::{ProcessContext, System},
   units::{PhysicsVector, UnitConvert, UnitConvert2, vec_zero},
@@ -138,12 +142,17 @@ impl<Input: Clone> ControlsSystem<Input> {
 
           let mouse_pos = mouse_position();
 
-          let player_screen_position = PhysicsVector::from_vec(
+          let player_virtual_screen_position = PhysicsVector::from_vec(
             *physics_system.rigid_body_set[physics_system.player_handle].translation(),
           )
           .into_pos(camera_system.translation);
 
-          let base_stick = vector![mouse_pos.0, mouse_pos.1] - player_screen_position.into_vec();
+          let player_real_screen_position = vector![
+            player_virtual_screen_position.x() * screen_width() / VIRTUAL_SCREEN_WIDTH,
+            player_virtual_screen_position.y() * screen_height() / VIRTUAL_SCREEN_HEIGHT
+          ];
+
+          let base_stick = vector![mouse_pos.0, mouse_pos.1] - player_real_screen_position;
           vector![base_stick[0], -base_stick[1]]
         } else {
           vec_zero()

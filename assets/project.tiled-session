@@ -157,8 +157,8 @@
             "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 358.9999999999999,
-                "y": 559.6666666666666
+                "x": 159.66666666666666,
+                "y": 159.66666666666666
             }
         },
         "maps/generated/MP20.json": {
@@ -197,11 +197,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 0.75,
-            "selectedLayer": 2,
+            "scale": 0.5,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 199.33333333333331,
-                "y": 239.33333333333331
+                "x": 199,
+                "y": 239
             }
         },
         "maps/generated/MP26.json": {
