@@ -1,15 +1,12 @@
 use std::rc::Rc;
 
-use macroquad::{
-  math::Rect,
-  window::{screen_height, screen_width},
-};
+use macroquad::math::Rect;
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
   GameInput,
   balance::BALANCING,
-  graphics::{VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
+  graphics::{VIRTUAL_PIXEL_FACTOR, VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
   load_map::MapSystem,
   physics::PhysicsSystem,
   system::System,
@@ -18,10 +15,20 @@ use crate::{
 
 fn camera_screen_bounds() -> Rect {
   Rect {
-    x: BALANCING.graphics_config.camera_deadzone * VIRTUAL_SCREEN_WIDTH,
-    y: BALANCING.graphics_config.camera_deadzone * VIRTUAL_SCREEN_HEIGHT,
-    w: (1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * VIRTUAL_SCREEN_WIDTH,
-    h: (1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * VIRTUAL_SCREEN_HEIGHT,
+    x: (BALANCING.graphics_config.camera_deadzone * VIRTUAL_SCREEN_WIDTH / VIRTUAL_PIXEL_FACTOR)
+      .round()
+      * VIRTUAL_PIXEL_FACTOR,
+    y: (BALANCING.graphics_config.camera_deadzone * VIRTUAL_SCREEN_HEIGHT / VIRTUAL_PIXEL_FACTOR)
+      .round()
+      * VIRTUAL_PIXEL_FACTOR,
+    w: ((1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * VIRTUAL_SCREEN_WIDTH
+      / VIRTUAL_PIXEL_FACTOR)
+      .round()
+      * VIRTUAL_PIXEL_FACTOR,
+    h: ((1.0 - (2.0 * BALANCING.graphics_config.camera_deadzone)) * VIRTUAL_SCREEN_HEIGHT
+      / VIRTUAL_PIXEL_FACTOR)
+      .round()
+      * VIRTUAL_PIXEL_FACTOR,
   }
 }
 
@@ -131,7 +138,10 @@ impl System for CameraSystem {
     let new_translation =
       self.translation + get_camera_translation_change(player_translation) + map_bounds_offset;
 
-    let rounded_translation = vector![new_translation.x.round(), new_translation.y.round()];
+    let rounded_translation = vector![
+      (new_translation.x * VIRTUAL_PIXEL_FACTOR).round() / VIRTUAL_PIXEL_FACTOR,
+      (new_translation.y * VIRTUAL_PIXEL_FACTOR).round() / VIRTUAL_PIXEL_FACTOR
+    ];
 
     Rc::new(Self {
       translation: rounded_translation,

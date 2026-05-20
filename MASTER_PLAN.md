@@ -10,6 +10,7 @@
       - Locomotor
       - Ability pickup
       - Boost?
+      - Indicator for when an enemy is offscreen !!!!
   - Core elements
     - 2nd boss
   - Full blocking

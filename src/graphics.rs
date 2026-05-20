@@ -181,7 +181,7 @@ const MINI_MAP_TILE_HEIGHT: f32 = 2.0;
 const TILEMAP_TILE_WIDTH: f32 = 8.0;
 const TILEMAP_TILE_HEIGHT: f32 = 8.0;
 
-pub const VIRTUAL_PIXEL_FACTOR: f32 = 8.0;
+pub const VIRTUAL_PIXEL_FACTOR: f32 = 4.0;
 pub const VIRTUAL_SCREEN_WIDTH: f32 = 160.0 * VIRTUAL_PIXEL_FACTOR;
 pub const VIRTUAL_SCREEN_HEIGHT: f32 = 144.0 * VIRTUAL_PIXEL_FACTOR;
 
@@ -878,7 +878,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         let player_y = current_world_map.height
           + (current_world_map.y - physics_scalar_to_map(player_physics_pos.data.0[0][1])) / 8.0;
 
-        let center_x = screen_width() / 2.0;
+        let center_x = VIRTUAL_SCREEN_WIDTH / 2.0;
         let center_y = screen_height() / 2.0;
 
         draw_triangle(
@@ -1151,11 +1151,12 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 }
 
 fn virtual_screen_scale() -> f32 {
-  f32::min(
+  (f32::min(
     screen_width() / VIRTUAL_SCREEN_WIDTH,
     screen_height() / VIRTUAL_SCREEN_HEIGHT,
-  )
-  .round()
+  ) * 8.0)
+    .round()
+    / 8.0
 }
 
 fn draw_render_target(materials: &GameMaterials, camera: &Camera2D) {
@@ -1272,12 +1273,18 @@ fn draw_main_menu(
   match menu.kind.clone() {
     /* MARK: Menu Main */
     crate::menu::MainMenuKind::Main(should_include_continue_option) => {
-      draw_rectangle(0.0, 0.0, screen_width(), screen_height(), COLOR_4);
+      draw_rectangle(
+        0.0,
+        0.0,
+        VIRTUAL_SCREEN_WIDTH,
+        VIRTUAL_SCREEN_HEIGHT,
+        COLOR_4,
+      );
 
       draw_game_text(
         "LONGINUS",
         text_font,
-        vec2(screen_width() * 0.2, screen_height() * 0.3),
+        vec2(VIRTUAL_SCREEN_WIDTH * 0.2, VIRTUAL_SCREEN_HEIGHT * 0.3),
         GameTextParams {
           color: GameColor::Color1,
           ..Default::default()
@@ -1304,8 +1311,8 @@ fn draw_main_menu(
             ""
           }
         ),
-        screen_width() * 0.2,
-        screen_height() * 0.6,
+        VIRTUAL_SCREEN_WIDTH * 0.2,
+        VIRTUAL_SCREEN_HEIGHT * 0.6,
         40.0,
         COLOR_1,
       );
@@ -1328,8 +1335,8 @@ fn draw_main_menu(
             ""
           }
         ),
-        screen_width() * 0.2,
-        screen_height() * 0.7,
+        VIRTUAL_SCREEN_WIDTH * 0.2,
+        VIRTUAL_SCREEN_HEIGHT * 0.7,
         40.0,
         COLOR_1,
       );
@@ -1340,8 +1347,8 @@ fn draw_main_menu(
           } else {
             "load_game"
           },
-          screen_width() * 0.2,
-          screen_height() * 0.8,
+          VIRTUAL_SCREEN_WIDTH * 0.2,
+          VIRTUAL_SCREEN_HEIGHT * 0.8,
           40.0,
           COLOR_1,
         );
@@ -1349,10 +1356,10 @@ fn draw_main_menu(
     }
     crate::menu::MainMenuKind::MainLoadSave => {
       draw_rectangle(
-        screen_width() * 0.45,
-        screen_height() * 0.45,
-        screen_width() * 0.5,
-        screen_height() * 0.5,
+        VIRTUAL_SCREEN_WIDTH * 0.45,
+        VIRTUAL_SCREEN_HEIGHT * 0.45,
+        VIRTUAL_SCREEN_WIDTH * 0.5,
+        VIRTUAL_SCREEN_HEIGHT * 0.5,
         COLOR_2,
       );
       draw_text(
@@ -1361,8 +1368,8 @@ fn draw_main_menu(
         } else {
           "cancel"
         },
-        screen_width() * 0.5,
-        screen_height() * 0.5,
+        VIRTUAL_SCREEN_WIDTH * 0.5,
+        VIRTUAL_SCREEN_HEIGHT * 0.5,
         40.0,
         COLOR_1,
       );
@@ -1380,8 +1387,8 @@ fn draw_main_menu(
               },
               save
             ),
-            screen_width() * 0.5,
-            screen_height() * (0.55 + (index as f32 * 0.05)),
+            VIRTUAL_SCREEN_WIDTH * 0.5,
+            VIRTUAL_SCREEN_HEIGHT * (0.55 + (index as f32 * 0.05)),
             40.0,
             COLOR_1,
           );
@@ -1396,10 +1403,10 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
     /* MARK: Pause Main */
     crate::menu::GameMenuKind::PauseMain => {
       draw_rectangle(
-        screen_width() * 0.1,
-        screen_height() * 0.1,
-        screen_width() * 0.8,
-        screen_height() * 0.8,
+        VIRTUAL_SCREEN_WIDTH * 0.1,
+        VIRTUAL_SCREEN_HEIGHT * 0.1,
+        VIRTUAL_SCREEN_WIDTH * 0.8,
+        VIRTUAL_SCREEN_HEIGHT * 0.8,
         COLOR_3,
       );
 
@@ -1409,8 +1416,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         } else {
           "resume"
         },
-        screen_width() * 0.2,
-        screen_height() * 0.6,
+        VIRTUAL_SCREEN_WIDTH * 0.2,
+        VIRTUAL_SCREEN_HEIGHT * 0.6,
         40.0,
         COLOR_1,
       );
@@ -1420,8 +1427,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         } else {
           "load game"
         },
-        screen_width() * 0.2,
-        screen_height() * 0.65,
+        VIRTUAL_SCREEN_WIDTH * 0.2,
+        VIRTUAL_SCREEN_HEIGHT * 0.65,
         40.0,
         COLOR_1,
       );
@@ -1431,8 +1438,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         } else {
           "quit to menu"
         },
-        screen_width() * 0.2,
-        screen_height() * 0.7,
+        VIRTUAL_SCREEN_WIDTH * 0.2,
+        VIRTUAL_SCREEN_HEIGHT * 0.7,
         40.0,
         COLOR_1,
       );
@@ -1440,10 +1447,10 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
     /* MARK: Pause Load Save */
     crate::menu::GameMenuKind::PauseLoadSave => {
       draw_rectangle(
-        screen_width() * 0.45,
-        screen_height() * 0.45,
-        screen_width() * 0.5,
-        screen_height() * 0.5,
+        VIRTUAL_SCREEN_WIDTH * 0.45,
+        VIRTUAL_SCREEN_HEIGHT * 0.45,
+        VIRTUAL_SCREEN_WIDTH * 0.5,
+        VIRTUAL_SCREEN_HEIGHT * 0.5,
         COLOR_2,
       );
       draw_text(
@@ -1452,8 +1459,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         } else {
           "cancel"
         },
-        screen_width() * 0.5,
-        screen_height() * 0.5,
+        VIRTUAL_SCREEN_WIDTH * 0.5,
+        VIRTUAL_SCREEN_HEIGHT * 0.5,
         40.0,
         COLOR_1,
       );
@@ -1471,8 +1478,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
               },
               save
             ),
-            screen_width() * 0.5,
-            screen_height() * (0.55 + (index as f32 * 0.05)),
+            VIRTUAL_SCREEN_WIDTH * 0.5,
+            VIRTUAL_SCREEN_HEIGHT * (0.55 + (index as f32 * 0.05)),
             40.0,
             COLOR_1,
           );
@@ -1481,17 +1488,17 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
     /* MARK: Inventory Main */
     crate::menu::GameMenuKind::InventoryMain => {
       draw_rectangle(
-        screen_width() * 0.1,
-        screen_height() * 0.1,
-        screen_width() * 0.8,
-        screen_height() * 0.8,
+        VIRTUAL_SCREEN_WIDTH * 0.1,
+        VIRTUAL_SCREEN_HEIGHT * 0.1,
+        VIRTUAL_SCREEN_WIDTH * 0.8,
+        VIRTUAL_SCREEN_HEIGHT * 0.8,
         COLOR_3,
       );
 
       draw_text(
         "inventory",
-        screen_width() * 0.2,
-        screen_height() * 0.4,
+        VIRTUAL_SCREEN_WIDTH * 0.2,
+        VIRTUAL_SCREEN_HEIGHT * 0.4,
         80.0,
         COLOR_1,
       );
@@ -1502,8 +1509,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         } else {
           "edit"
         },
-        screen_width() * 0.2,
-        screen_height() * 0.6,
+        VIRTUAL_SCREEN_WIDTH * 0.2,
+        VIRTUAL_SCREEN_HEIGHT * 0.6,
         40.0,
         COLOR_1,
       );
@@ -1513,8 +1520,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         } else {
           "close"
         },
-        screen_width() * 0.5,
-        screen_height() * 0.6,
+        VIRTUAL_SCREEN_WIDTH * 0.5,
+        VIRTUAL_SCREEN_HEIGHT * 0.6,
         40.0,
         COLOR_1,
       );
@@ -1522,10 +1529,10 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
     /* MARK: Inventory pick slot */
     crate::menu::GameMenuKind::InventoryPickSlot(_, inventory_update) => {
       draw_rectangle(
-        screen_width() * 0.45,
-        screen_height() * 0.4,
-        screen_width() * 0.5,
-        screen_height() * 0.5,
+        VIRTUAL_SCREEN_WIDTH * 0.45,
+        VIRTUAL_SCREEN_HEIGHT * 0.4,
+        VIRTUAL_SCREEN_WIDTH * 0.5,
+        VIRTUAL_SCREEN_HEIGHT * 0.5,
         COLOR_2,
       );
 
@@ -1535,8 +1542,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         } else {
           "confirm"
         },
-        0.5 * screen_width(),
-        0.45 * screen_height(),
+        0.5 * VIRTUAL_SCREEN_WIDTH,
+        0.45 * VIRTUAL_SCREEN_HEIGHT,
         40.0,
         COLOR_1,
       );
@@ -1544,18 +1551,18 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
       (0..4).for_each(|x| {
         (0..4).for_each(|y| {
           draw_rectangle(
-            (0.5 + (x as f32 * 0.05)) * screen_width(),
-            (0.5 + (y as f32 * 0.05)) * screen_height(),
-            0.05 * screen_width(),
-            0.05 * screen_height(),
+            (0.5 + (x as f32 * 0.05)) * VIRTUAL_SCREEN_WIDTH,
+            (0.5 + (y as f32 * 0.05)) * VIRTUAL_SCREEN_HEIGHT,
+            0.05 * VIRTUAL_SCREEN_WIDTH,
+            0.05 * VIRTUAL_SCREEN_HEIGHT,
             COLOR_3,
           );
 
           draw_rectangle(
-            (0.51 + (x as f32 * 0.05)) * screen_width(),
-            (0.51 + (y as f32 * 0.05)) * screen_height(),
-            0.03 * screen_width(),
-            0.03 * screen_height(),
+            (0.51 + (x as f32 * 0.05)) * VIRTUAL_SCREEN_WIDTH,
+            (0.51 + (y as f32 * 0.05)) * VIRTUAL_SCREEN_HEIGHT,
+            0.03 * VIRTUAL_SCREEN_WIDTH,
+            0.03 * VIRTUAL_SCREEN_HEIGHT,
             COLOR_2,
           );
         })
@@ -1563,10 +1570,10 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
 
       if menu.cursor_position.y > -1 {
         draw_rectangle(
-          (0.5 + (menu.cursor_position.x as f32 * 0.05)) * screen_width(),
-          (0.5 + (menu.cursor_position.y as f32 * 0.05)) * screen_height(),
-          0.05 * screen_width(),
-          0.05 * screen_height(),
+          (0.5 + (menu.cursor_position.x as f32 * 0.05)) * VIRTUAL_SCREEN_WIDTH,
+          (0.5 + (menu.cursor_position.y as f32 * 0.05)) * VIRTUAL_SCREEN_HEIGHT,
+          0.05 * VIRTUAL_SCREEN_WIDTH,
+          0.05 * VIRTUAL_SCREEN_HEIGHT,
           COLOR_3,
         );
 
@@ -1590,8 +1597,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
             .for_each(|(index, text)| {
               draw_text(
                 text,
-                screen_width(),
-                (0.8 + (index as f32 * 0.02)) * screen_height(),
+                VIRTUAL_SCREEN_WIDTH,
+                (0.8 + (index as f32 * 0.02)) * VIRTUAL_SCREEN_HEIGHT,
                 25.0,
                 COLOR_1,
               );
@@ -1610,8 +1617,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
 
             draw_text(
               debug_module_symbol(module_kind),
-              (0.5113 + (module_x)) * screen_width(),
-              (0.535 + (module_y)) * screen_height(),
+              (0.5113 + (module_x)) * VIRTUAL_SCREEN_WIDTH,
+              (0.535 + (module_y)) * VIRTUAL_SCREEN_HEIGHT,
               30.0,
               COLOR_1,
             );
@@ -1624,37 +1631,37 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
                 .for_each(|attachment_point| match attachment_point {
                   Direction::Up => {
                     draw_rectangle(
-                      (0.52 + module_x) * screen_width(),
-                      (0.51 + module_y) * screen_height(),
-                      0.01 * screen_width(),
-                      0.005 * screen_height(),
+                      (0.52 + module_x) * VIRTUAL_SCREEN_WIDTH,
+                      (0.51 + module_y) * VIRTUAL_SCREEN_HEIGHT,
+                      0.01 * VIRTUAL_SCREEN_WIDTH,
+                      0.005 * VIRTUAL_SCREEN_HEIGHT,
                       COLOR_4,
                     );
                   }
                   Direction::Down => {
                     draw_rectangle(
-                      (0.52 + module_x) * screen_width(),
-                      (0.535 + module_y) * screen_height(),
-                      0.01 * screen_width(),
-                      0.005 * screen_height(),
+                      (0.52 + module_x) * VIRTUAL_SCREEN_WIDTH,
+                      (0.535 + module_y) * VIRTUAL_SCREEN_HEIGHT,
+                      0.01 * VIRTUAL_SCREEN_WIDTH,
+                      0.005 * VIRTUAL_SCREEN_HEIGHT,
                       COLOR_4,
                     );
                   }
                   Direction::Left => {
                     draw_rectangle(
-                      (0.51 + module_x) * screen_width(),
-                      (0.52 + module_y) * screen_height(),
-                      0.005 * screen_width(),
-                      0.01 * screen_height(),
+                      (0.51 + module_x) * VIRTUAL_SCREEN_WIDTH,
+                      (0.52 + module_y) * VIRTUAL_SCREEN_HEIGHT,
+                      0.005 * VIRTUAL_SCREEN_WIDTH,
+                      0.01 * VIRTUAL_SCREEN_HEIGHT,
                       COLOR_4,
                     );
                   }
                   Direction::Right => {
                     draw_rectangle(
-                      (0.535 + module_x) * screen_width(),
-                      (0.52 + module_y) * screen_height(),
-                      0.005 * screen_width(),
-                      0.01 * screen_height(),
+                      (0.535 + module_x) * VIRTUAL_SCREEN_WIDTH,
+                      (0.52 + module_y) * VIRTUAL_SCREEN_HEIGHT,
+                      0.005 * VIRTUAL_SCREEN_WIDTH,
+                      0.01 * VIRTUAL_SCREEN_HEIGHT,
                       COLOR_4,
                     );
                   }
@@ -1673,8 +1680,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
 
           draw_text(
             debug_module_symbol(unequipped_module_kind),
-            (0.5113 + (module_x)) * screen_width(),
-            (0.535 + (module_y)) * screen_height(),
+            (0.5113 + (module_x)) * VIRTUAL_SCREEN_WIDTH,
+            (0.535 + (module_y)) * VIRTUAL_SCREEN_HEIGHT,
             30.0,
             COLOR_1,
           );
@@ -1687,37 +1694,37 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
               .for_each(|attachment_point| match attachment_point {
                 Direction::Up => {
                   draw_rectangle(
-                    (0.52 + module_x) * screen_width(),
-                    (0.51 + module_y) * screen_height(),
-                    0.01 * screen_width(),
-                    0.005 * screen_height(),
+                    (0.52 + module_x) * VIRTUAL_SCREEN_WIDTH,
+                    (0.51 + module_y) * VIRTUAL_SCREEN_HEIGHT,
+                    0.01 * VIRTUAL_SCREEN_WIDTH,
+                    0.005 * VIRTUAL_SCREEN_HEIGHT,
                     COLOR_4,
                   );
                 }
                 Direction::Down => {
                   draw_rectangle(
-                    (0.52 + module_x) * screen_width(),
-                    (0.535 + module_y) * screen_height(),
-                    0.01 * screen_width(),
-                    0.005 * screen_height(),
+                    (0.52 + module_x) * VIRTUAL_SCREEN_WIDTH,
+                    (0.535 + module_y) * VIRTUAL_SCREEN_HEIGHT,
+                    0.01 * VIRTUAL_SCREEN_WIDTH,
+                    0.005 * VIRTUAL_SCREEN_HEIGHT,
                     COLOR_4,
                   );
                 }
                 Direction::Left => {
                   draw_rectangle(
-                    (0.51 + module_x) * screen_width(),
-                    (0.52 + module_y) * screen_height(),
-                    0.005 * screen_width(),
-                    0.01 * screen_height(),
+                    (0.51 + module_x) * VIRTUAL_SCREEN_WIDTH,
+                    (0.52 + module_y) * VIRTUAL_SCREEN_HEIGHT,
+                    0.005 * VIRTUAL_SCREEN_WIDTH,
+                    0.01 * VIRTUAL_SCREEN_HEIGHT,
                     COLOR_4,
                   );
                 }
                 Direction::Right => {
                   draw_rectangle(
-                    (0.535 + module_x) * screen_width(),
-                    (0.52 + module_y) * screen_height(),
-                    0.005 * screen_width(),
-                    0.01 * screen_height(),
+                    (0.535 + module_x) * VIRTUAL_SCREEN_WIDTH,
+                    (0.52 + module_y) * VIRTUAL_SCREEN_HEIGHT,
+                    0.005 * VIRTUAL_SCREEN_WIDTH,
+                    0.01 * VIRTUAL_SCREEN_HEIGHT,
                     COLOR_4,
                   );
                 }
@@ -1728,43 +1735,43 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
     /* MARK: Save Confirm */
     crate::menu::GameMenuKind::SaveConfirm(_) => {
       draw_rectangle(
-        screen_width() * 0.3,
-        screen_height() * 0.45,
-        screen_width() * 0.4,
-        screen_height() * 0.1,
+        VIRTUAL_SCREEN_WIDTH * 0.3,
+        VIRTUAL_SCREEN_HEIGHT * 0.45,
+        VIRTUAL_SCREEN_WIDTH * 0.4,
+        VIRTUAL_SCREEN_HEIGHT * 0.1,
         COLOR_2,
       );
 
       draw_text(
         "Cancel",
-        0.4 * screen_width(),
-        0.5 * screen_height(),
+        0.4 * VIRTUAL_SCREEN_WIDTH,
+        0.5 * VIRTUAL_SCREEN_HEIGHT,
         40.0,
         COLOR_1,
       );
 
       draw_text(
         "Save",
-        0.6 * screen_width(),
-        0.5 * screen_height(),
+        0.6 * VIRTUAL_SCREEN_WIDTH,
+        0.5 * VIRTUAL_SCREEN_HEIGHT,
         40.0,
         COLOR_1,
       );
 
       draw_text(
         "-",
-        (0.4 + (menu.cursor_position.x as f32 * 0.2)) * screen_width(),
-        0.53 * screen_height(),
+        (0.4 + (menu.cursor_position.x as f32 * 0.2)) * VIRTUAL_SCREEN_WIDTH,
+        0.53 * VIRTUAL_SCREEN_HEIGHT,
         40.0,
         COLOR_1,
       );
     }
     crate::menu::GameMenuKind::ModulePickupConfirm(weapon_module_kind) => {
       draw_rectangle(
-        screen_width() * 0.3,
-        screen_height() * 0.4,
-        screen_width() * 0.4,
-        screen_height() * 0.15,
+        VIRTUAL_SCREEN_WIDTH * 0.3,
+        VIRTUAL_SCREEN_HEIGHT * 0.4,
+        VIRTUAL_SCREEN_WIDTH * 0.4,
+        VIRTUAL_SCREEN_HEIGHT * 0.15,
         COLOR_2,
       );
 
@@ -1781,26 +1788,26 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
           },
           debug_module_symbol(weapon_module_kind)
         ),
-        0.4 * screen_width(),
-        0.45 * screen_height(),
+        0.4 * VIRTUAL_SCREEN_WIDTH,
+        0.45 * VIRTUAL_SCREEN_HEIGHT,
         40.0,
         COLOR_1,
       );
 
       draw_text(
         "-edit-",
-        0.4 * screen_width(),
-        0.5 * screen_height(),
+        0.4 * VIRTUAL_SCREEN_WIDTH,
+        0.5 * VIRTUAL_SCREEN_HEIGHT,
         40.0,
         COLOR_1,
       );
     }
     crate::menu::GameMenuKind::AbilityPickupConfirm(ability) => {
       draw_rectangle(
-        screen_width() * 0.3,
-        screen_height() * 0.4,
-        screen_width() * 0.4,
-        screen_height() * 0.15,
+        VIRTUAL_SCREEN_WIDTH * 0.3,
+        VIRTUAL_SCREEN_HEIGHT * 0.4,
+        VIRTUAL_SCREEN_WIDTH * 0.4,
+        VIRTUAL_SCREEN_HEIGHT * 0.15,
         COLOR_2,
       );
 
@@ -1812,44 +1819,50 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
             crate::load_map::MapAbilityType::Chain => "CHAIN",
           },
         ),
-        0.4 * screen_width(),
-        0.45 * screen_height(),
+        0.4 * VIRTUAL_SCREEN_WIDTH,
+        0.45 * VIRTUAL_SCREEN_HEIGHT,
         40.0,
         COLOR_1,
       );
 
       draw_text(
         "-close-",
-        0.4 * screen_width(),
-        0.5 * screen_height(),
+        0.4 * VIRTUAL_SCREEN_WIDTH,
+        0.5 * VIRTUAL_SCREEN_HEIGHT,
         40.0,
         COLOR_1,
       );
     }
     crate::menu::GameMenuKind::GameOver => {
-      draw_rectangle(0.0, 0.0, screen_width(), screen_height(), COLOR_4);
+      draw_rectangle(
+        0.0,
+        0.0,
+        VIRTUAL_SCREEN_WIDTH,
+        VIRTUAL_SCREEN_HEIGHT,
+        COLOR_4,
+      );
 
       draw_text(
         "GAME OVER",
-        0.4 * screen_width(),
-        0.6 * screen_height(),
+        0.4 * VIRTUAL_SCREEN_WIDTH,
+        0.6 * VIRTUAL_SCREEN_HEIGHT,
         40.0,
         COLOR_1,
       );
     }
     crate::menu::GameMenuKind::TerminalShow(terminal) => {
       draw_rectangle(
-        0.25 * screen_width(),
-        0.2 * screen_height(),
-        0.5 * screen_width(),
-        0.6 * screen_height(),
+        0.25 * VIRTUAL_SCREEN_WIDTH,
+        0.2 * VIRTUAL_SCREEN_HEIGHT,
+        0.5 * VIRTUAL_SCREEN_WIDTH,
+        0.6 * VIRTUAL_SCREEN_HEIGHT,
         COLOR_4,
       );
 
       draw_text(
         &terminal.created_at,
-        0.265 * screen_width(),
-        0.25 * screen_height(),
+        0.265 * VIRTUAL_SCREEN_WIDTH,
+        0.25 * VIRTUAL_SCREEN_HEIGHT,
         20.0,
         COLOR_1,
       );
@@ -1861,8 +1874,8 @@ fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
         .for_each(|(index, line)| {
           draw_text(
             line,
-            0. * screen_width(),
-            (0.35 + (0.025 * index as f32)) * screen_height(),
+            0. * VIRTUAL_SCREEN_WIDTH,
+            (0.35 + (0.025 * index as f32)) * VIRTUAL_SCREEN_HEIGHT,
             25.0,
             COLOR_1,
           );
