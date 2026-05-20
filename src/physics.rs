@@ -2839,9 +2839,6 @@ fn fold_damageable_damage_taken(
                     .and_then(|rigid_body_handle| {
                       entities.get(&EntityHandle::RigidBody(rigid_body_handle))
                     })
-                    .filter(|other_entity| {
-                      !damageable.visited_damagers.contains(&other_entity.handle)
-                    })
                     .and_then(|entity| {
                       if let Some(damager) = entity.components.get::<Damager>()
                         && damager.hitboxes.contains(&collider_handle)
@@ -2871,10 +2868,13 @@ fn fold_damageable_damage_taken(
                 })
                 .unwrap_or(1.0);
 
-              (
-                sum + (damager.damage * weakness_modifier),
-                visited_damagers.insert(*handle),
-              )
+              let incoming_damage = if damageable.visited_damagers.contains(handle) {
+                0.0
+              } else {
+                sum + (damager.damage * weakness_modifier)
+              };
+
+              (incoming_damage, visited_damagers.insert(*handle))
             },
           );
 
@@ -2911,13 +2911,6 @@ fn fold_damageable_damage_taken(
                 building_status_effects.insert(*status_effect, new_applied_amount)
               },
             );
-
-          let visited_damagers = damageable
-            .visited_damagers
-            .iter()
-            .chain(&visited_damagers)
-            .copied()
-            .collect::<HashTrieSet<_>>();
 
           if incoming_damage == 0.0 {
             (

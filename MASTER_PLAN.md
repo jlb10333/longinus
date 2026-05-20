@@ -4,7 +4,6 @@
   - Graphics
     - All menus
     - Misc
-      - Mana tanks
       - Status effects
       - UI elements
       - Damaging tiles

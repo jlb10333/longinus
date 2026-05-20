@@ -261,6 +261,30 @@
                  "width":8,
                  "x":0,
                  "y":312
+                }, 
+                {
+                 "height":0,
+                 "id":5,
+                 "name":"Save Point",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"PlayerSpawnId",
+                         "type":"object",
+                         "value":6
+                        }],
+                 "rotation":0,
+                 "type":"SavePoint",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
+                 "y":424
+                }, 
+                {
+                 "id":6,
+                 "template":"templates\/Player Spawn.tx",
+                 "x":104,
+                 "y":448
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -269,7 +293,7 @@
          "y":0
         }],
  "nextlayerid":5,
- "nextobjectid":5,
+ "nextobjectid":7,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

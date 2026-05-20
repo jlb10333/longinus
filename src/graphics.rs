@@ -560,12 +560,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       let player_translation =
         physics_system.rigid_body_set[physics_system.player_handle].translation();
-      println!(
-        "{}",
-        PhysicsVector::from_vec(*player_translation)
-          .into_pos(camera_system.translation)
-          .into_vec()
-      );
 
       let mount_point_selection_sprite = {
         if !ability_system.acquired_chain {
@@ -1189,12 +1183,6 @@ fn draw_render_target(materials: &GameMaterials, camera: &Camera2D) {
   material.set_uniform("MAPPED_COLOR_2", mapped_color_palette.color_2.to_vec());
   material.set_uniform("MAPPED_COLOR_3", mapped_color_palette.color_3.to_vec());
   material.set_uniform("MAPPED_COLOR_4", mapped_color_palette.color_4.to_vec());
-
-  println!(
-    "{} {}",
-    camera.render_target.as_ref().unwrap().texture.width(),
-    camera.render_target.as_ref().unwrap().texture.height()
-  );
 
   set_default_camera();
   gl_use_material(&material);
