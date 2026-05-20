@@ -286,7 +286,10 @@ fn load_new_map(
           })
           .insert(Id { id: mana_tank.id })
           .insert(PersistDestruction)
-          .insert(DestroyOnCollision),
+          .insert(DestroyOnCollision)
+          .insert(SimpleSprite {
+            kind: sprite::ManaTankPickup,
+          }),
         label: "mana_tank".to_string(),
       }
     })

@@ -227,11 +227,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 3,
-            "selectedLayer": 3,
+            "scale": 1,
+            "selectedLayer": 1,
             "viewCenter": {
-                "x": 200.16666666666669,
-                "y": 200.16666666666669
+                "x": 1275.5,
+                "y": 899.5
             }
         },
         "maps/generated/MP4.json": {

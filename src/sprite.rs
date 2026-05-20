@@ -50,6 +50,7 @@ pub enum SimpleSpriteTextureKind {
   Beam(i32, PhysicsVector),
   SniperProjectile,
   HealthTankPickup,
+  ManaTankPickup,
   WeaponModulePickup,
   BreakableTile,
   Block(PhysicsVector),
@@ -80,6 +81,7 @@ pub fn get_sprites_to_draw(
     AraneaQueenProjectile => aranea_queen_projectile(game_textures),
     SniperProjectile => sniper_projectile(game_textures),
     HealthTankPickup => health_tank_pickup(game_textures),
+    ManaTankPickup => mana_tank_pickup(frame_count, game_textures),
     WeaponModulePickup => weapon_module_pickup(game_textures),
     BreakableTile => breakable_tile(game_textures),
     Block(dimensions) => block(dimensions, game_textures),
@@ -194,6 +196,21 @@ pub fn health_tank_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       h: 16.0,
     },
   )]
+}
+
+pub fn mana_tank_pickup(frame_count: i64, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  draw_from_sprite_sheet(
+    (frame_count / 30) as i32 % 3,
+    SpriteSheetArgs {
+      width: 16,
+      height: 16,
+      num_columns: 2,
+      num_sprites: 3,
+      offset: None,
+      z_position: None,
+    },
+    &game_textures.pickup_textures.mana_tank,
+  )
 }
 
 pub fn weapon_module_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {

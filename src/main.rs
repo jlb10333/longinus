@@ -59,6 +59,7 @@ pub struct ProjectileTextures {
 
 pub struct PickupTextures {
   pub health_tank: Texture2D,
+  pub mana_tank: Texture2D,
   pub weapon_module: Texture2D,
   pub health: Texture2D,
   pub mana: Texture2D,
@@ -158,6 +159,7 @@ async fn load_game_textures() -> GameTextures {
     load_texture_with_filter("./assets/sprites/projectiles/sniper_projectile.png").await;
   let health_tank_texture =
     load_texture_with_filter("./assets/sprites/pickups/health_tank.png").await;
+  let mana_tank_texture = load_texture_with_filter("./assets/sprites/pickups/mana_tank.png").await;
   let weapon_module_texture =
     load_texture_with_filter("./assets/sprites/pickups/weapon_module.png").await;
   let health_pickup_texture =
@@ -208,6 +210,7 @@ async fn load_game_textures() -> GameTextures {
     },
     pickup_textures: PickupTextures {
       health_tank: health_tank_texture,
+      mana_tank: mana_tank_texture,
       weapon_module: weapon_module_texture,
       health: health_pickup_texture,
       mana: mana_pickup_texture,
