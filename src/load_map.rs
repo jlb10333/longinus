@@ -1551,8 +1551,8 @@ fn hitboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
       .mass(0.0),
     ],
     EnemySpawnEnemy::AraneaQueen(_) => vec![ColliderBuilder::cuboid(
-      BALANCING.enemies.aranea_queen.colliders_side_length + 0.1,
-      BALANCING.enemies.aranea_queen.colliders_side_length + 0.1,
+      BALANCING.enemies.aranea_queen.colliders_side_length,
+      BALANCING.enemies.aranea_queen.colliders_side_length,
     )],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],

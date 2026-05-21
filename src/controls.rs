@@ -272,7 +272,10 @@ impl<Input: Clone + 'static> System for ControlsSystem<Input> {
     )
   }
 
-  fn fixed_update(&self, ctx: &ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>> {
+  fn fixed_update(
+    &self,
+    _ctx: &ProcessContext<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>> {
     // Self::handle_input(
     //   Rc::clone(&self.gilrs),
     //   self.control_mode,

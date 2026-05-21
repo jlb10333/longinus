@@ -94,11 +94,12 @@ impl UnitConvert2<PhysicsVector> for ScreenVector {
     vector![ScreenScalar(vector.x), ScreenScalar(vector.y)]
   }
   fn into_pos(self, camera_position: Vector2<f32>) -> PhysicsVector {
-    PhysicsVector::from_vec(
-      vector![self.into_vec().x, VIRTUAL_SCREEN_HEIGHT - self.into_vec().y]
-        .scale(1.0 / BALANCING.graphics_config.adjusted_scaling())
-        + camera_position,
-    )
+    let x = (self.into_vec().x + camera_position.x)
+      * (1.0 / BALANCING.graphics_config.adjusted_scaling());
+    let y = -((self.into_vec().y + camera_position.y)
+      * (1.0 / BALANCING.graphics_config.adjusted_scaling()));
+
+    PhysicsVector::from_vec(vector![x, y])
   }
 }
 
@@ -130,7 +131,7 @@ impl UnitConvert2<ScreenVector> for PhysicsVector {
       vector![
         (self.into_vec().x / BALANCING.graphics_config.rounding_factor).round()
           * BALANCING.graphics_config.rounding_factor,
-        ((screen_height() / BALANCING.graphics_config.adjusted_scaling())
+        ((VIRTUAL_SCREEN_HEIGHT / BALANCING.graphics_config.adjusted_scaling())
           - self.into_vec().y / BALANCING.graphics_config.rounding_factor)
           .round()
           * BALANCING.graphics_config.rounding_factor

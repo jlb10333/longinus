@@ -11,6 +11,7 @@ use crate::{
   GameInput,
   ability::AbilitySystem,
   balance::BALANCING,
+  camera::CameraSystem,
   combat::{CombatSystem, WeaponModuleKind, WeaponOutputKind, distance_projection_physics},
   controls::{ControlsSystem, angle_from_vec},
   easing,
@@ -29,6 +30,7 @@ use crate::{
     EnemyImpState, EnemyLaserGate, EnemySeeker, EnemySeekerGenerator, EnemySniper,
     EnemySniperGenerator, EnemySystem,
   },
+  graphics::{VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
   load_map::{
     BlockVariant, COLLISION_GROUP_CHAIN, COLLISION_GROUP_GRAVITY, COLLISION_GROUP_PLAYER,
     COLLISION_GROUP_PLAYER_INTERACTIBLE, COLLISION_GROUP_WALL, ENEMY_PROJECTILE_INTERACTION_GROUPS,
@@ -37,7 +39,7 @@ use crate::{
   },
   sprite,
   system::System,
-  units::{PhysicsVector, UnitConvert2, vec_zero},
+  units::{PhysicsVector, ScreenVector, UnitConvert2, vec_zero},
 };
 
 const PLAYER_SPEED_LIMIT: f32 = 5.5;
@@ -968,6 +970,7 @@ impl System for PhysicsSystem {
     let combat_system = ctx.get::<CombatSystem>().unwrap();
     let ability_system = ctx.get::<AbilitySystem>().unwrap();
     let enemy_system = ctx.get::<EnemySystem>().unwrap();
+    let camera_system = ctx.get::<CameraSystem>().unwrap();
 
     let rng = rand::RandGenerator::new();
     rng.srand(self.frame_count as u64);
@@ -1121,6 +1124,16 @@ impl System for PhysicsSystem {
       })
       .collect::<HashTrieMap<_, _>>();
 
+    let buffer = 200.0;
+
+    let top_left_corner =
+      ScreenVector::from_vec(vector![-buffer, -buffer]).into_pos(camera_system.translation);
+    let bottom_right_corner = ScreenVector::from_vec(vector![
+      VIRTUAL_SCREEN_WIDTH + buffer,
+      VIRTUAL_SCREEN_HEIGHT + buffer
+    ])
+    .into_pos(camera_system.translation);
+
     /* MARK: Spawn new gravity particles */
     let entities = entities
       .into_iter()
@@ -1164,12 +1177,21 @@ impl System for PhysicsSystem {
             let rate = rate + extra_particle;
 
             (0..rate)
-              .map(|_| {
+              .filter_map(|_| {
                 let angle = rng.gen_range(0.0, 2.0 * PI);
                 let distance = rng.gen_range(0.1, ball.radius);
 
                 let translation =
                   collider.translation() + distance_projection_physics(angle, distance).into_vec();
+
+                if translation.x < top_left_corner.x()
+                  || translation.x > bottom_right_corner.x()
+                  || translation.y > top_left_corner.y()
+                  || translation.y < bottom_right_corner.y()
+                {
+                  return None;
+                }
+
                 let particle_collider =
                   ColliderBuilder::ball(0.01)
                     .mass(0.2)
@@ -1199,7 +1221,7 @@ impl System for PhysicsSystem {
                   label: "grav_particle".to_string(),
                 };
 
-                (handle, Rc::new(entity))
+                Some((handle, Rc::new(entity)))
               })
               .collect_vec()
           }

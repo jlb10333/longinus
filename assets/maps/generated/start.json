@@ -186,6 +186,29 @@
                  "template":"templates\/Player Spawn.tx",
                  "x":160,
                  "y":272
+                }, 
+                {
+                 "height":0,
+                 "id":45,
+                 "name":"Gravity Source",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"Radius",
+                         "type":"float",
+                         "value":40
+                        }, 
+                        {
+                         "name":"Strength",
+                         "type":"float",
+                         "value":0.06
+                        }],
+                 "rotation":0,
+                 "type":"GravitySource",
+                 "visible":true,
+                 "width":0,
+                 "x":104,
+                 "y":200
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -194,7 +217,7 @@
          "y":0
         }],
  "nextlayerid":5,
- "nextobjectid":45,
+ "nextobjectid":46,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",
