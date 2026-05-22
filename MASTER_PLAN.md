@@ -10,7 +10,9 @@
       - Locomotor
       - Ability pickup
       - Boost?
-      - Indicator for when an enemy is offscreen !!!!
+      - Make offscreen enemy indicator smaller
+      - Make offscreen enemy indicator show some form of distance
+      - Make offscreen enemy indicator not show enemies beyond some max distance
   - Core elements
     - 2nd boss
   - Full blocking

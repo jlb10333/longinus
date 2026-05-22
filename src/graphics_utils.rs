@@ -1,8 +1,10 @@
+use std::f32::consts::PI;
+
 use macroquad::prelude::*;
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
-  graphics::{COLOR_2, COLOR_4},
+  graphics::{COLOR_2, COLOR_4, VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 
@@ -134,5 +136,47 @@ pub fn draw_collider(
         }
       }
     });
+  }
+}
+
+pub fn all_offscreen(colliders: &[Collider], camera_translation: Vector2<f32>) -> bool {
+  colliders
+    .iter()
+    .all(|collider| is_offscreen(collider, camera_translation))
+}
+
+pub fn is_offscreen(collider: &Collider, camera_translation: Vector2<f32>) -> bool {
+  let shape = collider.shape();
+
+  let half_extents = if let Some(ball) = shape.as_ball() {
+    vector![ball.radius, ball.radius]
+  } else if let Some(cuboid) = shape.as_cuboid() {
+    let farthest_extent =
+      (cuboid.half_extents.x.powf(2.0) + cuboid.half_extents.y.powf(2.0)).sqrt();
+    vector![farthest_extent, farthest_extent]
+  } else {
+    panic!("Unhandled shape kind {:?}", shape.shape_type());
+  };
+
+  let half_extents_screen = PhysicsVector::from_vec(half_extents).convert();
+  let collider_screen =
+    PhysicsVector::from_vec(*collider.translation()).into_pos(camera_translation);
+
+  let between_x = collider_screen.x() - half_extents_screen.x() > 0.0
+    && collider_screen.x() + half_extents_screen.x() < VIRTUAL_SCREEN_WIDTH;
+
+  let between_y = collider_screen.y() - half_extents_screen.y() > 0.0
+    && collider_screen.y() + half_extents_screen.y() < VIRTUAL_SCREEN_HEIGHT;
+
+  !(between_x && between_y)
+}
+
+pub fn angle_from_vec(direction: Vector2<f32>) -> f32 {
+  let base_angle = direction.angle(&vector![1.0, 0.0]);
+
+  if direction.y > 0.0 {
+    2.0 * PI - base_angle
+  } else {
+    base_angle
   }
 }

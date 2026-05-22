@@ -186,6 +186,21 @@ pub fn sniper_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
+pub fn enemy_offscreen(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw {
+    z_position: Some(-20.0),
+    ..SpriteToDraw::default(
+      &game_textures.ui_textures.enemy_offscreen,
+      Rect {
+        x: 0.0,
+        y: 0.0,
+        w: 16.0,
+        h: 16.0,
+      },
+    )
+  }]
+}
+
 pub fn health_tank_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
     &game_textures.pickup_textures.health_tank,

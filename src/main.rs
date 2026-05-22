@@ -97,6 +97,10 @@ pub struct AbilityTextures {
   pub chain_mount_point_selection: Texture2D,
 }
 
+pub struct UiTextures {
+  pub enemy_offscreen: Texture2D,
+}
+
 pub struct GameTextures {
   pub tiles_texture: Texture2D,
   pub player_texture: Texture2D,
@@ -109,6 +113,7 @@ pub struct GameTextures {
   pub enemy_textures: EnemyTextures,
   pub effect_textures: EffectTextures,
   pub ability_textures: AbilityTextures,
+  pub ui_textures: UiTextures,
 }
 
 #[derive(Clone)]
@@ -194,6 +199,8 @@ async fn load_game_textures() -> GameTextures {
   let chain_texture = load_texture_with_filter("./assets/sprites/abilities/chain.png").await;
   let chain_mount_point_selection_texture =
     load_texture_with_filter("./assets/sprites/abilities/chain_mount_point_selection.png").await;
+  let enemy_offscreen_texture =
+    load_texture_with_filter("./assets/sprites/ui/enemy_offscreen.png").await;
 
   GameTextures {
     tiles_texture,
@@ -241,6 +248,9 @@ async fn load_game_textures() -> GameTextures {
     ability_textures: AbilityTextures {
       chain: chain_texture,
       chain_mount_point_selection: chain_mount_point_selection_texture,
+    },
+    ui_textures: UiTextures {
+      enemy_offscreen: enemy_offscreen_texture,
     },
   }
 }

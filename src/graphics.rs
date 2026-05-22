@@ -2,7 +2,7 @@ use std::{cmp::Ordering, f32::consts::PI, marker::PhantomData, rc::Rc};
 
 use itertools::Itertools;
 use macroquad::prelude::*;
-use rapier2d::prelude::*;
+use rapier2d::{na::Vector2, prelude::*, utils::SimdBasis};
 use serde::Deserialize;
 
 use crate::{
@@ -25,7 +25,7 @@ use crate::{
     EnemyAraneaState, EnemyDefenderState, EnemyImpState, EnemySniperState, FramesLeft, aranea_queen,
   },
   f::partition,
-  graphics_utils::{draw_collider, draw_label},
+  graphics_utils::{all_offscreen, angle_from_vec, draw_collider, draw_label, is_offscreen},
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
   menu::{GameMenu, INVENTORY_WRAP_WIDTH, MainMenu, MenuSystem},
   physics::PhysicsSystem,
@@ -150,6 +150,9 @@ pub const TEXT_FONT_BACKGROUND_COLOR: Color = Color {
   a: 1.0,
 };
 
+pub const VIRTUAL_SCREEN_CENTER: Vector2<f32> =
+  Vector2::new(VIRTUAL_SCREEN_WIDTH / 2.0, VIRTUAL_SCREEN_HEIGHT / 2.0);
+
 #[derive(Deserialize, Clone, Copy)]
 pub enum ColorPalettePresets {
   Default,
@@ -265,6 +268,79 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         .collect::<Vec<_>>();
 
       let game_textures = &ctx.input.textures;
+
+      let offscreen_enemies = sorted_entities
+        .iter()
+        .flat_map(|(handle, entity)| {
+          let colliders = handle
+            .colliders(&physics_system.rigid_body_set)
+            .iter()
+            .map(|collider_handle| physics_system.collider_set[**collider_handle].clone())
+            .collect_vec();
+
+          let offscreen = all_offscreen(&colliders, camera_system.translation);
+
+          if !offscreen || entity.components.get::<Enemy>().is_none() {
+            return vec![];
+          }
+
+          colliders
+            .into_iter()
+            .flat_map(|collider| {
+              let screen_translation = PhysicsVector::from_vec(*collider.translation())
+                .into_pos(camera_system.translation);
+              let vector_from_center = screen_translation.into_vec() - VIRTUAL_SCREEN_CENTER;
+
+              // let projection = move |vector_to_edge: Vector2<f32>| {
+              //   let angle = vector_from_center.angle(&vector_to_edge);
+
+              //   let opposite_magnitude = vector_to_edge.magnitude() * angle.tan();
+
+              //   let opposite = vector_to_edge.orthonormal_vector() * opposite_magnitude;
+
+              //   vector_to_edge + opposite
+              // };
+
+              let rotation = angle_from_vec(vector_from_center) - (PI / 2.0);
+
+              // let possible_projections = vec![
+              //   vector![VIRTUAL_SCREEN_WIDTH / 2.0, 0.0],
+              //   vector![-VIRTUAL_SCREEN_WIDTH / 2.0, 0.0],
+              //   vector![0.0, VIRTUAL_SCREEN_HEIGHT / 2.0],
+              //   vector![0.0, VIRTUAL_SCREEN_HEIGHT / 2.0],
+              // ]
+              // .into_iter()
+              // .map(projection);
+
+              let indicator_translation =
+                VIRTUAL_SCREEN_CENTER + vector_from_center.normalize().scale(30.0);
+              sprite::enemy_offscreen(game_textures)
+                .iter()
+                .map(|sprite| {
+                  (
+                    sprite.clone(),
+                    ScreenVector::from_vec(indicator_translation),
+                    rotation,
+                  )
+                })
+                .collect_vec()
+
+              // possible_projections.flat_map(move |indicator_translation| {
+              //   sprite::enemy_offscreen(game_textures)
+              //     .iter()
+              //     .map(|sprite| {
+              //       (
+              //         sprite.clone(),
+              //         ScreenVector::from_vec(indicator_translation),
+              //         rotation,
+              //       )
+              //     })
+              //     .collect_vec()
+              // })
+            })
+            .collect_vec()
+        })
+        .collect_vec();
 
       let entities_with_sprites: Vec<(Rc<Entity>, Vec<SpriteToDraw>)> = sorted_entities
         .iter()
@@ -639,6 +715,14 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         .chain(effect_sprites)
         .flatten()
         .chain(mount_point_selection_sprite)
+        .map(|(sprite, physics_translation, rotation)| {
+          (
+            sprite,
+            physics_translation.into_pos(camera_system.translation),
+            rotation,
+          )
+        })
+        .chain(offscreen_enemies)
         .sorted_by(|(sprite_a, _, _), (sprite_b, _, _)| {
           let z_position_a = sprite_a.z_position;
           let z_position_b = sprite_b.z_position;
@@ -668,10 +752,10 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       below_tiles
         .into_iter()
-        .for_each(|(sprite, physics_translation, rotation)| {
+        .for_each(|(sprite, screen_translation, rotation)| {
           draw_sprites(
             &[sprite],
-            physics_translation.into_pos(camera_system.translation),
+            screen_translation,
             -((rotation * 16.0 / PI).round() / (16.0 / PI)),
             false,
           );
@@ -682,10 +766,10 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       above_tiles
         .into_iter()
-        .for_each(|(sprite, physics_translation, rotation)| {
+        .for_each(|(sprite, screen_translation, rotation)| {
           draw_sprites(
             &[sprite],
-            physics_translation.into_pos(camera_system.translation),
+            screen_translation,
             -(rotation * (16.0 / PI).round() / (16.0 / PI)),
             false,
           );
