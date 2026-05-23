@@ -219,11 +219,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 1.5,
-            "selectedLayer": 0,
+            "scale": 3,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 12.333333333333371,
-                "y": -1430.3333333333333
+                "x": 192.83333333333331,
+                "y": -138.16666666666669
             }
         },
         "maps/generated/MP3.json": {
@@ -290,11 +290,14 @@
             }
         },
         "maps/generated/boost.json": {
-            "scale": 1.5,
-            "selectedLayer": 2,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 3,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": -96.33333333333337,
-                "y": 1431
+                "x": 549.8333333333333,
+                "y": 442.8333333333333
             }
         },
         "maps/generated/boss1.json": {

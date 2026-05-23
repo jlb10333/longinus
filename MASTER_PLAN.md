@@ -10,9 +10,6 @@
       - Locomotor
       - Ability pickup
       - Boost?
-      - Make offscreen enemy indicator smaller
-      - Make offscreen enemy indicator show some form of distance
-      - Make offscreen enemy indicator not show enemies beyond some max distance
   - Core elements
     - 2nd boss
   - Full blocking
@@ -22,7 +19,6 @@
   - Polish
     - Bugs
       - Fix bug causing menu update from item acquisition to not be consumed by physics
-      - Fix player movement (normalize diagonal)
     - Visual explainability
       - Show all health tank and mana tanks in inventory
   - Testing
