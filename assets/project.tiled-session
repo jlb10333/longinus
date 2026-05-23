@@ -112,10 +112,10 @@
         },
         "maps/generated/MP11.json": {
             "scale": 2,
-            "selectedLayer": 0,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 320.25,
-                "y": 200.25
+                "x": -307.75,
+                "y": 463.25
             }
         },
         "maps/generated/MP14.json": {
@@ -135,11 +135,11 @@
             }
         },
         "maps/generated/MP17.json": {
-            "scale": 1.5,
-            "selectedLayer": 0,
+            "scale": 4,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 119.66666666666666,
-                "y": 200.33333333333331
+                "x": 827.375,
+                "y": 590.375
             }
         },
         "maps/generated/MP19.json": {
@@ -154,27 +154,27 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 1.5,
-            "selectedLayer": 3,
+            "scale": 0.33,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 159.66666666666666,
-                "y": 159.66666666666666
+                "x": 404.5454545454545,
+                "y": 586.3636363636363
             }
         },
         "maps/generated/MP20.json": {
-            "scale": 1,
+            "scale": 4,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 200,
-                "y": 119.5
+                "x": 597.625,
+                "y": 182.625
             }
         },
         "maps/generated/MP21.json": {
-            "scale": 1.5,
-            "selectedLayer": 0,
+            "scale": 4,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 119.66666666666666,
-                "y": 79.66666666666666
+                "x": 351.875,
+                "y": 68.125
             }
         },
         "maps/generated/MP22.json": {
@@ -220,10 +220,10 @@
                 2
             ],
             "scale": 1.5,
-            "selectedLayer": 3,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": -199.66666666666663,
-                "y": 890.3333333333333
+                "x": 12.333333333333371,
+                "y": -1430.3333333333333
             }
         },
         "maps/generated/MP3.json": {

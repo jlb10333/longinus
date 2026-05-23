@@ -238,6 +238,13 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       let tiles_texture = &ctx.input.textures.tiles_texture;
 
+      let player_translation =
+        physics_system.rigid_body_set[physics_system.player_handle].translation();
+      let player_screen_translation = PhysicsVector::from_vec(
+        *physics_system.rigid_body_set[physics_system.player_handle].translation(),
+      )
+      .into_pos(camera_system.translation);
+
       // Draw tiles bg
       let tile_bg_layer = map_system.raw_map.tile_bg_layer();
       draw_tile_layer(tile_bg_layer, tiles_texture, &camera_system);
@@ -289,31 +296,36 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             .flat_map(|collider| {
               let screen_translation = PhysicsVector::from_vec(*collider.translation())
                 .into_pos(camera_system.translation);
-              let vector_from_center = screen_translation.into_vec() - VIRTUAL_SCREEN_CENTER;
-
-              // let projection = move |vector_to_edge: Vector2<f32>| {
-              //   let angle = vector_from_center.angle(&vector_to_edge);
-
-              //   let opposite_magnitude = vector_to_edge.magnitude() * angle.tan();
-
-              //   let opposite = vector_to_edge.orthonormal_vector() * opposite_magnitude;
-
-              //   vector_to_edge + opposite
-              // };
+              let vector_from_center =
+                screen_translation.into_vec() - player_screen_translation.into_vec();
 
               let rotation = angle_from_vec(vector_from_center) - (PI / 2.0);
 
-              // let possible_projections = vec![
-              //   vector![VIRTUAL_SCREEN_WIDTH / 2.0, 0.0],
-              //   vector![-VIRTUAL_SCREEN_WIDTH / 2.0, 0.0],
-              //   vector![0.0, VIRTUAL_SCREEN_HEIGHT / 2.0],
-              //   vector![0.0, VIRTUAL_SCREEN_HEIGHT / 2.0],
-              // ]
-              // .into_iter()
-              // .map(projection);
+              let distance_scale_ratio = vector_from_center.magnitude()
+                / (BALANCING
+                  .graphics_config
+                  .enemy_offscreen_indicator_max_enemy_distance
+                  * VIRTUAL_PIXEL_FACTOR);
+
+              if distance_scale_ratio > 1.0 {
+                return vec![];
+              }
+
+              let scale = BALANCING
+                .graphics_config
+                .enemy_offscreen_indicator_min_distance
+                + (distance_scale_ratio
+                  * ((BALANCING
+                    .graphics_config
+                    .enemy_offscreen_indicator_max_distance
+                    - BALANCING
+                      .graphics_config
+                      .enemy_offscreen_indicator_min_distance)
+                    * VIRTUAL_PIXEL_FACTOR));
 
               let indicator_translation =
-                VIRTUAL_SCREEN_CENTER + vector_from_center.normalize().scale(30.0);
+                player_screen_translation.into_vec() + vector_from_center.normalize().scale(scale);
+
               sprite::enemy_offscreen(game_textures)
                 .iter()
                 .map(|sprite| {
@@ -324,19 +336,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                   )
                 })
                 .collect_vec()
-
-              // possible_projections.flat_map(move |indicator_translation| {
-              //   sprite::enemy_offscreen(game_textures)
-              //     .iter()
-              //     .map(|sprite| {
-              //       (
-              //         sprite.clone(),
-              //         ScreenVector::from_vec(indicator_translation),
-              //         rotation,
-              //       )
-              //     })
-              //     .collect_vec()
-              // })
             })
             .collect_vec()
         })
@@ -633,9 +632,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           })
           .collect::<Vec<_>>()
       });
-
-      let player_translation =
-        physics_system.rigid_body_set[physics_system.player_handle].translation();
 
       let mount_point_selection_sprite = {
         if !ability_system.acquired_chain {

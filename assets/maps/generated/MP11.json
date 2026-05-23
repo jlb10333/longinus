@@ -561,7 +561,7 @@
                         {
                          "name":"ActivatorId",
                          "type":"object",
-                         "value":0
+                         "value":46
                         }, 
                         {
                          "name":"Radius",
@@ -823,6 +823,24 @@
                  "width":0,
                  "x":464,
                  "y":304
+                }, 
+                {
+                 "height":0,
+                 "id":46,
+                 "name":"Chain Switch",
+                 "opacity":1,
+                 "properties":[
+                        {
+                         "name":"InitialActivation",
+                         "type":"float",
+                         "value":1
+                        }],
+                 "rotation":180,
+                 "type":"ChainSwitch",
+                 "visible":true,
+                 "width":0,
+                 "x":220,
+                 "y":220
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -831,7 +849,7 @@
          "y":0
         }],
  "nextlayerid":5,
- "nextobjectid":46,
+ "nextobjectid":47,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.1",

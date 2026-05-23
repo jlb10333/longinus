@@ -243,6 +243,9 @@ pub struct GraphicsConfig {
   pub color_palette_override: Option<ColorPaletteConfig>,
   pub color_palette_preset: ColorPalettePresets,
   pub camera_deadzone: f32,
+  pub enemy_offscreen_indicator_min_distance: f32,
+  pub enemy_offscreen_indicator_max_distance: f32,
+  pub enemy_offscreen_indicator_max_enemy_distance: f32,
 }
 
 impl GraphicsConfig {
