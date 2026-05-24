@@ -19,7 +19,7 @@ use crate::{
     Activator, AddManaTankOnCollision, And, ChainMountArea, ChainSegment, ComponentSet, Damageable,
     Damager, DestroyAfterFrames, DestroyOnCollision, Destroyed, DropOnDestroy, Enemy, EnemyGate,
     Engine, Entity, EntityHandle, ExplodeOnCollision, Gate, GiveAbilityOnCollision,
-    GiveManaOnCollision, GivesItemOnCollision, GravityParticle, GravitySource, HealOnCollision, Id,
+    GiveManaOnCollision, GivesItemOnCollision, GravitySource, HealOnCollision, Id,
     IncreaseMaxHealthOnCollision, Locomotor, MapTransitionOnCollision, Not, OnDestroyEffect, Or,
     PersistDestruction, SaveMenuOnCollision, SimpleActivatable, SimpleSprite, StatusEffect, Switch,
     Terminal, TouchSensor,
@@ -67,6 +67,7 @@ pub struct PhysicsSystem {
   pub player_handle: RigidBodyHandle,
   pub entities: HashTrieMap<EntityHandle, Rc<Entity>>,
   pub destroyed_entities: HashTrieMap<EntityHandle, Rc<Entity>>,
+  pub particles: HashTrieMap<RigidBodyHandle, i64>,
   pub new_mana_tanks: List<(i32, Rc<AddManaTankOnCollision>)>,
   pub new_weapon_modules: List<(i32, WeaponModuleKind)>,
   pub new_abilities: List<MapAbilityType>,
@@ -910,6 +911,7 @@ fn load_new_map(
     player_handle,
     entities,
     destroyed_entities: ht_map![],
+    particles: ht_map![],
     frame_count: 0,
     new_mana_tanks: list![],
     new_weapon_modules: list![],
@@ -1071,24 +1073,27 @@ impl System for PhysicsSystem {
     }
 
     /* MARK: Remove gravity particles */
-    let entities = entities
-      .into_iter()
-      .map(|(handle, entity)| {
-        if entity.components.get::<GravityParticle>().is_some() {
-          let colliding_gravity_sources = handle
-            .intersecting_with_colliders(rigid_body_set, &narrow_phase)
-            .into_iter()
-            .filter(|&&collider_handle| {
-              entities
-                .get(&EntityHandle::Collider(collider_handle))
-                .and_then(|entity| entity.components.get::<GravitySource>())
-                .is_some()
-            })
-            .copied()
-            .collect_vec();
+    let particles = self
+      .particles
+      .iter()
+      .filter(|&(handle, last_frame)| {
+        let entity_handle = EntityHandle::RigidBody(*handle);
 
-          let out_of_range = colliding_gravity_sources.is_empty();
-          let hit_center = handle
+        let colliding_gravity_sources = entity_handle
+          .intersecting_with_colliders(rigid_body_set, &narrow_phase)
+          .into_iter()
+          .filter(|&&collider_handle| {
+            entities
+              .get(&EntityHandle::Collider(collider_handle))
+              .and_then(|entity| entity.components.get::<GravitySource>())
+              .is_some()
+          })
+          .copied()
+          .collect_vec();
+
+        let out_of_range = colliding_gravity_sources.is_empty();
+        let hit_center =
+          entity_handle
             .colliders(rigid_body_set)
             .into_iter()
             .any(|&collider_handle| {
@@ -1107,20 +1112,32 @@ impl System for PhysicsSystem {
                 })
             });
 
-          if !(out_of_range || hit_center) {
-            (*handle, Rc::clone(entity))
-          } else {
-            (
+        let last_frame_reached = self.frame_count >= *last_frame;
+
+        let destroy = out_of_range || hit_center || last_frame_reached;
+
+        if destroy {
+          let removed_rigid_body = rigid_body_set
+            .remove(
               *handle,
-              Rc::new(Entity {
-                components: entity.components.insert(Destroyed),
-                ..entity.as_ref().clone()
-              }),
+              &mut island_manager,
+              &mut collider_set,
+              &mut impulse_joint_set,
+              &mut multibody_joint_set,
+              true,
             )
-          }
-        } else {
-          (*handle, Rc::clone(entity))
+            .unwrap();
+          narrow_phase.handle_user_changes(
+            Some(&mut island_manager),
+            &[],
+            removed_rigid_body.colliders(),
+            &mut collider_set,
+            rigid_body_set,
+            &(),
+          );
         }
+
+        !destroy
       })
       .collect::<HashTrieMap<_, _>>();
 
@@ -1135,10 +1152,11 @@ impl System for PhysicsSystem {
     .into_pos(camera_system.translation);
 
     /* MARK: Spawn new gravity particles */
-    let entities = entities
+    let particles = particles
       .into_iter()
-      .flat_map(|(handle, entity)| {
-        let new_particles = if let Some(gravity_source) = entity.components.get::<GravitySource>()
+      .map(|(a, b)| (**a, **b))
+      .chain(entities.iter().flat_map(|(handle, entity)| {
+        if let Some(gravity_source) = entity.components.get::<GravitySource>()
           && let EntityHandle::Collider(collider_handle) = handle
         {
           let activation = if let Some(target_activator_id) = gravity_source.activator_id
@@ -1207,40 +1225,21 @@ impl System for PhysicsSystem {
                 let particle_handle = rigid_body_set.insert(particle_rigid_body);
                 collider_set.insert_with_parent(particle_collider, particle_handle, rigid_body_set);
 
-                let handle = EntityHandle::RigidBody(particle_handle);
-                let entity = Entity {
-                  handle,
-                  components: ComponentSet::new()
-                    .insert(GravityParticle)
-                    .insert(DestroyAfterFrames {
-                      frames: BALANCING.graphics_config.gravity_particle_effect_lifetime,
-                    })
-                    .insert(SimpleSprite {
-                      kind: sprite::GravityParticle,
-                    }),
-                  label: "grav_particle".to_string(),
-                };
+                let last_frame =
+                  self.frame_count + BALANCING.graphics_config.gravity_particle_effect_lifetime;
 
-                Some((handle, Rc::new(entity)))
+                Some((particle_handle, last_frame))
               })
               .collect_vec()
           }
         } else {
           vec![]
-        };
-
-        vec![(*handle, Rc::clone(entity))]
-          .into_iter()
-          .chain(new_particles)
-      })
+        }
+      }))
       .collect::<HashTrieMap<_, _>>();
 
-    entities.iter().for_each(|(handle, entity)| {
-      if entity.components.get::<GravityParticle>().is_some()
-        && let EntityHandle::RigidBody(rigid_body_handle) = handle
-      {
-        rigid_body_set[*rigid_body_handle].set_linvel(vec_zero(), true);
-      }
+    particles.iter().for_each(|(handle, _)| {
+      rigid_body_set[*handle].set_linvel(vec_zero(), true);
     });
 
     /* MARK: Gravity source behavior */
@@ -1248,6 +1247,7 @@ impl System for PhysicsSystem {
       if let Some(gravity_source) = entity.components.get::<GravitySource>()
         && let EntityHandle::Collider(collider_handle) = handle
       {
+        let collider_handle = *collider_handle;
         let strength = if let Some(target_activator_id) = gravity_source.activator_id
           && let Some((_, entity)) = entities.iter().find(|(_, entity)| {
             if let Some(id) = entity.components.get::<Id>()
@@ -1266,19 +1266,19 @@ impl System for PhysicsSystem {
         } * gravity_source.strength;
 
         narrow_phase
-          .intersection_pairs_with(*collider_handle)
+          .intersection_pairs_with(collider_handle)
           .filter_map(|(collider1, collider2, colliding)| {
             if colliding {
               [collider1, collider2]
                 .iter()
-                .find(|other_handle| **other_handle != *collider_handle)
+                .find(|other_handle| **other_handle != collider_handle)
                 .cloned()
             } else {
               None
             }
           })
           .for_each(|other_handle| {
-            let distance_vec = collider_set[*collider_handle].translation()
+            let distance_vec = collider_set[collider_handle].translation()
               - collider_set[other_handle].translation();
 
             let distance_squared = distance_vec.magnitude_squared();
@@ -1291,9 +1291,7 @@ impl System for PhysicsSystem {
                 return;
               };
 
-            if let Some(entity) = entities.get(&EntityHandle::RigidBody(rigid_body_handle))
-              && entity.components.get::<GravityParticle>().is_some()
-            {
+            if particles.contains_key(&rigid_body_handle) {
               let linvel = *rigid_body_set[rigid_body_handle].linvel();
 
               rigid_body_set[rigid_body_handle].set_linvel(
@@ -1495,7 +1493,9 @@ impl System for PhysicsSystem {
                       hitboxes: vec![collider_handle],
                       status_effects: weapon_output.status_effects.clone(),
                     })
-                    .insert(DestroyAfterFrames { frames: 2 })
+                    .insert(DestroyAfterFrames {
+                      last_frame_count: self.frame_count + 2,
+                    })
                     .insert(SimpleSprite {
                       kind: sprite::Beam((self.frame_count as i32 / 7) % 4, dimensions),
                     }),
@@ -1696,26 +1696,16 @@ impl System for PhysicsSystem {
 
     /* MARK: Destroy all marked to be destroyed on this frame */
     let entities = entities.map(|(handle, entity)| {
-      if let Some(destroy_after_frames) = entity.components.get::<DestroyAfterFrames>() {
-        if destroy_after_frames.frames > 0 {
-          (
-            handle,
-            Rc::new(Entity {
-              components: entity.components.with(DestroyAfterFrames {
-                frames: destroy_after_frames.frames - 1,
-              }),
-              ..entity.as_ref().clone()
-            }),
-          )
-        } else {
-          (
-            handle,
-            Rc::new(Entity {
-              components: entity.components.with(Destroyed),
-              ..entity.as_ref().clone()
-            }),
-          )
-        }
+      if let Some(destroy_after_frames) = entity.components.get::<DestroyAfterFrames>()
+        && destroy_after_frames.last_frame_count <= self.frame_count
+      {
+        (
+          handle,
+          Rc::new(Entity {
+            components: entity.components.with(Destroyed),
+            ..entity.as_ref().clone()
+          }),
+        )
       } else {
         (handle, entity)
       }
@@ -2437,7 +2427,7 @@ impl System for PhysicsSystem {
                 }
               })
             })
-            .unwrap_or(Some(0.0))
+            .unwrap_or(Some(1.0))
         {
           let activation_change = ENGINE_MAX_SPEED * incoming_activation;
 
@@ -2755,6 +2745,7 @@ impl System for PhysicsSystem {
       player_handle: self.player_handle,
       entities,
       destroyed_entities,
+      particles,
       new_mana_tanks,
       new_weapon_modules,
       new_abilities,
@@ -3012,7 +3003,7 @@ fn spawn_explosion(
         activator_id: None,
       })
       .insert(DestroyAfterFrames {
-        frames: BALANCING.graphics_config.explosion_frames,
+        last_frame_count: frame_count + BALANCING.graphics_config.explosion_frames,
       })
       .insert(SimpleSprite {
         kind: sprite::Explosion(

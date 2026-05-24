@@ -1,7 +1,7 @@
 {
-  "player_spawn_id": 8,
-  "map_name": "start",
-  "unequipped_modules": ["Missile"],
+  "player_spawn_id": 62,
+  "map_name": "MP28",
+  "unequipped_modules": [],
   "equipped_modules": [
     [
       "Plasma",
@@ -32,10 +32,10 @@
   "player_health": 100.0,
   "player_max_health": 100.0,
   "visited_maps": ["start"],
-  "acquired_boost": false,
-  "acquired_chain": false,
+  "acquired_boost": true,
+  "acquired_chain": true,
   "mana_tanks_capacity": {
-    "auto_recharge_mana_tanks": 1,
+    "auto_recharge_mana_tanks": 5,
     "non_recharge_mana_tanks": 0
   }
 }

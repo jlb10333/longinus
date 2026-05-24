@@ -1,4 +1,7 @@
-use std::{any::Any, rc::Rc};
+use std::{
+  any::{Any, TypeId},
+  rc::Rc,
+};
 
 use rapier2d::{
   na::Vector2,
@@ -101,13 +104,13 @@ pub struct Entity {
 
 #[derive(Clone)]
 pub struct ComponentSet {
-  components: Vec<Rc<dyn Component>>,
+  components: HashTrieMap<TypeId, Rc<dyn Component>>,
 }
 
 impl ComponentSet {
   pub fn new() -> Self {
     ComponentSet {
-      components: Vec::new(),
+      components: HashTrieMap::new(),
     }
   }
 
@@ -115,39 +118,31 @@ impl ComponentSet {
   where
     Item: Component,
   {
-    if self.components.iter().any(|component| {
-      (Rc::clone(component) as Rc<dyn Any>)
-        .downcast::<Item>()
-        .is_ok()
-    }) {
+    let type_id = item.type_id();
+
+    if self.components.contains_key(&type_id) {
       return self.clone();
     }
-    return Self {
+
+    Self {
       components: self
         .components
-        .iter()
-        .cloned()
-        .chain([Rc::new(item) as Rc<dyn Component>])
-        .collect(),
-    };
+        .insert(type_id, Rc::new(item) as Rc<dyn Component>),
+    }
   }
 
   pub fn with<Item>(&self, item: Item) -> Self
   where
     Item: Component,
   {
-    let components: Vec<_> = self
-      .components
-      .iter()
-      .cloned()
-      .filter(|component| {
-        (Rc::clone(component) as Rc<dyn Any>)
-          .downcast::<Item>()
-          .is_err()
-      })
-      .collect();
+    let type_id = item.type_id();
 
-    return Self { components }.insert(item);
+    let components = self
+      .components
+      .remove(&type_id)
+      .insert(type_id, Rc::new(item) as Rc<dyn Component>);
+
+    Self { components }
   }
 
   pub fn get<Item>(&self) -> Option<Rc<Item>>
@@ -156,17 +151,9 @@ impl ComponentSet {
   {
     self
       .components
-      .iter()
-      .find(|component| {
-        (Rc::clone(component) as Rc<dyn Any>)
-          .downcast::<Item>()
-          .is_ok()
-      })
-      .and_then(|component| {
-        (Rc::clone(component) as Rc<dyn Any>)
-          .downcast::<Item>()
-          .ok()
-      })
+      .get(&TypeId::of::<Item>())
+      .cloned()
+      .map(|item| (item as Rc<dyn Any>).downcast::<Item>().unwrap())
   }
 }
 
@@ -367,7 +354,7 @@ pub struct ExplodeOnCollision {
 impl Component for ExplodeOnCollision {}
 
 pub struct DestroyAfterFrames {
-  pub frames: i32,
+  pub last_frame_count: i64,
 }
 impl Component for DestroyAfterFrames {}
 
@@ -419,9 +406,6 @@ pub struct OnDestroyEffect {
   pub duration: i32,
 }
 impl Component for OnDestroyEffect {}
-
-pub struct GravityParticle;
-impl Component for GravityParticle {}
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 pub struct Id {

@@ -775,7 +775,7 @@ struct MapEngine {
   id: i32,
   x: f32,
   y: f32,
-  properties: (Option<MapActivatorId>,),
+  properties: Option<Vec<MapActivatorId>>,
   #[serde(rename = "type")]
   _class: MapEngineClass,
 }
@@ -2113,9 +2113,8 @@ impl Object {
         id: engine.id,
         activator_id: engine
           .properties
-          .0
           .as_ref()
-          .map(|activator_id| activator_id.value),
+          .and_then(|properties| properties.first().map(|activator_id| activator_id.value)),
         rigid_body: RigidBodyBuilder::fixed()
           .translation(physics_translation_from_map(
             engine.x, engine.y, 0.0, 0.0, map_height,

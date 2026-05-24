@@ -341,6 +341,25 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         })
         .collect_vec();
 
+      let gravity_particles = physics_system
+        .particles
+        .iter()
+        .flat_map(|(particle_handle, _)| {
+          physics_system.rigid_body_set[*particle_handle]
+            .colliders()
+            .iter()
+            .flat_map(|&collider_handle| {
+              let collider = &physics_system.collider_set[collider_handle];
+
+              let collider_translation = collider.translation();
+
+              sprite::gravity_particle(game_textures)
+                .into_iter()
+                .map(|sprite| (sprite, PhysicsVector::from_vec(*collider_translation), 0.0))
+            })
+        })
+        .collect_vec();
+
       let entities_with_sprites: Vec<(Rc<Entity>, Vec<SpriteToDraw>)> = sorted_entities
         .iter()
         .filter_map(|(handle, entity)| {
@@ -711,6 +730,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         .chain(effect_sprites)
         .flatten()
         .chain(mount_point_selection_sprite)
+        .chain(gravity_particles)
         .map(|(sprite, physics_translation, rotation)| {
           (
             sprite,

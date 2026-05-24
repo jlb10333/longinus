@@ -111,11 +111,14 @@
             }
         },
         "maps/generated/MP11.json": {
+            "expandedObjectLayers": [
+                2
+            ],
             "scale": 2,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": -307.75,
-                "y": 463.25
+                "x": 1416.75,
+                "y": 1746.75
             }
         },
         "maps/generated/MP14.json": {
@@ -197,11 +200,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 0.5,
-            "selectedLayer": 1,
+            "scale": 1.5,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 199,
-                "y": 239
+                "x": 981,
+                "y": 315
             }
         },
         "maps/generated/MP26.json": {
@@ -219,22 +222,44 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 3,
+            "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 192.83333333333331,
-                "y": -138.16666666666669
+                "x": 1571.6666666666665,
+                "y": -114.33333333333337
             }
         },
         "maps/generated/MP3.json": {
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 0.75,
+            "scale": 2,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 199.33333333333331,
-                "y": 199.33333333333331
+                "x": 2535.25,
+                "y": 577.25
+            }
+        },
+        "maps/generated/MP30.json": {
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 0.5,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": -435,
+                "y": -223
+            }
+        },
+        "maps/generated/MP31.json": {
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 4,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 561.625,
+                "y": 429.625
             }
         },
         "maps/generated/MP4.json": {
@@ -252,11 +277,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 1,
-            "selectedLayer": 0,
+            "scale": 2,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 239.5,
-                "y": 79.5
+                "x": 1271.75,
+                "y": 205.25
             }
         },
         "maps/generated/MP6.json": {
@@ -277,8 +302,8 @@
             "scale": 1,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 159.5,
-                "y": 199.5
+                "x": 499.5,
+                "y": 145.5
             }
         },
         "maps/generated/MP9.json": {
@@ -293,11 +318,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 3,
-            "selectedLayer": 3,
+            "scale": 2,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 549.8333333333333,
-                "y": 442.8333333333333
+                "x": -260.25,
+                "y": -0.25
             }
         },
         "maps/generated/boss1.json": {
@@ -306,6 +331,14 @@
             "viewCenter": {
                 "x": 435.5,
                 "y": 175.83333333333331
+            }
+        },
+        "maps/generated/boss2.json": {
+            "scale": 2,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 830.75,
+                "y": 332.25
             }
         },
         "maps/generated/rules.json": {
@@ -499,8 +532,9 @@
         "maps/tilesets/tiles.tsx"
     ],
     "project": "project.tiled-project",
-    "property.type": "float",
+    "property.type": "bool",
     "recentFiles": [
+        "maps/generated/MP31.json",
         "maps/generated/MP20.json",
         "maps/generated/MP11.json",
         "maps/generated/MP26.json",
@@ -511,8 +545,7 @@
         "maps/generated/MP28.json",
         "maps/generated/boost.json",
         "maps/generated/MP7.json",
-        "maps/generated/start.json",
-        "maps/generated/MP25.json"
+        "maps/generated/start.json"
     ],
     "tileset.lastUsedFilter": "All Files (*)",
     "tileset.lastUsedFormat": "json",

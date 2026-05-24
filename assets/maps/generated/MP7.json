@@ -491,8 +491,8 @@
                  "type":"TouchSensor",
                  "visible":true,
                  "width":16,
-                 "x":224,
-                 "y":296
+                 "x":216,
+                 "y":256
                 }, 
                 {
                  "height":0,

@@ -132,7 +132,7 @@
     },
     "abilities": {
         "mana_tanks": {
-            "capacity": 3,
+            "capacity": 1,
             "recharge_rate": 0.02
         },
         "boost": {
