@@ -27,7 +27,6 @@ mod effects;
 mod enemy;
 mod f;
 mod graphics;
-mod graphics_utils;
 mod load_map;
 mod menu;
 mod physics;

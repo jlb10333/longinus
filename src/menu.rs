@@ -39,7 +39,7 @@ pub enum GameMenuKind {
   TerminalShow(Rc<Terminal>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Menu<Kind> {
   pub kind: Kind,
   pub cursor_position: Vector2<i32>,
