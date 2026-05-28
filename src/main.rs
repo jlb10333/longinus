@@ -38,7 +38,8 @@ mod units;
 
 #[derive(Clone)]
 pub struct Start {
-  text_font: Rc<Texture2D>,
+  pub textures: Rc<GameTextures>,
+  pub text_font: Rc<Texture2D>,
 }
 
 impl Default for Start {
@@ -98,6 +99,7 @@ pub struct AbilityTextures {
 
 pub struct UiTextures {
   pub enemy_offscreen: Texture2D,
+  pub menu: Texture2D,
 }
 
 pub struct GameTextures {
@@ -200,6 +202,7 @@ async fn load_game_textures() -> GameTextures {
     load_texture_with_filter("./assets/sprites/abilities/chain_mount_point_selection.png").await;
   let enemy_offscreen_texture =
     load_texture_with_filter("./assets/sprites/ui/enemy_offscreen.png").await;
+  let menu_texture = load_texture_with_filter("./assets/sprites/ui/menu.png").await;
 
   GameTextures {
     tiles_texture,
@@ -250,6 +253,7 @@ async fn load_game_textures() -> GameTextures {
     },
     ui_textures: UiTextures {
       enemy_offscreen: enemy_offscreen_texture,
+      menu: menu_texture,
     },
   }
 }
@@ -266,6 +270,7 @@ async fn main() {
     state = match state {
       State::MainMenu => {
         let save_data = Process::new(&Start {
+          textures: Rc::clone(&textures),
           text_font: Rc::clone(&text_font),
         })
         .add_system(ControlsSystem::start)

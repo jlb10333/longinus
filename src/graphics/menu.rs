@@ -1,14 +1,31 @@
+use std::ops::Deref;
+
 use super::consts::*;
+use derive_more::{Add, Div, Mul, Sub};
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
 
 use crate::{
+  GameTextures,
   combat::{Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind, weapon_module_from_kind},
-  menu::{GameMenu, INVENTORY_WRAP_WIDTH},
+  graphics::draw_sprites,
+  menu::{GameMenu, GameMenuKind, INVENTORY_WRAP_WIDTH},
+  sprite::tiled_sprites_to_draw,
+  units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 
-pub fn draw_menu(menu: &GameMenu, available_sava_data: &[String]) {
+pub fn draw_menu(menu: &GameMenu, available_sava_data: &[String], game_textures: &GameTextures) {
+  let draw_menu_box = draw_menu_box_g(game_textures);
+
   match menu.kind {
+    GameMenuKind::PauseMain => {
+      draw_menu_box(TileRect {
+        x: SCREEN_WIDTH_TILES / 2,
+        y: SCREEN_HEIGHT_TILES / 2,
+        w: SCREEN_WIDTH_TILES - Tiles(6),
+        h: SCREEN_HEIGHT_TILES - Tiles(6),
+      });
+    }
     _ => draw_menu_deprecated(menu, available_sava_data),
   }
 }
@@ -574,4 +591,41 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
   }
 }
 
-struct Tiles(i32);
+#[derive(Clone, Copy, Add, Sub, Mul, Div)]
+pub struct Tiles(pub i32);
+
+impl Deref for Tiles {
+  type Target = i32;
+
+  fn deref(&self) -> &Self::Target {
+    &self.0
+  }
+}
+
+struct TileRect {
+  pub x: Tiles,
+  pub y: Tiles,
+  pub w: Tiles,
+  pub h: Tiles,
+}
+
+fn draw_menu_box_g(game_textures: &GameTextures) -> impl Fn(TileRect) {
+  |dest| {
+    let sprites_to_draw = tiled_sprites_to_draw(
+      &PhysicsVector::from_vec(vector![*dest.w as f32, *dest.h as f32]),
+      &game_textures.ui_textures.menu,
+      None,
+      None,
+    );
+
+    draw_sprites(
+      &sprites_to_draw,
+      vector![
+        PhysicsScalar(*dest.x as f32).convert(),
+        PhysicsScalar(*dest.y as f32).convert()
+      ],
+      0.0,
+      false,
+    );
+  }
+}

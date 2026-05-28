@@ -1076,7 +1076,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         .active_menus
         .iter()
         .rev()
-        .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
+        .for_each(|menu| draw_menu(menu, &save_system.available_save_data, &ctx.input.textures));
 
       draw_render_target(&self.materials, &self.camera);
       return Rc::new(GraphicsSystem {
@@ -1104,7 +1104,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         .active_menus
         .iter()
         .rev()
-        .for_each(|menu| draw_menu(menu, &save_system.available_save_data));
+        .for_each(|menu| draw_menu(menu, &save_system.available_save_data, &ctx.input.textures));
     }
 
     draw_render_target(&self.materials, &self.camera);

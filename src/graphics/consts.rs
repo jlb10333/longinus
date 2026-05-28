@@ -1,9 +1,16 @@
 use macroquad::color::Color;
 use serde::Deserialize;
 
+use super::menu::Tiles;
+
 pub const VIRTUAL_PIXEL_FACTOR: f32 = 4.0;
 pub const VIRTUAL_SCREEN_WIDTH: f32 = 160.0 * VIRTUAL_PIXEL_FACTOR;
 pub const VIRTUAL_SCREEN_HEIGHT: f32 = 144.0 * VIRTUAL_PIXEL_FACTOR;
+
+pub const SCREEN_WIDTH_TILES: Tiles =
+  Tiles((VIRTUAL_SCREEN_WIDTH / (8.0 * VIRTUAL_PIXEL_FACTOR)) as i32);
+pub const SCREEN_HEIGHT_TILES: Tiles =
+  Tiles((VIRTUAL_SCREEN_HEIGHT / (8.0 * VIRTUAL_PIXEL_FACTOR)) as i32);
 
 /* Colors */
 pub const COLOR_1: Color = Color {

@@ -563,7 +563,7 @@ fn draw_from_sprite_sheet(
   }]
 }
 
-fn tiled_sprites_to_draw(
+pub fn tiled_sprites_to_draw(
   dimensions: &PhysicsVector,
   texture: &Texture2D,
   source_offset: Option<Vec2>,
