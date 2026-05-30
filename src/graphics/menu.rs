@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use super::consts::*;
+use super::{GameMaterials, GameTextParams, consts::*, draw_game_text};
 use derive_more::{Add, Div, Mul, Sub};
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
@@ -8,14 +8,31 @@ use rapier2d::prelude::*;
 use crate::{
   GameTextures,
   combat::{Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind, weapon_module_from_kind},
-  graphics::draw_sprites,
+  graphics::{GameColor, draw_sprites},
   menu::{GameMenu, GameMenuKind, INVENTORY_WRAP_WIDTH},
   sprite::tiled_sprites_to_draw,
-  units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
+  units::{PhysicsScalar, PhysicsVector, UnitConvert, UnitConvert2},
 };
 
-pub fn draw_menu(menu: &GameMenu, available_sava_data: &[String], game_textures: &GameTextures) {
+pub fn draw_menu(
+  menu: &GameMenu,
+  available_sava_data: &[String],
+  game_textures: &GameTextures,
+  game_materials: &GameMaterials,
+) {
   let draw_menu_box = draw_menu_box_g(game_textures);
+  let draw_game_text = |text, dest, color| {
+    draw_game_text(
+      text,
+      &game_textures.ui_textures.text,
+      dest,
+      GameTextParams {
+        color,
+        ..Default::default()
+      },
+      game_materials,
+    )
+  };
 
   match menu.kind {
     GameMenuKind::PauseMain => {
@@ -25,6 +42,81 @@ pub fn draw_menu(menu: &GameMenu, available_sava_data: &[String], game_textures:
         w: SCREEN_WIDTH_TILES - Tiles(6),
         h: SCREEN_HEIGHT_TILES - Tiles(6),
       });
+      draw_game_text(
+        if menu.cursor_position == vector![0, 0] {
+          "-resume-"
+        } else {
+          "resume"
+        },
+        Vec2 {
+          x: Tiles(4).to_screen(),
+          y: Tiles(8).to_screen(),
+        },
+        GameColor::Color1,
+      );
+      draw_game_text(
+        if menu.cursor_position == vector![0, 1] {
+          "-load game-"
+        } else {
+          "load game"
+        },
+        Vec2 {
+          x: Tiles(4).to_screen(),
+          y: Tiles(11).to_screen(),
+        },
+        GameColor::Color1,
+      );
+      draw_game_text(
+        if menu.cursor_position == vector![0, 2] {
+          "-quit to menu-"
+        } else {
+          "quit to menu"
+        },
+        Vec2 {
+          x: Tiles(4).to_screen(),
+          y: Tiles(14).to_screen(),
+        },
+        GameColor::Color1,
+      );
+    }
+    GameMenuKind::PauseLoadSave => {
+      draw_menu_box(TileRect {
+        x: (SCREEN_WIDTH_TILES / 2) + Tiles(4),
+        y: (SCREEN_HEIGHT_TILES / 2) + Tiles(2),
+        w: SCREEN_WIDTH_TILES / 2,
+        h: SCREEN_HEIGHT_TILES / 2,
+      });
+      draw_text(
+        if menu.cursor_position == vector![0, 0] {
+          "-cancel"
+        } else {
+          "cancel"
+        },
+        VIRTUAL_SCREEN_WIDTH * 0.5,
+        VIRTUAL_SCREEN_HEIGHT * 0.5,
+        40.0,
+        COLOR_1,
+      );
+      available_sava_data
+        .iter()
+        .enumerate()
+        .for_each(|(index, save)| {
+          draw_text(
+            &format!(
+              "{}{}",
+              if menu.cursor_position.y - 1 == index as i32 {
+                "-"
+              } else {
+                ""
+              },
+              save
+            ),
+            VIRTUAL_SCREEN_WIDTH * 0.5,
+            VIRTUAL_SCREEN_HEIGHT * (0.55 + (index as f32 * 0.05)),
+            40.0,
+            COLOR_1,
+          );
+        });
     }
     _ => draw_menu_deprecated(menu, available_sava_data),
   }
@@ -599,6 +691,12 @@ impl Deref for Tiles {
 
   fn deref(&self) -> &Self::Target {
     &self.0
+  }
+}
+
+impl Tiles {
+  fn to_screen(self) -> f32 {
+    self.0 as f32 * 8.0 * VIRTUAL_PIXEL_FACTOR
   }
 }
 

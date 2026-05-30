@@ -744,6 +744,7 @@ pub struct CombatSystem {
   pub exhausted_entities: HashTrieSet<(String, i32)>,
   pub reticle_angle: f32,
   pub total_mana_cost: f32,
+  pub consumed_new_weapon_modules: List<(i32, WeaponModuleKind)>,
 }
 
 impl System for CombatSystem {
@@ -766,6 +767,7 @@ impl System for CombatSystem {
       reticle_angle: 0.0,
       exhausted_entities: save_data.exhausted_entities,
       total_mana_cost: 0.0,
+      consumed_new_weapon_modules: list![],
     })
   }
 
@@ -784,6 +786,7 @@ impl System for CombatSystem {
         reticle_angle: self.reticle_angle,
         exhausted_entities: self.exhausted_entities.clone(),
         total_mana_cost: 0.0,
+        consumed_new_weapon_modules: list![],
       });
     }
 
@@ -898,6 +901,7 @@ impl System for CombatSystem {
       reticle_angle,
       exhausted_entities,
       total_mana_cost,
+      consumed_new_weapon_modules: physics_system.new_weapon_modules.clone(),
     })
   }
 }

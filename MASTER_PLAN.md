@@ -18,7 +18,7 @@
     - Settle on distribution and selection of upgrade modules/mana bars/health bars
   - Polish
     - Bugs
-      - Fix bug causing menu update from item acquisition to not be consumed by physics
+      - Fix incorrect mouse aim
     - Visual explainability
       - Show all health tank and mana tanks in inventory
   - Testing

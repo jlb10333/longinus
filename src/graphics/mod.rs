@@ -950,7 +950,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           player_damageable.health.round(),
           player_damageable.max_health.round()
         ),
-        &ctx.input.text_font,
+        &ctx.input.textures.ui_textures.text,
         vec2(
           16.0 * VIRTUAL_PIXEL_FACTOR,
           VIRTUAL_SCREEN_HEIGHT - (24.0 * VIRTUAL_PIXEL_FACTOR),
@@ -1029,7 +1029,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             .capacity
             .max_rechargeable_mana_level() as i32
         ),
-        &ctx.input.text_font,
+        &ctx.input.textures.ui_textures.text,
         vec2(
           16.0 * VIRTUAL_PIXEL_FACTOR,
           VIRTUAL_SCREEN_HEIGHT - (16.0 * VIRTUAL_PIXEL_FACTOR),
@@ -1049,7 +1049,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             .capacity
             .max_non_rechargeable_mana_level() as i32
         ),
-        &ctx.input.text_font,
+        &ctx.input.textures.ui_textures.text,
         vec2(
           16.0 * VIRTUAL_PIXEL_FACTOR,
           VIRTUAL_SCREEN_HEIGHT - (8.0 * VIRTUAL_PIXEL_FACTOR),
@@ -1067,16 +1067,19 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       menu_system.active_main_menus.iter().rev().for_each(|menu| {
         draw_main_menu(
           menu,
-          &ctx.input.text_font,
+          &ctx.input.textures.ui_textures.text,
           &save_system.available_save_data,
           self.materials.as_ref(),
         )
       });
-      menu_system
-        .active_menus
-        .iter()
-        .rev()
-        .for_each(|menu| draw_menu(menu, &save_system.available_save_data, &ctx.input.textures));
+      menu_system.active_menus.iter().rev().for_each(|menu| {
+        draw_menu(
+          menu,
+          &save_system.available_save_data,
+          &ctx.input.textures,
+          &self.materials,
+        )
+      });
 
       draw_render_target(&self.materials, &self.camera);
       return Rc::new(GraphicsSystem {
@@ -1095,16 +1098,19 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       menu_system.active_main_menus.iter().rev().for_each(|menu| {
         draw_main_menu(
           menu,
-          &ctx.input.text_font,
+          &ctx.input.textures.ui_textures.text,
           &save_system.available_save_data,
           self.materials.as_ref(),
         )
       });
-      menu_system
-        .active_menus
-        .iter()
-        .rev()
-        .for_each(|menu| draw_menu(menu, &save_system.available_save_data, &ctx.input.textures));
+      menu_system.active_menus.iter().rev().for_each(|menu| {
+        draw_menu(
+          menu,
+          &save_system.available_save_data,
+          &ctx.input.textures,
+          &self.materials,
+        )
+      });
     }
 
     draw_render_target(&self.materials, &self.camera);

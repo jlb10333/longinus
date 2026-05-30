@@ -473,15 +473,18 @@ pub fn save_point(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw>
 }
 
 pub fn gravity_particle(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  vec![SpriteToDraw::default(
-    &game_textures.effect_textures.gravity_particle,
-    Rect {
-      x: 0.0,
-      y: 0.0,
-      w: 5.0,
-      h: 5.0,
-    },
-  )]
+  vec![SpriteToDraw {
+    z_position: Some(-5.0),
+    ..SpriteToDraw::default(
+      &game_textures.effect_textures.gravity_particle,
+      Rect {
+        x: 0.0,
+        y: 0.0,
+        w: 5.0,
+        h: 5.0,
+      },
+    )
+  }]
 }
 
 pub fn laser_gate(game_textures: &GameTextures) -> Vec<SpriteToDraw> {

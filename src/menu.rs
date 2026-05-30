@@ -168,9 +168,10 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
       }
 
       let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+      let combat_system = ctx.get::<CombatSystem>().unwrap();
 
       return Rc::new(Self {
-        active_menus: open_menu(&input, physics_system),
+        active_menus: open_menu(&input, physics_system, combat_system),
         ..Default::default()
       });
     }
@@ -207,7 +208,11 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
   }
 }
 
-fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Vec<GameMenu> {
+fn open_menu(
+  input: &MenuInput,
+  physics_system: Rc<PhysicsSystem>,
+  combat_system: Rc<CombatSystem>,
+) -> Vec<GameMenu> {
   if physics_system
     .entities
     .get(&EntityHandle::RigidBody(physics_system.player_handle))
@@ -270,13 +275,14 @@ fn open_menu(input: &MenuInput, physics_system: Rc<PhysicsSystem>) -> Vec<GameMe
       cursor_position: vector![0, 0],
     });
 
-  let module_pickup_confirm = physics_system
-    .new_weapon_modules
-    .iter()
-    .map(|(_, new_module)| GameMenu {
-      kind: GameMenuKind::ModulePickupConfirm(*new_module),
-      cursor_position: vector![0, 0],
-    });
+  let module_pickup_confirm =
+    combat_system
+      .consumed_new_weapon_modules
+      .iter()
+      .map(|(_, new_module)| GameMenu {
+        kind: GameMenuKind::ModulePickupConfirm(*new_module),
+        cursor_position: vector![0, 0],
+      });
 
   save_confirm
     .into_iter()

@@ -39,7 +39,6 @@ mod units;
 #[derive(Clone)]
 pub struct Start {
   pub textures: Rc<GameTextures>,
-  pub text_font: Rc<Texture2D>,
 }
 
 impl Default for Start {
@@ -100,6 +99,7 @@ pub struct AbilityTextures {
 pub struct UiTextures {
   pub enemy_offscreen: Texture2D,
   pub menu: Texture2D,
+  pub text: Texture2D,
 }
 
 pub struct GameTextures {
@@ -121,7 +121,6 @@ pub struct GameTextures {
 pub struct GameInput {
   pub save_data: SaveData,
   pub textures: Rc<GameTextures>,
-  pub text_font: Rc<Texture2D>,
 }
 
 impl Default for GameInput {
@@ -203,6 +202,7 @@ async fn load_game_textures() -> GameTextures {
   let enemy_offscreen_texture =
     load_texture_with_filter("./assets/sprites/ui/enemy_offscreen.png").await;
   let menu_texture = load_texture_with_filter("./assets/sprites/ui/menu.png").await;
+  let text_font = load_texture_with_filter("./assets/sprites/ui/text_font.png").await;
 
   GameTextures {
     tiles_texture,
@@ -254,6 +254,7 @@ async fn load_game_textures() -> GameTextures {
     ui_textures: UiTextures {
       enemy_offscreen: enemy_offscreen_texture,
       menu: menu_texture,
+      text: text_font,
     },
   }
 }
@@ -262,7 +263,6 @@ async fn load_game_textures() -> GameTextures {
 async fn main() {
   // Load textures async
   let textures = Rc::new(load_game_textures().await);
-  let text_font = Rc::new(load_texture_with_filter("./assets/sprites/ui/text_font.png").await);
 
   let mut state = State::MainMenu;
 
@@ -271,7 +271,6 @@ async fn main() {
       State::MainMenu => {
         let save_data = Process::new(&Start {
           textures: Rc::clone(&textures),
-          text_font: Rc::clone(&text_font),
         })
         .add_system(ControlsSystem::start)
         .add_system(SaveSystem::start)
@@ -293,7 +292,6 @@ async fn main() {
         let game_input = GameInput {
           save_data,
           textures: Rc::clone(&textures),
-          text_font: Rc::clone(&text_font),
         };
 
         let quit_decision = Process::new(&game_input)
