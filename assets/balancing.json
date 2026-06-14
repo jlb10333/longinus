@@ -94,9 +94,25 @@
             "cooldown_initial_frames": 35,
             "ease_period": 15
         },
+        "defender_prime": {
+            "body_damage": 15,
+            "projectile_damage": 15,
+            "max_health": 5000,
+            "shoot_force": 25,
+            "destroy_effect_duration": 200,
+            "status_effect_threshold": 50,
+            "burst_num_shots": 10,
+            "mid_burst_cooldown_frames": 4,
+            "between_burst_cooldown_frames": 50,
+            "projectile_radius": 0.3,
+            "seeker_spawn_cooldown_frames": 120,
+            "seeker_spawn_ready_frames": 120,
+            "seeker_spawn_position_offset": 2.5
+        },
         "seeker": {
             "speed_cap": 5,
-            "speed": 0.3
+            "speed": 0.3,
+            "max_health": 10
         },
         "seeker_generator": {
             "initial_force": 5,
@@ -150,13 +166,13 @@
         "scaling_factor": 1.0,
         "explosion_frames": 15,
         "color_palette_override": null,
-        "color_palette_preset": "Grayscale",
+        "color_palette_preset": "Default",
         "camera_deadzone": 0.45,
         "enemy_offscreen_indicator_min_distance": 0.0,
         "enemy_offscreen_indicator_max_distance": 70.0,
         "enemy_offscreen_indicator_max_enemy_distance": 350.0
     },
     "debug": {
-        "show_colliders": false
+        "show_colliders": true
     }
 }

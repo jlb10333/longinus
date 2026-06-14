@@ -26,9 +26,9 @@ use crate::{
   },
   effects,
   enemy::{
-    EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyGoblin, EnemyGoblinState, EnemyImp,
-    EnemyImpState, EnemyLaserGate, EnemySeeker, EnemySeekerGenerator, EnemySniper,
-    EnemySniperGenerator, EnemySystem,
+    EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyDefenderPrime, EnemyGoblin,
+    EnemyGoblinState, EnemyImp, EnemyImpState, EnemyLaserGate, EnemySeeker, EnemySeekerGenerator,
+    EnemySniper, EnemySniperGenerator, EnemySystem,
   },
   graphics::{VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
   load_map::{
@@ -195,6 +195,7 @@ fn load_new_map(
           Enemy::AraneaQueen(EnemyAraneaQueen::new(egg_handle))
         }
         EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
+        EnemySpawnEnemy::DefenderPrime => Enemy::DefenderPrime(EnemyDefenderPrime::new()),
         EnemySpawnEnemy::Seeker => Enemy::Seeker(EnemySeeker),
         EnemySpawnEnemy::SeekerGenerator => {
           Enemy::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 })
@@ -1553,6 +1554,7 @@ impl System for PhysicsSystem {
                   panic!("Cannot spawn aranea child")
                 }
                 EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
+                EnemySpawnEnemy::DefenderPrime => Enemy::DefenderPrime(EnemyDefenderPrime::new()),
                 EnemySpawnEnemy::Seeker => Enemy::Seeker(EnemySeeker),
                 EnemySpawnEnemy::SeekerGenerator => {
                   Enemy::SeekerGenerator(EnemySeekerGenerator { cooldown: 0 })

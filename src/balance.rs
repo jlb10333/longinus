@@ -124,9 +124,27 @@ pub struct DefenderBalancing {
 }
 
 #[derive(Deserialize)]
+pub struct DefenderPrimeBalancing {
+  pub body_damage: f32,
+  pub projectile_damage: f32,
+  pub max_health: f32,
+  pub shoot_force: f32,
+  pub destroy_effect_duration: i32,
+  pub status_effect_threshold: f32,
+  pub burst_num_shots: i32,
+  pub mid_burst_cooldown_frames: i32,
+  pub between_burst_cooldown_frames: i32,
+  pub projectile_radius: f32,
+  pub seeker_spawn_cooldown_frames: i32,
+  pub seeker_spawn_ready_frames: i32,
+  pub seeker_spawn_position_offset: f32,
+}
+
+#[derive(Deserialize)]
 pub struct SeekerBalancing {
   pub speed_cap: f32,
   pub speed: f32,
+  pub max_health: f32,
 }
 
 #[derive(Deserialize)]
@@ -176,6 +194,7 @@ pub struct EnemyBalancing {
   pub aranea: AraneaBalancing,
   pub aranea_queen: AraneaQueenBalancing,
   pub defender: DefenderBalancing,
+  pub defender_prime: DefenderPrimeBalancing,
   pub seeker: SeekerBalancing,
   pub seeker_generator: SeekerGeneratorBalancing,
   pub sniper: SniperBalancing,

@@ -82,6 +82,7 @@ pub struct EnemyTextures {
   pub aranea_queen: Texture2D,
   pub sniper: Texture2D,
   pub defender: Texture2D,
+  pub defender_prime: Texture2D,
   pub laser_gate: Texture2D,
 }
 
@@ -189,6 +190,8 @@ async fn load_game_textures() -> GameTextures {
     load_texture_with_filter("./assets/sprites/enemies/aranea_queen.png").await;
   let sniper_texture = load_texture_with_filter("./assets/sprites/enemies/sniper.png").await;
   let defender_texture = load_texture_with_filter("./assets/sprites/enemies/defender.png").await;
+  let defender_prime_texture =
+    load_texture_with_filter("./assets/sprites/enemies/defender_prime.png").await;
   let laser_gate_texture =
     load_texture_with_filter("./assets/sprites/enemies/laser_gate.png").await;
   let noise_texture = load_texture_with_filter("./assets/sprites/noise.png").await;
@@ -240,6 +243,7 @@ async fn load_game_textures() -> GameTextures {
       aranea_queen: aranea_queen_texture,
       sniper: sniper_texture,
       defender: defender_texture,
+      defender_prime: defender_prime_texture,
       laser_gate: laser_gate_texture,
     },
     effect_textures: EffectTextures {

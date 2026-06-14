@@ -1,4 +1,4 @@
-use std::{rc::Rc, u32};
+use std::rc::Rc;
 
 use macroquad::{
   math::{Rect, Vec2},
@@ -63,6 +63,7 @@ pub enum SimpleSpriteTextureKind {
   Explosion(Easing<f32>),
   SavePoint,
   Chain(PhysicsVector),
+  DefenderPrimeBody,
 }
 
 pub use SimpleSpriteTextureKind::*;
@@ -94,6 +95,7 @@ pub fn get_sprites_to_draw(
     Explosion(easing) => explosion((easing.at(frame_count as f32) * 5.0) as i32, game_textures),
     SavePoint => save_point((frame_count as i32 / 15) % 5, game_textures),
     Chain(dimensions) => chain(dimensions, game_textures),
+    DefenderPrimeBody => defender_prime_body(game_textures),
   }
 }
 
@@ -182,6 +184,18 @@ pub fn sniper_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       y: 0.0,
       w: 8.0,
       h: 8.0,
+    },
+  )]
+}
+
+pub fn defender_prime_body(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw::default(
+    &game_textures.enemy_textures.defender_prime,
+    Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 48.0,
+      h: 48.0,
     },
   )]
 }

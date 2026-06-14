@@ -46,6 +46,7 @@ pub enum MapEnemyName {
   AraneaQueen,
   /* Angelic Constructs */
   Defender,
+  DefenderPrime,
   Seeker,
   SeekerGenerator,
   Sniper,
@@ -136,6 +137,7 @@ impl MapEnemySpawn {
             .unwrap(),
         }),
         MapEnemyName::Defender => EnemySpawnEnemy::Defender,
+        MapEnemyName::DefenderPrime => EnemySpawnEnemy::DefenderPrime,
         MapEnemyName::Seeker => EnemySpawnEnemy::Seeker,
         MapEnemyName::SeekerGenerator => EnemySpawnEnemy::SeekerGenerator,
         MapEnemyName::Sniper => EnemySpawnEnemy::Sniper,
@@ -1052,6 +1054,7 @@ pub enum EnemySpawnEnemy {
   AraneaQueen(Id),
   /* Angelic Constructs */
   Defender,
+  DefenderPrime,
   Seeker,
   SeekerGenerator,
   Sniper,
@@ -1226,11 +1229,41 @@ impl EnemySpawn {
           effect_kind: effects::NoiseDissolve,
           duration: BALANCING.enemies.goblin.destroy_effect_duration,
         }),
+      EnemySpawnEnemy::DefenderPrime => {
+        let balancing = &BALANCING.enemies.defender_prime;
+        ComponentSet::new()
+          .insert(Damageable {
+            status_effect_threshold: balancing.status_effect_threshold,
+            hurtboxes,
+            health: balancing.max_health,
+            max_health: balancing.max_health,
+            destroy_on_zero_health: true,
+            ..Default::default()
+          })
+          .insert(Damager {
+            hitboxes,
+            damage: balancing.body_damage,
+            ..Default::default()
+          })
+          .insert(DropOnDestroy {
+            health_amount: 200.0,
+            chance_health: 1.0,
+            mana_amount: 0.0,
+            chance_mana: 0.0,
+          })
+          .insert(OnDestroyEffect {
+            effect_kind: effects::NoiseDissolve,
+            duration: balancing.destroy_effect_duration,
+          })
+          .insert(SimpleSprite {
+            kind: sprite::DefenderPrimeBody,
+          })
+      }
       EnemySpawnEnemy::Seeker => ComponentSet::new()
         .insert(Damageable {
           status_effect_threshold: 20.0,
           hurtboxes,
-          health: 30.0,
+          health: BALANCING.enemies.seeker.max_health,
           max_health: 30.0,
           destroy_on_zero_health: true,
           ..Default::default()
@@ -1513,6 +1546,7 @@ fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
       BALANCING.enemies.aranea_queen.colliders_side_length,
     )],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
+    EnemySpawnEnemy::DefenderPrime => vec![ColliderBuilder::ball(2.5)],
     EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
     EnemySpawnEnemy::Sniper => vec![
@@ -1555,6 +1589,7 @@ fn hitboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
       BALANCING.enemies.aranea_queen.colliders_side_length,
     )],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
+    EnemySpawnEnemy::DefenderPrime => vec![ColliderBuilder::ball(2.5)],
     EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
     EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
     EnemySpawnEnemy::Sniper => vec![

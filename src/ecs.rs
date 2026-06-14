@@ -15,12 +15,12 @@ use serde::Deserialize;
 use struct_record::record;
 
 use crate::{
-  balance::{BALANCING, StatusEffectBalancing},
+  balance::{BALANCING, DefenderPrimeBalancing, StatusEffectBalancing},
   combat::WeaponModuleKind,
   effects::EffectKind,
   enemy::{
-    EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyGoblin, EnemyImp, EnemyLaserGate,
-    EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
+    EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyDefenderPrime, EnemyGoblin, EnemyImp,
+    EnemyLaserGate, EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
   },
   load_map::MapAbilityType,
   sprite::SimpleSpriteTextureKind,
@@ -243,6 +243,7 @@ pub enum Enemy {
   AraneaQueen(EnemyAraneaQueen),
   /* Angelic Constructs */
   Defender(EnemyDefender),
+  DefenderPrime(EnemyDefenderPrime),
   Seeker(EnemySeeker),
   SeekerGenerator(EnemySeekerGenerator),
   Sniper(EnemySniper),

@@ -6,9 +6,19 @@ use rapier2d::{na::Vector2, prelude::*};
 use rpds::{List, list};
 
 use crate::{
-  balance::BALANCING, combat::{distance_projection_physics, Beam, Projectile, WeaponOutput, WeaponOutputKind}, controls::angle_from_vec, easing::{self, ease_in_out_sine}, ecs::{ComponentSet, Damageable, Enemy, Entity, EntityHandle, SimpleSprite, StatusEffect}, load_map::{
-    EnemySpawn, EnemySpawnEnemy, ENEMY_PROJECTILE_INTERACTION_GROUPS, RAYCAST_INTERACTION_GROUPS
-  }, physics::PhysicsSystem, sprite, system::System, units::{vec_zero, PhysicsVector, UnitConvert2}, GameInput
+  GameInput,
+  balance::BALANCING,
+  combat::{Beam, Projectile, WeaponOutput, WeaponOutputKind, distance_projection_physics},
+  controls::angle_from_vec,
+  easing::{self, ease_in_out_sine},
+  ecs::{ComponentSet, Damageable, Enemy, Entity, EntityHandle, SimpleSprite, StatusEffect},
+  load_map::{
+    ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, EnemySpawnEnemy, RAYCAST_INTERACTION_GROUPS,
+  },
+  physics::PhysicsSystem,
+  sprite,
+  system::System,
+  units::{PhysicsVector, UnitConvert2, vec_zero},
 };
 
 #[derive(Clone)]
@@ -170,6 +180,7 @@ fn enemy_behavior_generator(
             rigid_body_set,
             query_pipeline,
           ),
+          Enemy::DefenderPrime(defender_prime) => defender_prime.behavior(handle, rng, rigid_body_set),
           Enemy::Seeker(seeker) => seeker.behavior(handle, player_translation, rigid_body_set),
           Enemy::SeekerGenerator(seeker_generator) => {
             seeker_generator.behavior(handle, player_translation, rigid_body_set)
@@ -244,15 +255,16 @@ impl EnemyGoblin {
           let self_translation = self_rigid_body.translation();
           let vector_to_player = player_translation - self_translation;
 
-          let movement_force = vector_to_player.normalize() * BALANCING.enemies.goblin.lunge_force * rigid_body_set[handle].mass();
+          let movement_force = vector_to_player.normalize()
+            * BALANCING.enemies.goblin.lunge_force
+            * rigid_body_set[handle].mass();
 
           let lunge_distance = vector_to_player
             .magnitude()
             .min(BALANCING.enemies.goblin.max_lunge_distance);
 
-          let lunge_frames = (lunge_distance
-            / (BALANCING.enemies.goblin.lunge_force)
-            * 60.0) as i32;
+          let lunge_frames =
+            (lunge_distance / (BALANCING.enemies.goblin.lunge_force) * 60.0) as i32;
 
           EnemyDecision {
             movement_force,
@@ -300,8 +312,13 @@ impl EnemyGoblin {
         let linvel = rigid_body_set[handle].linvel();
         if remaining_frames > 0 && linvel.magnitude() > 0.0 {
           EnemyDecision {
-            movement_force: -linvel.normalize() * BALANCING.enemies.goblin.slowing_force() * rigid_body_set[handle].mass(),
-            angvel: Some((ease_in_out_sine()  * BALANCING.enemies.goblin.lunge_angvel).at(remaining_frames as f32 / BALANCING.enemies.goblin.slowing_frames as f32)),
+            movement_force: -linvel.normalize()
+              * BALANCING.enemies.goblin.slowing_force()
+              * rigid_body_set[handle].mass(),
+            angvel: Some(
+              (ease_in_out_sine() * BALANCING.enemies.goblin.lunge_angvel)
+                .at(remaining_frames as f32 / BALANCING.enemies.goblin.slowing_frames as f32),
+            ),
             ..EnemyDecision::default(
               handle,
               Enemy::Goblin(Self {
@@ -483,7 +500,8 @@ impl EnemyImp {
       EnemyImpState::Moving(frames_left, direction) => {
         if frames_left > 0 {
           let ease = easing::ease_in_out_sine_ddt2()
-            * (direction / BALANCING.enemies.imp.moving_initial_frames as f32) * self_rigid_body.mass();
+            * (direction / BALANCING.enemies.imp.moving_initial_frames as f32)
+            * self_rigid_body.mass();
           let x = 1.0 - frames_left as f32 / BALANCING.enemies.imp.moving_initial_frames as f32;
           let movement_force = ease.at(x);
 
@@ -559,7 +577,9 @@ impl EnemyAranea {
           let egg_translation = collider_set[self.egg_handle].translation();
           let vector_to_egg = egg_translation - self_translation;
 
-          let movement_force = vector_to_egg.normalize() * BALANCING.enemies.aranea.launch_force * self_rigid_body.mass();
+          let movement_force = vector_to_egg.normalize()
+            * BALANCING.enemies.aranea.launch_force
+            * self_rigid_body.mass();
 
           let launch_frames = (vector_to_egg.magnitude()
             / (movement_force.magnitude() / self_rigid_body.mass())
@@ -570,7 +590,11 @@ impl EnemyAranea {
               handle,
               Enemy::Aranea(Self {
                 egg_handle: self.egg_handle,
-                state: EnemyAraneaState::Detaching(BALANCING.enemies.aranea.detaching_initial_frames, movement_force, launch_frames),
+                state: EnemyAraneaState::Detaching(
+                  BALANCING.enemies.aranea.detaching_initial_frames,
+                  movement_force,
+                  launch_frames,
+                ),
               }),
             )
           }
@@ -610,7 +634,7 @@ impl EnemyAranea {
                 state: EnemyAraneaState::Launching(launch_frames),
               }),
             )
-          }          
+          }
         }
       }
       EnemyAraneaState::Launching(frames_left) => {
@@ -747,7 +771,9 @@ pub mod aranea_queen {
   impl Debug for LaunchSubstate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       match self {
-        Self::Starting(target, FramesLeft(frames_left)) => write!(f, "Starting({}, {})", *target, frames_left),
+        Self::Starting(target, FramesLeft(frames_left)) => {
+          write!(f, "Starting({}, {})", *target, frames_left)
+        }
         Self::Cruising(FramesLeft(frames_left)) => write!(f, "Cruising({})", frames_left),
         Self::Stopping(FramesLeft(frames_left)) => write!(f, "Stopping({})", frames_left),
       }
@@ -781,7 +807,9 @@ pub mod aranea_queen {
       match self {
         Self::Root => write!(f, "Root"),
         Self::LaunchToPlayer(launch_substate) => write!(f, "LaunchToPlayer({:?})", launch_substate),
-        Self::LaunchToEgg(launch_to_egg_substate) => write!(f, "LaunchToEgg({:?})", launch_to_egg_substate),
+        Self::LaunchToEgg(launch_to_egg_substate) => {
+          write!(f, "LaunchToEgg({:?})", launch_to_egg_substate)
+        }
       }
     }
   }
@@ -802,12 +830,15 @@ pub mod aranea_queen {
       match self {
         Self::Root => write!(f, "Root"),
         Self::LaunchToPlayer(launch_substate) => write!(f, "LaunchToPlayer({:?})", launch_substate),
-        Self::LaunchToEgg(launch_to_egg_substate) => write!(f, "LaunchToEgg({:?})", launch_to_egg_substate),
-        Self::BounceOffWalls(BouncesLeft(bounces_left), launch_substate) => write!(f, "BounceOffWalls({}, {:?})", bounces_left, launch_substate)
-              }
+        Self::LaunchToEgg(launch_to_egg_substate) => {
+          write!(f, "LaunchToEgg({:?})", launch_to_egg_substate)
+        }
+        Self::BounceOffWalls(BouncesLeft(bounces_left), launch_substate) => {
+          write!(f, "BounceOffWalls({}, {:?})", bounces_left, launch_substate)
+        }
+      }
     }
   }
-
 
   #[derive(Clone)]
   pub enum State {
@@ -822,10 +853,14 @@ pub mod aranea_queen {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       match self {
         Self::Idle => write!(f, "Idle"),
-        Self::FirstLaunch(launch_to_egg_substate) => write!(f, "FirstLaunch({:?})", launch_to_egg_substate),
+        Self::FirstLaunch(launch_to_egg_substate) => {
+          write!(f, "FirstLaunch({:?})", launch_to_egg_substate)
+        }
         Self::Phase1(phase_1_substate) => write!(f, "Phase1({:?})", phase_1_substate),
         Self::Phase2(phase_2_substate) => write!(f, "Phase2({:?})", phase_2_substate),
-        Self::Cooldown(next_state, FramesLeft(frames_left)) => write!(f, "Cooldown({:?}, {})", next_state, frames_left),
+        Self::Cooldown(next_state, FramesLeft(frames_left)) => {
+          write!(f, "Cooldown({:?}, {})", next_state, frames_left)
+        }
       }
     }
   }
@@ -857,7 +892,7 @@ impl EnemyAraneaQueen {
     query_pipeline: &QueryPipeline,
   ) -> EnemyDecision {
     println!("{} {:?}", damageable.health, self.state);
-    
+
     let self_rigid_body = &rigid_body_set[handle];
     let movement_force = stop_linvel(BALANCING.enemies.aranea.hold_force, self_rigid_body);
     match self.state.clone() {
@@ -1182,7 +1217,9 @@ impl EnemyAraneaQueen {
             angles
               .map(|angle| WeaponOutput {
                 damage: BALANCING.enemies.defender.damage,
-                component_set: ComponentSet::new().insert(SimpleSprite { kind: sprite::AraneaQueenProjectile }),
+                component_set: ComponentSet::new().insert(SimpleSprite {
+                  kind: sprite::AraneaQueenProjectile,
+                }),
                 ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
                   initial_impulse: distance_projection_physics(angle, 0.7),
                   ..Projectile::default(
@@ -1198,7 +1235,10 @@ impl EnemyAraneaQueen {
           };
           EnemyDecision {
             weapon_outputs,
-            movement_force: stop_linvel(BALANCING.enemies.aranea_queen.launch_force, self_rigid_body),
+            movement_force: stop_linvel(
+              BALANCING.enemies.aranea_queen.launch_force,
+              self_rigid_body,
+            ),
             ..EnemyDecision::default(
               handle,
               Enemy::AraneaQueen(Self {
@@ -1236,35 +1276,42 @@ impl EnemyAraneaQueen {
       aranea_queen::LaunchSubstate::Starting(target_translation, FramesLeft(frames_left)) => {
         if frames_left > 0 {
           EnemyDecision {
-            ..EnemyDecision::default(handle, Enemy::AraneaQueen(Self {
-              egg_handle: self.egg_handle,
-              state: outer_state(aranea_queen::LaunchSubstate::Starting(target_translation, FramesLeft(frames_left - 1)))
-            }))
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: outer_state(aranea_queen::LaunchSubstate::Starting(
+                  target_translation,
+                  FramesLeft(frames_left - 1),
+                )),
+              }),
+            )
           }
         } else {
-        let self_translation = self_rigid_body.translation();
+          let self_translation = self_rigid_body.translation();
 
-        let vector_to_target = target_translation - self_translation;
+          let vector_to_target = target_translation - self_translation;
 
-        let movement_force =
-          vector_to_target.normalize() * BALANCING.enemies.aranea_queen.launch_force;
+          let movement_force =
+            vector_to_target.normalize() * BALANCING.enemies.aranea_queen.launch_force;
 
-        let launch_frames = (vector_to_target.magnitude()
-          / (movement_force.magnitude() / self_rigid_body.mass())
-          * 60.0) as i32;
+          let launch_frames = (vector_to_target.magnitude()
+            / (movement_force.magnitude() / self_rigid_body.mass())
+            * 60.0) as i32;
 
-        EnemyDecision {
-          movement_force,
-          ..EnemyDecision::default(
-            handle,
-            Enemy::AraneaQueen(Self {
-              egg_handle: self.egg_handle,
-              state: outer_state(aranea_queen::LaunchSubstate::Cruising(FramesLeft(
-                launch_frames,
-              ))),
-            }),
-          )
-        }}
+          EnemyDecision {
+            movement_force,
+            ..EnemyDecision::default(
+              handle,
+              Enemy::AraneaQueen(Self {
+                egg_handle: self.egg_handle,
+                state: outer_state(aranea_queen::LaunchSubstate::Cruising(FramesLeft(
+                  launch_frames,
+                ))),
+              }),
+            )
+          }
+        }
       }
       aranea_queen::LaunchSubstate::Cruising(FramesLeft(frames_left)) => {
         if frames_left > 0 {
@@ -1399,12 +1446,22 @@ impl EnemyDefender {
         if frames_left > 0 {
           EnemyDecision {
             movement_force,
-            ..EnemyDecision::default(handle, Enemy::Defender(Self{state: EnemyDefenderState::WakingUp(frames_left - 1)}))
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Defender(Self {
+                state: EnemyDefenderState::WakingUp(frames_left - 1),
+              }),
+            )
           }
         } else {
-          EnemyDecision  {
+          EnemyDecision {
             movement_force,
-            ..EnemyDecision::default(handle, Enemy::Defender(Self{state: EnemyDefenderState::Shooting(0)}))
+            ..EnemyDecision::default(
+              handle,
+              Enemy::Defender(Self {
+                state: EnemyDefenderState::Shooting(0),
+              }),
+            )
           }
         }
       }
@@ -1418,9 +1475,14 @@ impl EnemyDefender {
 
         let weapon_output = |offset: f32| WeaponOutput {
           damage: BALANCING.enemies.defender.damage,
-          component_set: ComponentSet::new().insert(SimpleSprite {kind: sprite::SniperProjectile}),
+          component_set: ComponentSet::new().insert(SimpleSprite {
+            kind: sprite::SniperProjectile,
+          }),
           ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
-            initial_impulse: distance_projection_physics(offset + angle, BALANCING.enemies.defender.shoot_force),
+            initial_impulse: distance_projection_physics(
+              offset + angle,
+              BALANCING.enemies.defender.shoot_force,
+            ),
             ..Projectile::default(
               ColliderBuilder::ball(0.1)
                 .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
@@ -1429,7 +1491,9 @@ impl EnemyDefender {
           }))
         };
 
-        let weapon_outputs = (0..8).map(|offset| weapon_output(offset as f32 * PI / 4.0)).collect_vec();
+        let weapon_outputs = (0..8)
+          .map(|offset| weapon_output(offset as f32 * PI / 4.0))
+          .collect_vec();
 
         EnemyDecision {
           angvel: Some(angvel),
@@ -1455,7 +1519,7 @@ impl EnemyDefender {
 
         if frames_left > 0 {
           EnemyDecision {
-          angvel: Some(angvel),
+            angvel: Some(angvel),
             movement_force,
             ..EnemyDecision::default(
               handle,
@@ -1466,7 +1530,7 @@ impl EnemyDefender {
           }
         } else {
           EnemyDecision {
-          angvel: Some(angvel),
+            angvel: Some(angvel),
             movement_force,
             ..EnemyDecision::default(
               handle,
@@ -1482,6 +1546,178 @@ impl EnemyDefender {
     }
   }
 }
+
+pub mod defender_prime {
+  use std::collections::HashSet;
+
+  
+
+use super::*;
+
+  #[derive(Clone)]
+  pub enum State {
+    Idle,
+    Active(TurretState, SeekerSpawnState),
+  }
+  use State::*;
+
+  #[derive(Clone)]
+  pub enum TurretState {
+    Shooting(i32),
+    Cooldown(i32, FramesLeft),
+  }
+  use TurretState::*;
+
+  #[derive(Clone)]
+  pub enum SeekerSpawnState {
+    Cooldown(FramesLeft),
+    Ready(HashSet<SeekerSpawnPosition>, FramesLeft),
+    Spawning(HashSet<SeekerSpawnPosition>),
+  }
+  use SeekerSpawnState::*;
+
+  #[derive(Clone, Copy, Hash, PartialEq, Eq)]
+  pub enum SeekerSpawnPosition {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+  }
+
+  use SeekerSpawnPosition::*;
+
+  const SEEKER_SPAWN_POSITION_CHOICES: [SeekerSpawnPosition; 4] =
+    [TopLeft, TopRight, BottomLeft, BottomRight];
+
+  #[derive(Clone)]
+  pub struct EnemyDefenderPrime {
+    pub state: State,
+    pub turret_angle: f32,
+  }
+
+  impl EnemyDefenderPrime {
+    pub fn behavior(&self, handle: RigidBodyHandle, rng: &RandGenerator, rigid_body_set: &RigidBodySet) -> EnemyDecision {
+      let balancing = &BALANCING.enemies.defender_prime;
+      match &self.state {
+        Idle => EnemyDecision {
+          ..EnemyDecision::default(
+            handle,
+            Enemy::DefenderPrime(Self {
+              state: Idle,
+              turret_angle: self.turret_angle,
+            }),
+          )
+        },
+        Active(turret_state, seeker_spawn_state) => {
+          let (turret_state, new_projectiles) = match turret_state {
+            TurretState::Cooldown(shots_left, FramesLeft(frames_left)) => {
+              if *frames_left > 0 {
+                (
+                  TurretState::Cooldown(*shots_left, FramesLeft(*frames_left - 1)),
+                  vec![],
+                )
+              } else {
+                (Shooting(*shots_left), vec![])
+              }
+            }
+            Shooting(shots_left) => (
+              if *shots_left > 0 {
+                TurretState::Cooldown(
+                  *shots_left - 1,
+                  FramesLeft(balancing.mid_burst_cooldown_frames),
+                )
+              } else {
+                TurretState::Cooldown(
+                  balancing.burst_num_shots,
+                  FramesLeft(balancing.between_burst_cooldown_frames),
+                )
+              },
+              vec![WeaponOutput {
+                damage: balancing.projectile_damage,
+                ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
+                  collider: ColliderBuilder::ball(balancing.projectile_radius).collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS).build(),
+                  initial_impulse: distance_projection_physics(self.turret_angle, 1.0),
+                  force_mod: balancing.shoot_force,
+                }))
+              }],
+            ),
+          };
+
+          let (seeker_spawn_state, new_seekers) = match seeker_spawn_state {
+            SeekerSpawnState::Cooldown(FramesLeft(frames_left)) => {
+              if *frames_left > 0 {
+                (
+                  SeekerSpawnState::Cooldown(FramesLeft(frames_left - 1)),
+                  vec![],
+                )
+              } else {
+                let num_seekers = rng.gen_range(2, 4);
+
+                let mut position_set = SEEKER_SPAWN_POSITION_CHOICES.to_vec();
+                let seeker_position_choices = (0..num_seekers).map(|_| {
+                  let chosen_index = rng.gen_range(0, position_set.len());
+                  let chosen_position = position_set[chosen_index];
+                  position_set.remove(chosen_index);
+                  chosen_position
+                }).collect::<HashSet<_>>();
+                
+                (
+                  SeekerSpawnState::Ready(
+                    seeker_position_choices,
+                    FramesLeft(balancing.seeker_spawn_ready_frames),
+                  ),
+                  vec![],
+                )
+              }
+            },
+            Ready(seeker_position_choices, FramesLeft(frames_left)) => {
+              if *frames_left > 0 {
+                (Ready(seeker_position_choices.clone(), FramesLeft(frames_left - 1)), vec![])
+              } else {
+                (Spawning(seeker_position_choices.clone()), vec![])
+              }
+            },
+            Spawning(seeker_position_choices) => {
+              let self_translation = *rigid_body_set[handle].translation();
+              let children = seeker_position_choices.iter().map(|choice| match choice {
+                TopLeft => (vector![1.0, -1.0], (3.0 * PI) / 2.0),
+                TopRight => (vector![1.0, 1.0], PI / 2.0),
+                BottomLeft => (vector![-1.0, -1.0], -(3.0 * PI) / 2.0),
+                BottomRight => (vector![-1.0, 1.0], -PI / 2.0),
+              }).map(|(position, rotation)| (self_translation + position * balancing.seeker_spawn_position_offset, rotation)).map(|(position, rotation)| {
+                EnemyDecisionEnemySpawn {
+                  enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Seeker, position, rotation, None),
+                  initial_force: distance_projection_physics(rotation, 0.001).into_vec(),
+                }
+              }).collect_vec();
+              (SeekerSpawnState::Cooldown(FramesLeft(balancing.seeker_spawn_cooldown_frames)), children)
+            }
+          };
+
+          EnemyDecision {
+            weapon_outputs: new_projectiles,
+            enemies_to_spawn: new_seekers,
+            ..EnemyDecision::default(
+              handle,
+              Enemy::DefenderPrime(Self {
+                state: Active(turret_state, seeker_spawn_state),
+                turret_angle: 0.0,
+              }),
+            )
+          }
+        }
+      }
+    }
+
+    pub fn new() -> Self {
+      Self {
+        state: Active(Shooting(0), SeekerSpawnState::Cooldown(FramesLeft(BALANCING.enemies.defender_prime.seeker_spawn_cooldown_frames))),
+        turret_angle: 0.0,
+      }
+    }
+  }
+}
+pub use defender_prime::EnemyDefenderPrime;
 
 #[derive(Clone)]
 pub struct EnemySeeker;
@@ -1594,9 +1830,15 @@ impl EnemySniper {
       direction_to_player,
       player_relative_velocity,
       BALANCING.enemies.sniper.shooting_force / BALANCING.enemies.sniper.collider_mass,
-    ).unwrap_or(vector![1.0, 0.0]);
-    let target_angle = PI - lead_direction.angle(&vector![1.0, 0.0]) * if (lead_direction.y > 0.0) { -1.0 } else {1.0};
-    let angvel = rotate_to_target(BALANCING.enemies.sniper.rotation_force, self_rigid_body, target_angle);
+    )
+    .unwrap_or(vector![1.0, 0.0]);
+    let target_angle = PI
+      - lead_direction.angle(&vector![1.0, 0.0]) * if lead_direction.y > 0.0 { -1.0 } else { 1.0 };
+    let angvel = rotate_to_target(
+      BALANCING.enemies.sniper.rotation_force,
+      self_rigid_body,
+      target_angle,
+    );
 
     match self.state {
       EnemySniperState::Idle => {
@@ -1630,7 +1872,7 @@ impl EnemySniper {
       }
       EnemySniperState::Shooting => EnemyDecision {
         movement_force,
-            angvel: Some(angvel),
+        angvel: Some(angvel),
         weapon_outputs: {
           let collider = ColliderBuilder::ball(0.08)
             .mass(BALANCING.enemies.sniper.collider_mass)
@@ -1639,18 +1881,19 @@ impl EnemySniper {
 
           let angle = PI - self_rigid_body.rotation().angle();
 
-          vec![WeaponOutput {            
-              component_set: ComponentSet::new().insert(SimpleSprite {
-                  kind: sprite::SniperProjectile
-              }),
-              damage: BALANCING.enemies.sniper.projectile_damage,
-              ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
-                  initial_impulse: PhysicsVector::from_vec(
-                  distance_projection_physics(angle, BALANCING.enemies.sniper.shooting_force).into_vec(),
-                ),
-                ..Projectile::default(collider)
-              }))
-            }]
+          vec![WeaponOutput {
+            component_set: ComponentSet::new().insert(SimpleSprite {
+              kind: sprite::SniperProjectile,
+            }),
+            damage: BALANCING.enemies.sniper.projectile_damage,
+            ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
+              initial_impulse: PhysicsVector::from_vec(
+                distance_projection_physics(angle, BALANCING.enemies.sniper.shooting_force)
+                  .into_vec(),
+              ),
+              ..Projectile::default(collider)
+            }))
+          }]
         },
         ..EnemyDecision::default(
           handle,

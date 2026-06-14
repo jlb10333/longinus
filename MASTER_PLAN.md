@@ -6,7 +6,6 @@
     - Misc
       - Status effects
       - UI elements
-      - Damaging tiles
       - Locomotor
       - Ability pickup
       - Boost?
