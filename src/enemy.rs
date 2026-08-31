@@ -1589,6 +1589,32 @@ pub mod defender_prime {
   const SEEKER_SPAWN_POSITION_CHOICES: [SeekerSpawnPosition; 4] =
     [TopLeft, TopRight, BottomLeft, BottomRight];
 
+  pub fn child_spawn_locations(
+    self_translation: Vector2<f32>,
+    seeker_position_choices: &HashSet<SeekerSpawnPosition>,
+  ) -> Vec<(Vector2<f32>, f32)> {
+    seeker_position_choices
+      .iter()
+      .map(|choice| match choice {
+        TopLeft => (vector![-1.0, 1.0], (3.0 * PI) / 4.0),
+        TopRight => (vector![-1.0, -1.0], -(3.0 * PI) / 4.0),
+        BottomLeft => (vector![1.0, 1.0], PI / 4.0),
+        BottomRight => (vector![1.0, -1.0], -PI / 4.0),
+      })
+      .map(|(position, rotation)| {
+        (
+          self_translation
+            + position
+              * BALANCING
+                .enemies
+                .defender_prime
+                .seeker_spawn_position_offset,
+          rotation,
+        )
+      })
+      .collect_vec()
+  }
+
   #[derive(Clone)]
   pub struct EnemyDefenderPrime {
     pub state: State,
@@ -1725,20 +1751,8 @@ pub mod defender_prime {
             }
             Spawning(seeker_position_choices) => {
               let self_translation = *rigid_body_set[handle].translation();
-              let children = seeker_position_choices
-                .iter()
-                .map(|choice| match choice {
-                  TopLeft => (vector![-1.0, 1.0], (3.0 * PI) / 4.0),
-                  TopRight => (vector![-1.0, -1.0], -(3.0 * PI) / 4.0),
-                  BottomLeft => (vector![1.0, 1.0], PI / 4.0),
-                  BottomRight => (vector![1.0, -1.0], -PI / 4.0),
-                })
-                .map(|(position, rotation)| {
-                  (
-                    self_translation + position * balancing.seeker_spawn_position_offset,
-                    rotation,
-                  )
-                })
+              let children = child_spawn_locations(self_translation, seeker_position_choices)
+                .into_iter()
                 .map(|(position, rotation)| EnemyDecisionEnemySpawn {
                   enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Seeker, position, rotation, None),
                   initial_force: (position - self_translation)
@@ -1746,6 +1760,7 @@ pub mod defender_prime {
                     * 10.0,
                 })
                 .collect_vec();
+
               (
                 SeekerSpawnState::Cooldown(FramesLeft(balancing.seeker_spawn_cooldown_frames)),
                 children,

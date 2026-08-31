@@ -1281,7 +1281,7 @@ impl EnemySpawn {
         })
         .insert(OnDestroyEffect {
           effect_kind: effects::NoiseDissolve,
-          duration: balancing.destroy_effect_duration,
+          duration: BALANCING.enemies.seeker.destroy_effect_duration,
         })
         .insert(SimpleSprite {
           kind: sprite::Seeker,
@@ -1554,7 +1554,10 @@ fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
     )],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::DefenderPrime => vec![ColliderBuilder::ball(2.5)],
-    EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
+    EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(
+      BALANCING.enemies.seeker.collider_side_length,
+      BALANCING.enemies.seeker.collider_side_length,
+    )],
     EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
     EnemySpawnEnemy::Sniper => vec![
       ColliderBuilder::cuboid(
@@ -1597,7 +1600,15 @@ fn hitboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
     )],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::DefenderPrime => vec![ColliderBuilder::ball(2.5)],
-    EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(0.2, 0.2).mass(1.0)],
+    EnemySpawnEnemy::Seeker => {
+      vec![
+        ColliderBuilder::cuboid(
+          BALANCING.enemies.seeker.collider_side_length,
+          BALANCING.enemies.seeker.collider_side_length,
+        )
+        .mass(1.0),
+      ]
+    }
     EnemySpawnEnemy::SeekerGenerator => vec![ColliderBuilder::cuboid(0.7, 0.7)],
     EnemySpawnEnemy::Sniper => vec![
       ColliderBuilder::cuboid(

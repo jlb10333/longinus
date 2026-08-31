@@ -107,12 +107,14 @@
             "projectile_radius": 0.3,
             "seeker_spawn_cooldown_frames": 120,
             "seeker_spawn_ready_frames": 120,
-            "seeker_spawn_position_offset": 2.5
+            "seeker_spawn_position_offset": 1.5
         },
         "seeker": {
             "speed_cap": 5,
             "speed": 0.3,
-            "max_health": 10
+            "max_health": 10,
+            "collider_side_length": 0.5,
+            "destroy_effect_duration": 5
         },
         "seeker_generator": {
             "initial_force": 5,

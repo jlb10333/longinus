@@ -145,6 +145,8 @@ pub struct SeekerBalancing {
   pub speed_cap: f32,
   pub speed: f32,
   pub max_health: f32,
+  pub destroy_effect_duration: i32,
+  pub collider_side_length: f32,
 }
 
 #[derive(Deserialize)]

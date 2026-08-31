@@ -21,7 +21,9 @@ use crate::{
   },
   effects::{Effect, EffectKind},
   enemy::{
-    EnemyAraneaState, EnemyDefenderState, EnemyImpState, EnemySniperState, FramesLeft, aranea_queen,
+    EnemyAraneaState, EnemyDefenderState, EnemyImpState, EnemySniperState, FramesLeft,
+    aranea_queen,
+    defender_prime::{self},
   },
   f::partition,
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
@@ -432,23 +434,60 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
                   ))
                 }
               }
+              Enemy::DefenderPrime(defender_prime) => Some(
+                if let defender_prime::State::Active(
+                  _,
+                  defender_prime::SeekerSpawnState::Ready(positions, _),
+                ) = &defender_prime.state
+                {
+                  let enemy_translation =
+                    *physics_system.rigid_body_set[*handle.as_rb_handle().unwrap()].translation();
+                  defender_prime::child_spawn_locations(enemy_translation, positions)
+                    .iter()
+                    .flat_map(|(translation, rotation)| {
+                      let relative_physics_translation = translation - enemy_translation;
+                      let relative_screen_translation =
+                        PhysicsVector::from_vec(relative_physics_translation).convert();
+
+                      sprite::seeker(game_textures)
+                        .into_iter()
+                        .map(move |sprite_to_draw| SpriteToDraw {
+                          offset: Some(Vec2 {
+                            x: relative_screen_translation.x() / VIRTUAL_PIXEL_FACTOR,
+                            y: relative_screen_translation.y() / VIRTUAL_PIXEL_FACTOR,
+                          }),
+                          rotation: Some(*rotation),
+                          ..sprite_to_draw.clone()
+                        })
+                    })
+                    .collect_vec()
+                } else {
+                  vec![]
+                },
+              ),
               _ => None,
             }
           } else {
             None
           };
 
-          let sprites_to_draw = sprites_override.or_else(|| {
-            let sprite = entity.components.get::<SimpleSprite>()?;
+          let sprites_to_draw = sprites_override
+            .into_iter()
+            .flatten()
+            .chain(
+              {
+                let sprite = entity.components.get::<SimpleSprite>()?;
 
-            Some(get_sprites_to_draw(
-              &sprite.kind,
-              physics_system.frame_count,
-              ctx.input.textures.as_ref(),
-            ))
-          });
-
-          let sprites_to_draw = sprites_to_draw?;
+                Some(get_sprites_to_draw(
+                  &sprite.kind,
+                  physics_system.frame_count,
+                  ctx.input.textures.as_ref(),
+                ))
+              }
+              .into_iter()
+              .flatten(),
+            )
+            .collect_vec();
 
           Some((Rc::clone(*entity), sprites_to_draw))
         })
@@ -646,7 +685,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           draw_sprites(
             &[sprite],
             screen_translation,
-            -((rotation * 16.0 / PI).round() / (16.0 / PI)),
+            convert_rotation(rotation),
             false,
           );
         });
@@ -660,7 +699,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           draw_sprites(
             &[sprite],
             screen_translation,
-            -(rotation * (16.0 / PI).round() / (16.0 / PI)),
+            convert_rotation(rotation),
             false,
           );
         });
@@ -1401,6 +1440,8 @@ pub fn draw_sprites(
 
     let dest_y = translation.y() - (adjusted_height / 2.0) + new_offset_y;
 
+    let rotation = rotation + convert_rotation(sprite_to_draw.rotation.unwrap_or(0.0));
+
     if let Some(material) = sprite_to_draw.material.as_ref() {
       material.set_uniform("PixelsX", sprite_to_draw.source.w);
       material.set_uniform("PixelsY", sprite_to_draw.source.h);
@@ -1605,4 +1646,8 @@ impl GameColor {
       GameColor::Color4 => COLOR_4,
     }
   }
+}
+
+fn convert_rotation(rotation: f32) -> f32 {
+  -(rotation * (16.0 / PI).round() / (16.0 / PI))
 }

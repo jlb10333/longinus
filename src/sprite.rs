@@ -19,6 +19,7 @@ pub struct SpriteToDraw {
   pub offset: Option<Vec2>,
   pub material: Option<Material>,
   pub z_position: Option<f32>,
+  pub rotation: Option<f32>,
 }
 
 impl SpriteToDraw {
@@ -29,6 +30,7 @@ impl SpriteToDraw {
       offset: None,
       material: None,
       z_position: None,
+      rotation: None,
     }
   }
 

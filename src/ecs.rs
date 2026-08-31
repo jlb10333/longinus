@@ -93,6 +93,14 @@ impl EntityHandle {
       })
       .collect::<List<_>>()
   }
+
+  pub fn as_rb_handle(&self) -> Option<&RigidBodyHandle> {
+    if let Self::RigidBody(rb_handle) = self {
+      Some(rb_handle)
+    } else {
+      None
+    }
+  }
 }
 
 #[derive(Clone)]
