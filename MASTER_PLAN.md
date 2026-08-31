@@ -12,12 +12,11 @@
   - Core elements
     - 2nd boss
   - Full blocking
-    - Add level layout leading to 2nd boss, accessible via chain
-      - Add a section where you have to navigate through a tight corrider of damaging tiles
     - Settle on distribution and selection of upgrade modules/mana bars/health bars
   - Polish
     - Bugs
       - Fix incorrect mouse aim
+      - Fix backing out at game over screen causing visual glitch
     - Visual explainability
       - Show all health tank and mana tanks in inventory
   - Testing

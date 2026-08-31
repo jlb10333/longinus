@@ -16,7 +16,7 @@ pub fn draw_label(
 ) {
   let screen_translation = physics_translation.into_pos(camera_position);
   draw_text(
-    label.as_ref(),
+    label,
     screen_translation.x(),
     screen_translation.y(),
     20.0,
@@ -73,7 +73,7 @@ pub fn draw_collider(
 
       if let Some(label) = label.as_ref() {
         draw_text(
-          label.as_ref(),
+          label,
           top_left.x(),
           top_left.y(),
           40.0,
@@ -93,7 +93,7 @@ pub fn draw_collider(
 
     if let Some(label) = label.as_ref() {
       draw_text(
-        label.as_ref(),
+        label,
         translation.x(),
         translation.y(),
         40.0,

@@ -298,11 +298,11 @@
             }
         },
         "maps/generated/boss2.json": {
-            "scale": 2,
+            "scale": 0.33,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 214.75,
-                "y": 116.25
+                "x": -1937.878787878788,
+                "y": 1156.060606060606
             }
         },
         "maps/generated/rules.json": {
@@ -314,11 +314,11 @@
             }
         },
         "maps/generated/start.json": {
-            "scale": 3,
+            "scale": 2,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 160,
-                "y": 160
+                "x": 1350.25,
+                "y": -1287.75
             }
         },
         "maps/generated/start.json#colliders": {

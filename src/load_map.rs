@@ -1278,6 +1278,13 @@ impl EnemySpawn {
           chance_health: 0.3,
           mana_amount: 1.0,
           chance_mana: 0.2,
+        })
+        .insert(OnDestroyEffect {
+          effect_kind: effects::NoiseDissolve,
+          duration: balancing.destroy_effect_duration,
+        })
+        .insert(SimpleSprite {
+          kind: sprite::Seeker,
         }),
       EnemySpawnEnemy::SeekerGenerator => ComponentSet::new()
         .insert(Damageable {

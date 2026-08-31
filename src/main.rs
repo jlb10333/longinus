@@ -84,6 +84,7 @@ pub struct EnemyTextures {
   pub defender: Texture2D,
   pub defender_prime: Texture2D,
   pub laser_gate: Texture2D,
+  pub seeker: Texture2D,
 }
 
 pub struct EffectTextures {
@@ -192,6 +193,7 @@ async fn load_game_textures() -> GameTextures {
   let defender_texture = load_texture_with_filter("./assets/sprites/enemies/defender.png").await;
   let defender_prime_texture =
     load_texture_with_filter("./assets/sprites/enemies/defender_prime.png").await;
+  let seeker_texture = load_texture_with_filter("./assets/sprites/enemies/seeker.png").await;
   let laser_gate_texture =
     load_texture_with_filter("./assets/sprites/enemies/laser_gate.png").await;
   let noise_texture = load_texture_with_filter("./assets/sprites/noise.png").await;
@@ -245,6 +247,7 @@ async fn load_game_textures() -> GameTextures {
       defender: defender_texture,
       defender_prime: defender_prime_texture,
       laser_gate: laser_gate_texture,
+      seeker: seeker_texture,
     },
     effect_textures: EffectTextures {
       noise: noise_texture,

@@ -58,6 +58,7 @@ pub enum SimpleSpriteTextureKind {
   HealthPickup,
   ManaPickup,
   LaserGate,
+  Seeker,
   AraneaEgg,
   GravityParticle,
   Explosion(Easing<f32>),
@@ -90,6 +91,7 @@ pub fn get_sprites_to_draw(
     HealthPickup => health_pickup(game_textures),
     ManaPickup => mana_pickup(game_textures),
     LaserGate => laser_gate(game_textures),
+    Seeker => seeker(game_textures),
     AraneaEgg => aranea_egg(game_textures),
     GravityParticle => gravity_particle(game_textures),
     Explosion(easing) => explosion((easing.at(frame_count as f32) * 5.0) as i32, game_textures),
@@ -509,6 +511,18 @@ pub fn laser_gate(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       y: 0.0,
       w: 8.0,
       h: 8.0,
+    },
+  )]
+}
+
+pub fn seeker(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw::default(
+    &game_textures.enemy_textures.seeker,
+    Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 16.0,
+      h: 16.0,
     },
   )]
 }

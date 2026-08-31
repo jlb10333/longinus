@@ -15,7 +15,7 @@ use crate::{
   load_map::{
     ENEMY_PROJECTILE_INTERACTION_GROUPS, EnemySpawn, EnemySpawnEnemy, RAYCAST_INTERACTION_GROUPS,
   },
-  physics::PhysicsSystem,
+  physics::{PhysicsSystem, absolute_angle},
   sprite,
   system::System,
   units::{PhysicsVector, UnitConvert2, vec_zero},
@@ -180,7 +180,14 @@ fn enemy_behavior_generator(
             rigid_body_set,
             query_pipeline,
           ),
-          Enemy::DefenderPrime(defender_prime) => defender_prime.behavior(handle, rng, rigid_body_set),
+          Enemy::DefenderPrime(defender_prime) => defender_prime.behavior(
+            handle,
+            rng,
+            rigid_body_set,
+            player_handle,
+            query_pipeline,
+            collider_set,
+          ),
           Enemy::Seeker(seeker) => seeker.behavior(handle, player_translation, rigid_body_set),
           Enemy::SeekerGenerator(seeker_generator) => {
             seeker_generator.behavior(handle, player_translation, rigid_body_set)
@@ -241,17 +248,13 @@ impl EnemyGoblin {
         let player_translation = rigid_body_set[player_handle].translation();
         let self_rigid_body = &rigid_body_set[handle];
 
-        let self_translation = self_rigid_body.translation();
-
-        let direction_to_player = player_translation - self_translation;
-
-        if let Some((reached_handle, _)) = query_pipeline.cast_ray(
-          &Ray::new((*self_translation).into(), direction_to_player),
-          BALANCING.enemies.goblin.aggro_range,
-          true,
-        ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
-          && reached_parent_handle == player_handle
-        {
+        if detect_player_los(
+          rigid_body_set,
+          player_handle,
+          handle,
+          query_pipeline,
+          collider_set,
+        ) {
           let self_translation = self_rigid_body.translation();
           let vector_to_player = player_translation - self_translation;
 
@@ -1073,7 +1076,6 @@ impl EnemyAraneaQueen {
               )
             }
           }
-          
         }
         aranea_queen::Phase2Substate::LaunchToEgg(launch_to_egg_state) => self
           .launch_to_egg_behavior(
@@ -1129,7 +1131,7 @@ impl EnemyAraneaQueen {
             let random_angle = rng.gen_range(0.0, 2.0 * PI);
             let dir_vec = distance_projection_physics(random_angle, 1.0).into_vec().normalize();
             let (_, distance) = query_pipeline.cast_ray(&Ray::new((*self_rigid_body.translation()).into(), dir_vec), 200.0, true).expect("Hit max query distance when attempting to bounce aranea queen; did you accidentally allow it to access an unconstrained space?");
-            let target_translation = self_rigid_body.translation() + (dir_vec * distance);            
+            let target_translation = self_rigid_body.translation() + (dir_vec * distance);
             aranea_queen::State::Cooldown(
               Rc::new(aranea_queen::State::Phase2(
                 aranea_queen::Phase2Substate::BounceOffWalls(
@@ -1550,9 +1552,7 @@ impl EnemyDefender {
 pub mod defender_prime {
   use std::collections::HashSet;
 
-  
-
-use super::*;
+  use super::*;
 
   #[derive(Clone)]
   pub enum State {
@@ -1596,18 +1596,54 @@ use super::*;
   }
 
   impl EnemyDefenderPrime {
-    pub fn behavior(&self, handle: RigidBodyHandle, rng: &RandGenerator, rigid_body_set: &RigidBodySet) -> EnemyDecision {
+    pub fn behavior(
+      &self,
+      handle: RigidBodyHandle,
+      rng: &RandGenerator,
+      rigid_body_set: &RigidBodySet,
+      player_handle: RigidBodyHandle,
+      query_pipeline: &QueryPipeline,
+      collider_set: &ColliderSet,
+    ) -> EnemyDecision {
       let balancing = &BALANCING.enemies.defender_prime;
+      let movement_force = stop_linvel(100.0, &rigid_body_set[handle]);
+      let player_translation = *rigid_body_set[player_handle].translation();
+
       match &self.state {
-        Idle => EnemyDecision {
-          ..EnemyDecision::default(
+        Idle => {
+          if detect_player_los(
+            rigid_body_set,
+            player_handle,
             handle,
-            Enemy::DefenderPrime(Self {
-              state: Idle,
-              turret_angle: self.turret_angle,
-            }),
-          )
-        },
+            query_pipeline,
+            collider_set,
+          ) {
+            EnemyDecision {
+              movement_force,
+              ..EnemyDecision::default(
+                handle,
+                Enemy::DefenderPrime(Self {
+                  state: Active(
+                    TurretState::Shooting(0),
+                    SeekerSpawnState::Cooldown(FramesLeft(balancing.seeker_spawn_cooldown_frames)),
+                  ),
+                  turret_angle: self.turret_angle,
+                }),
+              )
+            }
+          } else {
+            EnemyDecision {
+              movement_force,
+              ..EnemyDecision::default(
+                handle,
+                Enemy::DefenderPrime(Self {
+                  state: Idle,
+                  turret_angle: self.turret_angle,
+                }),
+              )
+            }
+          }
+        }
         Active(turret_state, seeker_spawn_state) => {
           let (turret_state, new_projectiles) = match turret_state {
             TurretState::Cooldown(shots_left, FramesLeft(frames_left)) => {
@@ -1634,8 +1670,13 @@ use super::*;
               },
               vec![WeaponOutput {
                 damage: balancing.projectile_damage,
+                component_set: ComponentSet::new().insert(SimpleSprite {
+                  kind: sprite::SniperProjectile,
+                }),
                 ..WeaponOutput::default(WeaponOutputKind::Projectile(Projectile {
-                  collider: ColliderBuilder::ball(balancing.projectile_radius).collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS).build(),
+                  collider: ColliderBuilder::ball(balancing.projectile_radius)
+                    .collision_groups(ENEMY_PROJECTILE_INTERACTION_GROUPS)
+                    .build(),
                   initial_impulse: distance_projection_physics(self.turret_angle, 1.0),
                   force_mod: balancing.shoot_force,
                 }))
@@ -1654,13 +1695,15 @@ use super::*;
                 let num_seekers = rng.gen_range(2, 4);
 
                 let mut position_set = SEEKER_SPAWN_POSITION_CHOICES.to_vec();
-                let seeker_position_choices = (0..num_seekers).map(|_| {
-                  let chosen_index = rng.gen_range(0, position_set.len());
-                  let chosen_position = position_set[chosen_index];
-                  position_set.remove(chosen_index);
-                  chosen_position
-                }).collect::<HashSet<_>>();
-                
+                let seeker_position_choices = (0..num_seekers)
+                  .map(|_| {
+                    let chosen_index = rng.gen_range(0, position_set.len());
+                    let chosen_position = position_set[chosen_index];
+                    position_set.remove(chosen_index);
+                    chosen_position
+                  })
+                  .collect::<HashSet<_>>();
+
                 (
                   SeekerSpawnState::Ready(
                     seeker_position_choices,
@@ -1669,39 +1712,61 @@ use super::*;
                   vec![],
                 )
               }
-            },
+            }
             Ready(seeker_position_choices, FramesLeft(frames_left)) => {
               if *frames_left > 0 {
-                (Ready(seeker_position_choices.clone(), FramesLeft(frames_left - 1)), vec![])
+                (
+                  Ready(seeker_position_choices.clone(), FramesLeft(frames_left - 1)),
+                  vec![],
+                )
               } else {
                 (Spawning(seeker_position_choices.clone()), vec![])
               }
-            },
+            }
             Spawning(seeker_position_choices) => {
               let self_translation = *rigid_body_set[handle].translation();
-              let children = seeker_position_choices.iter().map(|choice| match choice {
-                TopLeft => (vector![1.0, -1.0], (3.0 * PI) / 2.0),
-                TopRight => (vector![1.0, 1.0], PI / 2.0),
-                BottomLeft => (vector![-1.0, -1.0], -(3.0 * PI) / 2.0),
-                BottomRight => (vector![-1.0, 1.0], -PI / 2.0),
-              }).map(|(position, rotation)| (self_translation + position * balancing.seeker_spawn_position_offset, rotation)).map(|(position, rotation)| {
-                EnemyDecisionEnemySpawn {
+              let children = seeker_position_choices
+                .iter()
+                .map(|choice| match choice {
+                  TopLeft => (vector![-1.0, 1.0], (3.0 * PI) / 4.0),
+                  TopRight => (vector![-1.0, -1.0], -(3.0 * PI) / 4.0),
+                  BottomLeft => (vector![1.0, 1.0], PI / 4.0),
+                  BottomRight => (vector![1.0, -1.0], -PI / 4.0),
+                })
+                .map(|(position, rotation)| {
+                  (
+                    self_translation + position * balancing.seeker_spawn_position_offset,
+                    rotation,
+                  )
+                })
+                .map(|(position, rotation)| EnemyDecisionEnemySpawn {
                   enemy_spawn: EnemySpawn::new(EnemySpawnEnemy::Seeker, position, rotation, None),
-                  initial_force: distance_projection_physics(rotation, 0.001).into_vec(),
-                }
-              }).collect_vec();
-              (SeekerSpawnState::Cooldown(FramesLeft(balancing.seeker_spawn_cooldown_frames)), children)
+                  initial_force: (position - self_translation)
+                    / balancing.seeker_spawn_position_offset
+                    * 10.0,
+                })
+                .collect_vec();
+              (
+                SeekerSpawnState::Cooldown(FramesLeft(balancing.seeker_spawn_cooldown_frames)),
+                children,
+              )
             }
+          };
+
+          let turret_angle = {
+            let vector_to_player = player_translation - rigid_body_set[handle].translation();
+            absolute_angle(&vector![vector_to_player.x, -vector_to_player.y])
           };
 
           EnemyDecision {
             weapon_outputs: new_projectiles,
             enemies_to_spawn: new_seekers,
+            movement_force,
             ..EnemyDecision::default(
               handle,
               Enemy::DefenderPrime(Self {
                 state: Active(turret_state, seeker_spawn_state),
-                turret_angle: 0.0,
+                turret_angle,
               }),
             )
           }
@@ -1711,7 +1776,7 @@ use super::*;
 
     pub fn new() -> Self {
       Self {
-        state: Active(Shooting(0), SeekerSpawnState::Cooldown(FramesLeft(BALANCING.enemies.defender_prime.seeker_spawn_cooldown_frames))),
+        state: Idle,
         turret_angle: 0.0,
       }
     }
@@ -1729,8 +1794,13 @@ impl EnemySeeker {
     player_translation: &Vector2<f32>,
     physics_rigid_bodies: &RigidBodySet,
   ) -> EnemyDecision {
+    let self_rigid_body = &physics_rigid_bodies[handle];
+    let angvel = rotate_to_target(
+      10.0,
+      self_rigid_body,
+      absolute_angle(self_rigid_body.linvel()),
+    );
     let movement_force = {
-      let self_rigid_body = &physics_rigid_bodies[handle];
       let direction_to_player = player_translation - self_rigid_body.translation();
       let velocity_towards_player = (self_rigid_body.linvel().dot(&direction_to_player)
         / direction_to_player.magnitude())
@@ -1746,6 +1816,7 @@ impl EnemySeeker {
     };
     EnemyDecision {
       movement_force,
+      angvel: Some(angvel),
       ..EnemyDecision::default(handle, Enemy::Seeker(Self))
     }
   }
@@ -2157,5 +2228,32 @@ pub fn rotate_to_target(force_mod: f32, rigid_body: &RigidBody, target_angle: f3
     -force_mod
   } else {
     force_mod
+  }
+}
+
+pub fn detect_player_los(
+  rigid_body_set: &RigidBodySet,
+  player_handle: RigidBodyHandle,
+  self_handle: RigidBodyHandle,
+  query_pipeline: &QueryPipeline,
+  collider_set: &ColliderSet,
+) -> bool {
+  let player_translation = rigid_body_set[player_handle].translation();
+  let self_rigid_body = &rigid_body_set[self_handle];
+
+  let self_translation = self_rigid_body.translation();
+
+  let direction_to_player = player_translation - self_translation;
+
+  if let Some((reached_handle, _)) = query_pipeline.cast_ray(
+    &Ray::new((*self_translation).into(), direction_to_player),
+    BALANCING.enemies.goblin.aggro_range,
+    true,
+  ) && let Some(reached_parent_handle) = collider_set[reached_handle].parent()
+    && reached_parent_handle == player_handle
+  {
+    true
+  } else {
+    false
   }
 }

@@ -1,17 +1,17 @@
 {
-  "player_spawn_id": 62,
-  "map_name": "MP28",
+  "player_spawn_id": 1,
+  "map_name": "boss2",
   "unequipped_modules": [],
   "equipped_modules": [
     [
       "Plasma",
-      null,
+      "Front2Slot",
       null,
       null
     ],
     [
       null,
-      null,
+      "Missile",
       null,
       null
     ],
@@ -35,7 +35,7 @@
   "acquired_boost": true,
   "acquired_chain": true,
   "mana_tanks_capacity": {
-    "auto_recharge_mana_tanks": 5,
+    "auto_recharge_mana_tanks": 3,
     "non_recharge_mana_tanks": 0
   }
 }

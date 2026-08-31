@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use macroquad::prelude::rand;
 use rapier2d::{
-  na::{Isometry2, OPoint},
+  na::{Isometry2, OPoint, Vector2},
   prelude::*,
 };
 use rpds::{HashTrieMap, HashTrieSet, List, ht_map, list};
@@ -3016,4 +3016,8 @@ fn spawn_explosion(
       }),
     label: "boom".to_string(),
   }
+}
+
+pub fn absolute_angle(v: &Vector2<f32>) -> f32 {
+  v.angle(&vector![1.0, 0.0]) * if v.y > 0.0 { 1.0 } else { -1.0 }
 }
