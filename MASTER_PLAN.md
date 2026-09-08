@@ -11,6 +11,8 @@
       - Boost?
   - Core elements
     - 2nd boss
+      - Per quadrant, chain mount point appears after quadrant has taken damage above a threshold, and pulling on this detaches the quadrant, destroying it (removing as a possible spawn point). Shooting in the hole left by the quadrant deals damage to the underlying enemy, but the enemy tries to rotate to face its non-destroyed quadrants towards the player at all times
+      - BUG: Rotation is not quantized for some reason?
   - Full blocking
     - Settle on distribution and selection of upgrade modules/mana bars/health bars
   - Polish

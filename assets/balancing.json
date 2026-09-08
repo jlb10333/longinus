@@ -107,7 +107,7 @@
             "projectile_radius": 0.3,
             "seeker_spawn_cooldown_frames": 120,
             "seeker_spawn_ready_frames": 120,
-            "seeker_spawn_position_offset": 1.5
+            "seeker_spawn_position_offset": 2.5
         },
         "seeker": {
             "speed_cap": 5,
@@ -175,6 +175,6 @@
         "enemy_offscreen_indicator_max_enemy_distance": 350.0
     },
     "debug": {
-        "show_colliders": true
+        "show_colliders": false
     }
 }

@@ -437,12 +437,19 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
               Enemy::DefenderPrime(defender_prime) => Some(
                 if let defender_prime::State::Active(
                   _,
-                  defender_prime::SeekerSpawnState::Ready(positions, _),
+                  defender_prime::SeekerSpawnState::Ready(positions, FramesLeft(frames_left)),
                 ) = &defender_prime.state
                 {
+                  let distance = ((1.0
+                    - (*frames_left as f32
+                      / BALANCING.enemies.defender_prime.seeker_spawn_ready_frames as f32))
+                    * 3.0)
+                    .floor()
+                    * 0.3
+                    + 1.6;
                   let enemy_translation =
                     *physics_system.rigid_body_set[*handle.as_rb_handle().unwrap()].translation();
-                  defender_prime::child_spawn_locations(enemy_translation, positions)
+                  defender_prime::child_spawn_locations(enemy_translation, 0.0, positions, distance)
                     .iter()
                     .flat_map(|(translation, rotation)| {
                       let relative_physics_translation = translation - enemy_translation;

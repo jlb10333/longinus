@@ -107,7 +107,7 @@
             "selectedLayer": 3,
             "viewCenter": {
                 "x": 120,
-                "y": 160
+                "y": 159.75
             }
         },
         "maps/generated/MP11.json": {
@@ -115,7 +115,7 @@
             "selectedLayer": 2,
             "viewCenter": {
                 "x": 320,
-                "y": 200
+                "y": 200.5
             }
         },
         "maps/generated/MP14.json": {
@@ -154,8 +154,8 @@
             "scale": 0.33,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 160.60606060606057,
-                "y": 160.60606060606062
+                "x": 160.60606060606062,
+                "y": 162.12121212121212
             }
         },
         "maps/generated/MP20.json": {
@@ -163,7 +163,7 @@
             "selectedLayer": 2,
             "viewCenter": {
                 "x": 199.99999999999997,
-                "y": 121
+                "y": 119.83333333333333
             }
         },
         "maps/generated/MP21.json": {
@@ -171,15 +171,15 @@
             "selectedLayer": 2,
             "viewCenter": {
                 "x": 120,
-                "y": 80
+                "y": 79.875
             }
         },
         "maps/generated/MP22.json": {
             "scale": 3,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 80,
-                "y": 80.16666666666667
+                "x": 79.99999999999999,
+                "y": 80.16666666666666
             }
         },
         "maps/generated/MP24.json": {
@@ -194,8 +194,8 @@
             "scale": 1.5,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 200,
-                "y": 240
+                "x": 199.99999999999997,
+                "y": 239.66666666666666
             }
         },
         "maps/generated/MP26.json": {
@@ -203,7 +203,7 @@
             "selectedLayer": 3,
             "viewCenter": {
                 "x": 160,
-                "y": 320
+                "y": 321
             }
         },
         "maps/generated/MP28.json": {
@@ -211,7 +211,7 @@
             "selectedLayer": 3,
             "viewCenter": {
                 "x": 431.99999999999994,
-                "y": 224
+                "y": 223.66666666666666
             }
         },
         "maps/generated/MP3.json": {
@@ -219,7 +219,7 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 200,
-                "y": 200
+                "y": 199.75
             }
         },
         "maps/generated/MP30.json": {
@@ -227,15 +227,15 @@
             "selectedLayer": 3,
             "viewCenter": {
                 "x": 612,
-                "y": 256.6666666666667
+                "y": 255.33333333333331
             }
         },
         "maps/generated/MP31.json": {
-            "scale": 2,
-            "selectedLayer": 2,
+            "scale": 3,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": -119.75,
-                "y": 213.25
+                "x": -104,
+                "y": 234.99999999999997
             }
         },
         "maps/generated/MP4.json": {
@@ -253,8 +253,8 @@
             "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 240,
-                "y": 79.99999999999999
+                "x": 239.99999999999997,
+                "y": 80.33333333333333
             }
         },
         "maps/generated/MP6.json": {
@@ -269,8 +269,8 @@
             "scale": 2,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": -195.75,
-                "y": -314.25
+                "x": 160,
+                "y": 199.75
             }
         },
         "maps/generated/MP9.json": {
@@ -286,7 +286,7 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 320,
-                "y": 200
+                "y": 199.75
             }
         },
         "maps/generated/boss1.json": {
@@ -298,11 +298,11 @@
             }
         },
         "maps/generated/boss2.json": {
-            "scale": 0.33,
-            "selectedLayer": 3,
+            "scale": 3,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": -1937.878787878788,
-                "y": 1156.060606060606
+                "x": 296,
+                "y": 186.99999999999997
             }
         },
         "maps/generated/rules.json": {
@@ -310,15 +310,15 @@
             "selectedLayer": 3,
             "viewCenter": {
                 "x": 200,
-                "y": 192.375
+                "y": 186.5625
             }
         },
         "maps/generated/start.json": {
             "scale": 2,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 1350.25,
-                "y": -1287.75
+                "x": 160,
+                "y": 159.75
             }
         },
         "maps/generated/start.json#colliders": {
@@ -463,7 +463,7 @@
     "last.objectTemplatePath": "/home/jack/longinus/assets/maps/generated/templates",
     "last.worldFilePath": "/home/jack/longinus/assets/maps/generated",
     "loadedWorlds": [
-        "/home/jack/longinus/assets/maps/generated/world.world"
+        "/home/jlb10333/game-rs/assets/maps/generated/world.world"
     ],
     "map.fixedSize": true,
     "map.height": 50,
