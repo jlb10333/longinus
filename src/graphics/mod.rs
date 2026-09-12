@@ -5,7 +5,7 @@ use itertools::Itertools;
 use macroquad::prelude::*;
 use menu::draw_menu;
 use rapier2d::prelude::*;
-use utils::{all_offscreen, angle_from_vec, draw_collider, draw_label};
+use utils::{angle_from_vec, draw_collider, draw_label};
 
 use crate::{
   Start,
@@ -161,9 +161,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             .map(|collider_handle| physics_system.collider_set[**collider_handle].clone())
             .collect_vec();
 
-          let offscreen = all_offscreen(&colliders, camera_system.translation);
-
-          if !offscreen || entity.components.get::<Enemy>().is_none() {
+          if entity.components.get::<Enemy>().is_none() {
             return vec![];
           }
 
@@ -483,13 +481,13 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             .flatten()
             .chain(
               {
-                let sprite = entity.components.get::<SimpleSprite>()?;
-
-                Some(get_sprites_to_draw(
-                  &sprite.kind,
-                  physics_system.frame_count,
-                  ctx.input.textures.as_ref(),
-                ))
+                entity.components.get::<SimpleSprite>().map(|sprite| {
+                  get_sprites_to_draw(
+                    &sprite.kind,
+                    physics_system.frame_count,
+                    ctx.input.textures.as_ref(),
+                  )
+                })
               }
               .into_iter()
               .flatten(),
@@ -1656,5 +1654,5 @@ impl GameColor {
 }
 
 fn convert_rotation(rotation: f32) -> f32 {
-  -(rotation * (16.0 / PI).round() / (16.0 / PI))
+  -(rotation * (16.0 / PI)).round() / (16.0 / PI)
 }

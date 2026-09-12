@@ -234,8 +234,8 @@
             "scale": 3,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -104,
-                "y": 234.99999999999997
+                "x": 432,
+                "y": 223.83333333333331
             }
         },
         "maps/generated/MP4.json": {
@@ -298,11 +298,11 @@
             }
         },
         "maps/generated/boss2.json": {
-            "scale": 3,
+            "scale": 1,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 296,
-                "y": 186.99999999999997
+                "x": -1131,
+                "y": 1643.5
             }
         },
         "maps/generated/rules.json": {

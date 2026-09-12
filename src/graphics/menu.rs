@@ -1,7 +1,7 @@
-use std::ops::Deref;
+use std::ops::{Deref, Mul};
 
 use super::{GameMaterials, GameTextParams, consts::*, draw_game_text};
-use derive_more::{Add, Div, Mul, Sub};
+use derive_more::{Add, Div, Sub};
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
 
@@ -21,7 +21,7 @@ pub fn draw_menu(
   game_materials: &GameMaterials,
 ) {
   let draw_menu_box = draw_menu_box_g(game_textures);
-  let draw_game_text = |text, dest, color| {
+  let draw_game_text = |text: &str, dest, color| {
     draw_game_text(
       text,
       &game_textures.ui_textures.text,
@@ -37,10 +37,10 @@ pub fn draw_menu(
   match menu.kind {
     GameMenuKind::PauseMain => {
       draw_menu_box(TileRect {
-        x: SCREEN_WIDTH_TILES / 2,
-        y: SCREEN_HEIGHT_TILES / 2,
-        w: SCREEN_WIDTH_TILES - Tiles(6),
-        h: SCREEN_HEIGHT_TILES - Tiles(6),
+        x: SCREEN_WIDTH_TILES * 0.5,
+        y: SCREEN_HEIGHT_TILES * 0.5,
+        w: SCREEN_WIDTH_TILES * 0.7,
+        h: SCREEN_HEIGHT_TILES * 0.66,
       });
       draw_game_text(
         if menu.cursor_position == vector![0, 0] {
@@ -81,27 +81,28 @@ pub fn draw_menu(
     }
     GameMenuKind::PauseLoadSave => {
       draw_menu_box(TileRect {
-        x: (SCREEN_WIDTH_TILES / 2) + Tiles(4),
-        y: (SCREEN_HEIGHT_TILES / 2) + Tiles(2),
-        w: SCREEN_WIDTH_TILES / 2,
-        h: SCREEN_HEIGHT_TILES / 2,
+        x: (SCREEN_WIDTH_TILES * 0.7),
+        y: (SCREEN_HEIGHT_TILES * 0.52),
+        w: SCREEN_WIDTH_TILES * 0.5,
+        h: SCREEN_HEIGHT_TILES * 0.5,
       });
-      draw_text(
+      draw_game_text(
         if menu.cursor_position == vector![0, 0] {
           "-cancel"
         } else {
           "cancel"
         },
-        VIRTUAL_SCREEN_WIDTH * 0.5,
-        VIRTUAL_SCREEN_HEIGHT * 0.5,
-        40.0,
-        COLOR_1,
+        Vec2 {
+          x: (SCREEN_WIDTH_TILES * 0.5).to_screen(),
+          y: (SCREEN_HEIGHT_TILES * 0.5).to_screen(),
+        },
+        GameColor::Color1,
       );
       available_sava_data
         .iter()
         .enumerate()
         .for_each(|(index, save)| {
-          draw_text(
+          draw_game_text(
             &format!(
               "{}{}",
               if menu.cursor_position.y - 1 == index as i32 {
@@ -111,10 +112,11 @@ pub fn draw_menu(
               },
               save
             ),
-            VIRTUAL_SCREEN_WIDTH * 0.5,
-            VIRTUAL_SCREEN_HEIGHT * (0.55 + (index as f32 * 0.05)),
-            40.0,
-            COLOR_1,
+            Vec2 {
+              x: (SCREEN_WIDTH_TILES * 0.5).to_screen(),
+              y: (SCREEN_HEIGHT_TILES * (0.6 + (index as f32 * 0.07))).to_screen(),
+            },
+            GameColor::Color1,
           );
         });
     }
@@ -683,7 +685,8 @@ fn debug_module_text(module_kind: WeaponModuleKind) -> Vec<&'static str> {
   }
 }
 
-#[derive(Clone, Copy, Add, Sub, Mul, Div)]
+#[derive(Clone, Copy, Add, Sub, Div)]
+/// Screen is 20 x 18
 pub struct Tiles(pub i32);
 
 impl Deref for Tiles {
@@ -691,6 +694,13 @@ impl Deref for Tiles {
 
   fn deref(&self) -> &Self::Target {
     &self.0
+  }
+}
+
+impl Mul<f32> for Tiles {
+  type Output = Self;
+  fn mul(self, rhs: f32) -> Self::Output {
+    Self((self.0 as f32 * rhs) as i32)
   }
 }
 
