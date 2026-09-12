@@ -51,17 +51,24 @@ uniform vec4 MAPPED_COLOR_2;
 uniform vec4 MAPPED_COLOR_3;
 uniform vec4 MAPPED_COLOR_4;
 
+const float EPSILON = 0.001;
+
+bool approxEqual(vec3 a, vec3 b) {
+    vec3 diff = abs(a - b);
+    return diff.r < EPSILON && diff.g < EPSILON && diff.b < EPSILON;
+}
+
 void main() {
     vec2 adjusted_uv = vec2(uv.x, 1.0 - uv.y);
     vec4 cur = texture2D(Texture, adjusted_uv);
 
-    if (cur.rgb == COLOR_1.rgb) {
+    if (approxEqual(cur.rgb, COLOR_1.rgb)) {
         cur = MAPPED_COLOR_1;
-    } else if (cur.rgb == COLOR_2.rgb) {
+    } else if (approxEqual(cur.rgb, COLOR_2.rgb)) {
         cur = MAPPED_COLOR_2;
-    } else if (cur.rgb == COLOR_3.rgb) {
+    } else if (approxEqual(cur.rgb, COLOR_3.rgb)) {
         cur = MAPPED_COLOR_3;
-    } else if (cur.rgb == COLOR_4.rgb) {
+    } else if (approxEqual(cur.rgb, COLOR_4.rgb)) {
         cur = MAPPED_COLOR_4;
     }
 
