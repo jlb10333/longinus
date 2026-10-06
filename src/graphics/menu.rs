@@ -5,7 +5,7 @@ use rapier2d::prelude::*;
 use std::ops::{Deref, Mul};
 
 use crate::{
-  GameTextures,
+  SpriteTextures,
   combat::{Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind, weapon_module_from_kind},
   graphics::{GameColor, draw_sprites},
   menu::{GameMenu, GameMenuKind, INVENTORY_WRAP_WIDTH},
@@ -16,14 +16,15 @@ use crate::{
 pub fn draw_menu(
   menu: &GameMenu,
   available_sava_data: &[String],
-  game_textures: &GameTextures,
+  game_textures: &SpriteTextures,
   game_materials: &GameMaterials,
 ) {
+  // Centered on (x, y), unlike draw_rectangle where (x, y) is the top-left corner
   let draw_menu_box = draw_menu_box_g(game_textures);
   let draw_game_text = |text: &str, dest, color| {
     draw_game_text(
       text,
-      &game_textures.ui_textures.text,
+      &game_textures.ui_textures.text_font_texture,
       dest,
       GameTextParams {
         color,
@@ -119,138 +120,55 @@ pub fn draw_menu(
           );
         });
     }
-    _ => draw_menu_deprecated(menu, available_sava_data),
-  }
-}
-
-pub fn draw_menu_deprecated(menu: &GameMenu, available_sava_data: &[String]) {
-  match &menu.kind {
-    /* MARK: Pause Main */
-    crate::menu::GameMenuKind::PauseMain => {
-      draw_rectangle(
-        VIRTUAL_SCREEN_WIDTH * 0.1,
-        VIRTUAL_SCREEN_HEIGHT * 0.1,
-        VIRTUAL_SCREEN_WIDTH * 0.8,
-        VIRTUAL_SCREEN_HEIGHT * 0.8,
-        COLOR_3,
-      );
-
-      draw_text(
-        if menu.cursor_position == vector![0, 0] {
-          "-resume-"
-        } else {
-          "resume"
-        },
-        VIRTUAL_SCREEN_WIDTH * 0.2,
-        VIRTUAL_SCREEN_HEIGHT * 0.6,
-        40.0,
-        COLOR_1,
-      );
-      draw_text(
-        if menu.cursor_position == vector![0, 1] {
-          "-load game-"
-        } else {
-          "load game"
-        },
-        VIRTUAL_SCREEN_WIDTH * 0.2,
-        VIRTUAL_SCREEN_HEIGHT * 0.65,
-        40.0,
-        COLOR_1,
-      );
-      draw_text(
-        if menu.cursor_position == vector![0, 2] {
-          "-quit to menu-"
-        } else {
-          "quit to menu"
-        },
-        VIRTUAL_SCREEN_WIDTH * 0.2,
-        VIRTUAL_SCREEN_HEIGHT * 0.7,
-        40.0,
-        COLOR_1,
-      );
-    }
-    /* MARK: Pause Load Save */
-    crate::menu::GameMenuKind::PauseLoadSave => {
-      draw_rectangle(
-        VIRTUAL_SCREEN_WIDTH * 0.45,
-        VIRTUAL_SCREEN_HEIGHT * 0.45,
-        VIRTUAL_SCREEN_WIDTH * 0.5,
-        VIRTUAL_SCREEN_HEIGHT * 0.5,
-        COLOR_2,
-      );
-      draw_text(
-        if menu.cursor_position == vector![0, 0] {
-          "-cancel"
-        } else {
-          "cancel"
-        },
-        VIRTUAL_SCREEN_WIDTH * 0.5,
-        VIRTUAL_SCREEN_HEIGHT * 0.5,
-        40.0,
-        COLOR_1,
-      );
-      available_sava_data
-        .iter()
-        .enumerate()
-        .for_each(|(index, save)| {
-          draw_text(
-            &format!(
-              "{}{}",
-              if menu.cursor_position.y - 1 == index as i32 {
-                "-"
-              } else {
-                ""
-              },
-              save
-            ),
-            VIRTUAL_SCREEN_WIDTH * 0.5,
-            VIRTUAL_SCREEN_HEIGHT * (0.55 + (index as f32 * 0.05)),
-            40.0,
-            COLOR_1,
-          );
-        });
-    }
-    /* MARK: Inventory Main */
     crate::menu::GameMenuKind::InventoryMain => {
-      draw_rectangle(
-        VIRTUAL_SCREEN_WIDTH * 0.1,
-        VIRTUAL_SCREEN_HEIGHT * 0.1,
-        VIRTUAL_SCREEN_WIDTH * 0.8,
-        VIRTUAL_SCREEN_HEIGHT * 0.8,
-        COLOR_3,
-      );
+      draw_menu_box(TileRect {
+        x: SCREEN_WIDTH_TILES * 0.5,
+        y: SCREEN_HEIGHT_TILES * 0.5,
+        w: SCREEN_WIDTH_TILES * 0.8,
+        h: SCREEN_HEIGHT_TILES * 0.8,
+      });
 
-      draw_text(
+      draw_game_text(
         "inventory",
-        VIRTUAL_SCREEN_WIDTH * 0.2,
-        VIRTUAL_SCREEN_HEIGHT * 0.4,
-        80.0,
-        COLOR_1,
+        Vec2 {
+          x: (SCREEN_WIDTH_TILES * 0.2).to_screen(),
+          y: (SCREEN_HEIGHT_TILES * 0.4).to_screen(),
+        },
+        GameColor::Color1,
       );
 
-      draw_text(
+      draw_game_text(
         if menu.cursor_position == vector![0, 0] {
           "-edit-"
         } else {
           "edit"
         },
-        VIRTUAL_SCREEN_WIDTH * 0.2,
-        VIRTUAL_SCREEN_HEIGHT * 0.6,
-        40.0,
-        COLOR_1,
+        Vec2 {
+          x: (SCREEN_WIDTH_TILES * 0.2).to_screen(),
+          y: (SCREEN_HEIGHT_TILES * 0.6).to_screen(),
+        },
+        GameColor::Color1,
       );
-      draw_text(
+
+      draw_game_text(
         if menu.cursor_position == vector![1, 0] {
           "-close-"
         } else {
           "close"
         },
-        VIRTUAL_SCREEN_WIDTH * 0.5,
-        VIRTUAL_SCREEN_HEIGHT * 0.6,
-        40.0,
-        COLOR_1,
+        Vec2 {
+          x: (SCREEN_WIDTH_TILES * 0.5).to_screen(),
+          y: (SCREEN_HEIGHT_TILES * 0.6).to_screen(),
+        },
+        GameColor::Color1,
       );
     }
+    _ => draw_menu_deprecated(menu),
+  }
+}
+
+pub fn draw_menu_deprecated(menu: &GameMenu) {
+  match &menu.kind {
     /* MARK: Inventory pick slot */
     crate::menu::GameMenuKind::InventoryPickSlot(_, inventory_update) => {
       draw_rectangle(
@@ -606,6 +524,7 @@ pub fn draw_menu_deprecated(menu: &GameMenu, available_sava_data: &[String]) {
           );
         });
     }
+    _ => panic!("Menu kind covered in neither new nor deprecated menu handlers"),
   }
 }
 
@@ -716,11 +635,11 @@ struct TileRect {
   pub h: Tiles,
 }
 
-fn draw_menu_box_g(game_textures: &GameTextures) -> impl Fn(TileRect) {
+fn draw_menu_box_g(game_textures: &SpriteTextures) -> impl Fn(TileRect) {
   |dest| {
     let sprites_to_draw = tiled_sprites_to_draw(
       &PhysicsVector::from_vec(vector![*dest.w as f32, *dest.h as f32]),
-      &game_textures.ui_textures.menu,
+      &game_textures.ui_textures.menu_texture,
       None,
       None,
     );

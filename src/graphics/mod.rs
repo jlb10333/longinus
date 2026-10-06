@@ -112,7 +112,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
       let ability_system = ctx.get::<AbilitySystem>().unwrap();
 
-      let tiles_texture = &ctx.input.textures.tiles_texture;
+      let tiles_texture = &ctx.input.textures.tileset_textures.tiles_texture;
 
       let player_translation =
         physics_system.rigid_body_set[physics_system.player_handle].translation();
@@ -550,7 +550,12 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             );
             dissolve.set_texture(
               "NoiseTexture",
-              ctx.input.textures.effect_textures.noise.weak_clone(),
+              ctx
+                .input
+                .textures
+                .effect_textures
+                .noise_texture
+                .weak_clone(),
             );
             dissolve
           }
@@ -994,7 +999,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
           player_damageable.health.round(),
           player_damageable.max_health.round()
         ),
-        &ctx.input.textures.ui_textures.text,
+        &ctx.input.textures.ui_textures.text_font_texture,
         vec2(
           16.0 * VIRTUAL_PIXEL_FACTOR,
           VIRTUAL_SCREEN_HEIGHT - (24.0 * VIRTUAL_PIXEL_FACTOR),
@@ -1073,7 +1078,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             .capacity
             .max_rechargeable_mana_level() as i32
         ),
-        &ctx.input.textures.ui_textures.text,
+        &ctx.input.textures.ui_textures.text_font_texture,
         vec2(
           16.0 * VIRTUAL_PIXEL_FACTOR,
           VIRTUAL_SCREEN_HEIGHT - (16.0 * VIRTUAL_PIXEL_FACTOR),
@@ -1093,7 +1098,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             .capacity
             .max_non_rechargeable_mana_level() as i32
         ),
-        &ctx.input.textures.ui_textures.text,
+        &ctx.input.textures.ui_textures.text_font_texture,
         vec2(
           16.0 * VIRTUAL_PIXEL_FACTOR,
           VIRTUAL_SCREEN_HEIGHT - (8.0 * VIRTUAL_PIXEL_FACTOR),
@@ -1111,7 +1116,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       menu_system.active_main_menus.iter().rev().for_each(|menu| {
         draw_main_menu(
           menu,
-          &ctx.input.textures.ui_textures.text,
+          &ctx.input.textures.ui_textures.text_font_texture,
           &save_system.available_save_data,
           self.materials.as_ref(),
         )
@@ -1142,7 +1147,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       menu_system.active_main_menus.iter().rev().for_each(|menu| {
         draw_main_menu(
           menu,
-          &ctx.input.textures.ui_textures.text,
+          &ctx.input.textures.ui_textures.text_font_texture,
           &save_system.available_save_data,
           self.materials.as_ref(),
         )

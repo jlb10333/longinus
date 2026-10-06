@@ -11,6 +11,7 @@ use crate::controls::ControlsSystem;
 use crate::enemy::EnemySystem;
 use crate::graphics::GraphicsSystem;
 use crate::load_map::MapSystem;
+pub use crate::load_sprites::*;
 use crate::menu::{MenuSystem, QuitDecision};
 use crate::physics::PhysicsSystem;
 use crate::save::{SaveData, SaveSystem, load_save};
@@ -26,8 +27,10 @@ mod ecs;
 mod effects;
 mod enemy;
 mod f;
+mod generated;
 mod graphics;
 mod load_map;
+mod load_sprites_utils;
 mod menu;
 mod physics;
 mod save;
@@ -36,9 +39,11 @@ mod sprite;
 mod system;
 mod units;
 
+pub use generated::*;
+
 #[derive(Clone)]
 pub struct Start {
-  pub textures: Rc<GameTextures>,
+  pub textures: Rc<SpriteTextures>,
 }
 
 impl Default for Start {
@@ -47,82 +52,10 @@ impl Default for Start {
   }
 }
 
-pub struct ProjectileTextures {
-  pub plasma: Texture2D,
-  pub missile: Texture2D,
-  pub imp: Texture2D,
-  pub aranea_queen: Texture2D,
-  pub beam: Texture2D,
-  pub sniper: Texture2D,
-}
-
-pub struct PickupTextures {
-  pub health_tank: Texture2D,
-  pub mana_tank: Texture2D,
-  pub weapon_module: Texture2D,
-  pub health: Texture2D,
-  pub mana: Texture2D,
-}
-
-pub struct BlockTextures {
-  pub block: Texture2D,
-  pub angelic_block: Texture2D,
-}
-
-pub struct ActivatorTextures {
-  pub touch_sensor_activated: Texture2D,
-  pub touch_sensor_deactivated: Texture2D,
-}
-
-pub struct EnemyTextures {
-  pub goblin: Texture2D,
-  pub imp: Texture2D,
-  pub aranea: Texture2D,
-  pub aranea_egg: Texture2D,
-  pub aranea_queen: Texture2D,
-  pub sniper: Texture2D,
-  pub defender: Texture2D,
-  pub defender_prime: Texture2D,
-  pub laser_gate: Texture2D,
-  pub seeker: Texture2D,
-}
-
-pub struct EffectTextures {
-  pub noise: Texture2D,
-  pub gravity_particle: Texture2D,
-  pub explosion: Texture2D,
-}
-
-pub struct AbilityTextures {
-  pub chain: Texture2D,
-  pub chain_mount_point_selection: Texture2D,
-}
-
-pub struct UiTextures {
-  pub enemy_offscreen: Texture2D,
-  pub menu: Texture2D,
-  pub text: Texture2D,
-}
-
-pub struct GameTextures {
-  pub tiles_texture: Texture2D,
-  pub player_texture: Texture2D,
-  pub breakable_tile_texture: Texture2D,
-  pub save_point_texture: Texture2D,
-  pub projectile_textures: ProjectileTextures,
-  pub pickup_textures: PickupTextures,
-  pub block_textures: BlockTextures,
-  pub activator_textures: ActivatorTextures,
-  pub enemy_textures: EnemyTextures,
-  pub effect_textures: EffectTextures,
-  pub ability_textures: AbilityTextures,
-  pub ui_textures: UiTextures,
-}
-
 #[derive(Clone)]
 pub struct GameInput {
   pub save_data: SaveData,
-  pub textures: Rc<GameTextures>,
+  pub textures: Rc<SpriteTextures>,
 }
 
 impl Default for GameInput {
@@ -143,126 +76,6 @@ fn window_conf() -> Conf {
     window_width: 1920,
     window_height: 1080,
     ..Default::default()
-  }
-}
-
-async fn load_texture_with_filter(path: &'static str) -> Texture2D {
-  let texture = load_texture(path).await.unwrap();
-  texture.set_filter(FilterMode::Nearest);
-  texture
-}
-
-async fn load_game_textures() -> GameTextures {
-  let tiles_texture = load_texture_with_filter("./assets/maps/tilesets/tiles.png").await;
-  let player_texture = load_texture_with_filter("./assets/sprites/player.png").await;
-  let plasma_texture = load_texture_with_filter("./assets/sprites/projectiles/plasma.png").await;
-  let missile_texture = load_texture_with_filter("./assets/sprites/projectiles/missile.png").await;
-  let imp_projectile_texture =
-    load_texture_with_filter("./assets/sprites/projectiles/imp_projectile.png").await;
-  let aranea_queen_projectile_texture =
-    load_texture_with_filter("./assets/sprites/projectiles/aranea_queen_projectile.png").await;
-  let beam_texture = load_texture_with_filter("./assets/sprites/projectiles/beam.png").await;
-  let sniper_projectile_texture =
-    load_texture_with_filter("./assets/sprites/projectiles/sniper_projectile.png").await;
-  let health_tank_texture =
-    load_texture_with_filter("./assets/sprites/pickups/health_tank.png").await;
-  let mana_tank_texture = load_texture_with_filter("./assets/sprites/pickups/mana_tank.png").await;
-  let weapon_module_texture =
-    load_texture_with_filter("./assets/sprites/pickups/weapon_module.png").await;
-  let health_pickup_texture =
-    load_texture_with_filter("./assets/sprites/pickups/health_pickup.png").await;
-  let mana_pickup_texture =
-    load_texture_with_filter("./assets/sprites/pickups/mana_pickup.png").await;
-  let breakable_tile_texture =
-    load_texture_with_filter("./assets/sprites/breakable_tile.png").await;
-  let block_texture = load_texture_with_filter("./assets/sprites/blocks/block.png").await;
-  let angelic_block_texture =
-    load_texture_with_filter("./assets/sprites/blocks/angelic_block.png").await;
-  let touch_sensor_deactivated_texture =
-    load_texture_with_filter("./assets/sprites/activators/touch_sensor_deactivated.png").await;
-  let touch_sensor_activated_texture =
-    load_texture_with_filter("./assets/sprites/activators/touch_sensor_activated.png").await;
-  let goblin_texture = load_texture_with_filter("./assets/sprites/enemies/goblin.png").await;
-  let imp_texture = load_texture_with_filter("./assets/sprites/enemies/imp.png").await;
-  let aranea_texture = load_texture_with_filter("./assets/sprites/enemies/aranea.png").await;
-  let aranea_egg_texture =
-    load_texture_with_filter("./assets/sprites/enemies/aranea_egg.png").await;
-  let aranea_queen_texture =
-    load_texture_with_filter("./assets/sprites/enemies/aranea_queen.png").await;
-  let sniper_texture = load_texture_with_filter("./assets/sprites/enemies/sniper.png").await;
-  let defender_texture = load_texture_with_filter("./assets/sprites/enemies/defender.png").await;
-  let defender_prime_texture =
-    load_texture_with_filter("./assets/sprites/enemies/defender_prime.png").await;
-  let seeker_texture = load_texture_with_filter("./assets/sprites/enemies/seeker.png").await;
-  let laser_gate_texture =
-    load_texture_with_filter("./assets/sprites/enemies/laser_gate.png").await;
-  let noise_texture = load_texture_with_filter("./assets/sprites/noise.png").await;
-  let gravity_particle_texture =
-    load_texture_with_filter("./assets/sprites/effects/gravity_particle.png").await;
-  let explosion_texture = load_texture_with_filter("./assets/sprites/effects/explosion.png").await;
-  let save_point_texture = load_texture_with_filter("./assets/sprites/save_point.png").await;
-  let chain_texture = load_texture_with_filter("./assets/sprites/abilities/chain.png").await;
-  let chain_mount_point_selection_texture =
-    load_texture_with_filter("./assets/sprites/abilities/chain_mount_point_selection.png").await;
-  let enemy_offscreen_texture =
-    load_texture_with_filter("./assets/sprites/ui/enemy_offscreen.png").await;
-  let menu_texture = load_texture_with_filter("./assets/sprites/ui/menu.png").await;
-  let text_font = load_texture_with_filter("./assets/sprites/ui/text_font.png").await;
-
-  GameTextures {
-    tiles_texture,
-    player_texture,
-    breakable_tile_texture,
-    save_point_texture,
-    projectile_textures: ProjectileTextures {
-      plasma: plasma_texture,
-      missile: missile_texture,
-      imp: imp_projectile_texture,
-      aranea_queen: aranea_queen_projectile_texture,
-      beam: beam_texture,
-      sniper: sniper_projectile_texture,
-    },
-    pickup_textures: PickupTextures {
-      health_tank: health_tank_texture,
-      mana_tank: mana_tank_texture,
-      weapon_module: weapon_module_texture,
-      health: health_pickup_texture,
-      mana: mana_pickup_texture,
-    },
-    block_textures: BlockTextures {
-      block: block_texture,
-      angelic_block: angelic_block_texture,
-    },
-    activator_textures: ActivatorTextures {
-      touch_sensor_activated: touch_sensor_activated_texture,
-      touch_sensor_deactivated: touch_sensor_deactivated_texture,
-    },
-    enemy_textures: EnemyTextures {
-      goblin: goblin_texture,
-      imp: imp_texture,
-      aranea: aranea_texture,
-      aranea_egg: aranea_egg_texture,
-      aranea_queen: aranea_queen_texture,
-      sniper: sniper_texture,
-      defender: defender_texture,
-      defender_prime: defender_prime_texture,
-      laser_gate: laser_gate_texture,
-      seeker: seeker_texture,
-    },
-    effect_textures: EffectTextures {
-      noise: noise_texture,
-      gravity_particle: gravity_particle_texture,
-      explosion: explosion_texture,
-    },
-    ability_textures: AbilityTextures {
-      chain: chain_texture,
-      chain_mount_point_selection: chain_mount_point_selection_texture,
-    },
-    ui_textures: UiTextures {
-      enemy_offscreen: enemy_offscreen_texture,
-      menu: menu_texture,
-      text: text_font,
-    },
   }
 }
 

@@ -7,7 +7,7 @@ use macroquad::{
 };
 
 use crate::{
-  GameTextures,
+  SpriteTextures,
   easing::Easing,
   units::{PhysicsVector, UnitConvert2},
 };
@@ -74,7 +74,7 @@ pub use SimpleSpriteTextureKind::*;
 pub fn get_sprites_to_draw(
   kind: &SimpleSpriteTextureKind,
   frame_count: i64,
-  game_textures: &GameTextures,
+  game_textures: &SpriteTextures,
 ) -> Vec<SpriteToDraw> {
   match kind {
     Player => player(game_textures),
@@ -103,7 +103,7 @@ pub fn get_sprites_to_draw(
   }
 }
 
-pub fn player(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn player(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
     &game_textures.player_texture,
     Rect {
@@ -115,9 +115,9 @@ pub fn player(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn plasma_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn plasma_projectile(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.projectile_textures.plasma,
+    &game_textures.projectile_textures.plasma_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -127,9 +127,9 @@ pub fn plasma_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn missile_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn missile_projectile(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.projectile_textures.missile,
+    &game_textures.projectile_textures.missile_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -142,7 +142,7 @@ pub fn missile_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
 pub fn beam(
   index: i32,
   dimensions: &PhysicsVector,
-  game_textures: &GameTextures,
+  game_textures: &SpriteTextures,
 ) -> Vec<SpriteToDraw> {
   let offset = Vec2 {
     x: 0.0,
@@ -150,15 +150,15 @@ pub fn beam(
   };
   tiled_sprites_to_draw(
     dimensions,
-    &game_textures.projectile_textures.beam,
+    &game_textures.projectile_textures.beam_texture,
     Some(offset),
     None,
   )
 }
 
-pub fn imp_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn imp_projectile(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.projectile_textures.imp,
+    &game_textures.projectile_textures.imp_projectile_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -168,9 +168,11 @@ pub fn imp_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn aranea_queen_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn aranea_queen_projectile(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.projectile_textures.aranea_queen,
+    &game_textures
+      .projectile_textures
+      .aranea_queen_projectile_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -180,9 +182,9 @@ pub fn aranea_queen_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw
   )]
 }
 
-pub fn sniper_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn sniper_projectile(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.projectile_textures.sniper,
+    &game_textures.projectile_textures.sniper_projectile_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -192,9 +194,9 @@ pub fn sniper_projectile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn defender_prime_body(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn defender_prime_body(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.enemy_textures.defender_prime,
+    &game_textures.enemy_textures.defender_prime_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -204,11 +206,11 @@ pub fn defender_prime_body(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn enemy_offscreen(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn enemy_offscreen(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw {
     z_position: Some(-20.0),
     ..SpriteToDraw::default(
-      &game_textures.ui_textures.enemy_offscreen,
+      &game_textures.ui_textures.enemy_offscreen_texture,
       Rect {
         x: 0.0,
         y: 0.0,
@@ -219,9 +221,9 @@ pub fn enemy_offscreen(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   }]
 }
 
-pub fn health_tank_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn health_tank_pickup(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.pickup_textures.health_tank,
+    &game_textures.pickup_textures.health_tank_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -231,7 +233,7 @@ pub fn health_tank_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn mana_tank_pickup(frame_count: i64, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn mana_tank_pickup(frame_count: i64, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     (frame_count / 30) as i32 % 3,
     SpriteSheetArgs {
@@ -242,13 +244,13 @@ pub fn mana_tank_pickup(frame_count: i64, game_textures: &GameTextures) -> Vec<S
       offset: None,
       z_position: None,
     },
-    &game_textures.pickup_textures.mana_tank,
+    &game_textures.pickup_textures.mana_tank_texture,
   )
 }
 
-pub fn weapon_module_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn weapon_module_pickup(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.pickup_textures.weapon_module,
+    &game_textures.pickup_textures.weapon_module_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -258,9 +260,9 @@ pub fn weapon_module_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn health_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn health_pickup(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.pickup_textures.health,
+    &game_textures.pickup_textures.health_pickup_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -270,9 +272,9 @@ pub fn health_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn mana_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn mana_pickup(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.pickup_textures.mana,
+    &game_textures.pickup_textures.mana_pickup_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -282,7 +284,7 @@ pub fn mana_pickup(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn breakable_tile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn breakable_tile(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
     &game_textures.breakable_tile_texture,
     Rect {
@@ -294,32 +296,40 @@ pub fn breakable_tile(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn block(dimensions: &PhysicsVector, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
-  tiled_sprites_to_draw(dimensions, &game_textures.block_textures.block, None, None)
-}
-
-pub fn angelic_block(
-  dimensions: &PhysicsVector,
-  game_textures: &GameTextures,
-) -> Vec<SpriteToDraw> {
+pub fn block(dimensions: &PhysicsVector, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   tiled_sprites_to_draw(
     dimensions,
-    &game_textures.block_textures.angelic_block,
+    &game_textures.block_textures.block_texture,
     None,
     None,
   )
 }
 
-pub fn chain(dimensions: &PhysicsVector, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn angelic_block(
+  dimensions: &PhysicsVector,
+  game_textures: &SpriteTextures,
+) -> Vec<SpriteToDraw> {
   tiled_sprites_to_draw(
     dimensions,
-    &game_textures.ability_textures.chain,
+    &game_textures.block_textures.angelic_block_texture,
+    None,
+    None,
+  )
+}
+
+pub fn chain(dimensions: &PhysicsVector, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
+  tiled_sprites_to_draw(
+    dimensions,
+    &game_textures.ability_textures.chain_texture,
     None,
     Some(-10.0),
   )
 }
 
-pub fn chain_mount_point_selection(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn chain_mount_point_selection(
+  index: i32,
+  game_textures: &SpriteTextures,
+) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
@@ -330,17 +340,21 @@ pub fn chain_mount_point_selection(index: i32, game_textures: &GameTextures) -> 
       offset: None,
       z_position: Some(-10.0),
     },
-    &game_textures.ability_textures.chain_mount_point_selection,
+    &game_textures
+      .ability_textures
+      .chain_mount_point_selection_texture,
   )
 }
 
 pub fn touch_sensor_activated(
   dimensions: &PhysicsVector,
-  game_textures: &GameTextures,
+  game_textures: &SpriteTextures,
 ) -> Vec<SpriteToDraw> {
   tiled_sprites_to_draw(
     dimensions,
-    &game_textures.activator_textures.touch_sensor_activated,
+    &game_textures
+      .activator_textures
+      .touch_sensor_activated_texture,
     None,
     None,
   )
@@ -348,17 +362,19 @@ pub fn touch_sensor_activated(
 
 pub fn touch_sensor_deactivated(
   dimensions: &PhysicsVector,
-  game_textures: &GameTextures,
+  game_textures: &SpriteTextures,
 ) -> Vec<SpriteToDraw> {
   tiled_sprites_to_draw(
     dimensions,
-    &game_textures.activator_textures.touch_sensor_deactivated,
+    &game_textures
+      .activator_textures
+      .touch_sensor_deactivated_texture,
     None,
     None,
   )
 }
 
-pub fn goblin(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn goblin(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
@@ -369,11 +385,11 @@ pub fn goblin(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       offset: None,
       z_position: None,
     },
-    &game_textures.enemy_textures.goblin,
+    &game_textures.enemy_textures.goblin_texture,
   )
 }
 
-pub fn imp(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn imp(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
@@ -384,11 +400,11 @@ pub fn imp(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       offset: None,
       z_position: None,
     },
-    &game_textures.enemy_textures.imp,
+    &game_textures.enemy_textures.imp_texture,
   )
 }
 
-pub fn aranea(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn aranea(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
@@ -399,11 +415,11 @@ pub fn aranea(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       offset: None,
       z_position: None,
     },
-    &game_textures.enemy_textures.aranea,
+    &game_textures.enemy_textures.aranea_texture,
   )
 }
 
-pub fn aranea_queen(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn aranea_queen(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
@@ -414,13 +430,13 @@ pub fn aranea_queen(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDra
       offset: None,
       z_position: None,
     },
-    &game_textures.enemy_textures.aranea_queen,
+    &game_textures.enemy_textures.aranea_queen_texture,
   )
 }
 
-pub fn aranea_egg(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn aranea_egg(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.enemy_textures.aranea_egg,
+    &game_textures.enemy_textures.aranea_egg_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -430,7 +446,7 @@ pub fn aranea_egg(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn sniper(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn sniper(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
@@ -441,11 +457,11 @@ pub fn sniper(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       offset: None,
       z_position: None,
     },
-    &game_textures.enemy_textures.sniper,
+    &game_textures.enemy_textures.sniper_texture,
   )
 }
 
-pub fn defender(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn defender(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
@@ -456,11 +472,11 @@ pub fn defender(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
       offset: None,
       z_position: None,
     },
-    &game_textures.enemy_textures.defender,
+    &game_textures.enemy_textures.defender_texture,
   )
 }
 
-pub fn explosion(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn explosion(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
@@ -471,11 +487,11 @@ pub fn explosion(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> 
       offset: None,
       z_position: None,
     },
-    &game_textures.effect_textures.explosion,
+    &game_textures.effect_textures.explosion_texture,
   )
 }
 
-pub fn save_point(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn save_point(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
@@ -490,11 +506,11 @@ pub fn save_point(index: i32, game_textures: &GameTextures) -> Vec<SpriteToDraw>
   )
 }
 
-pub fn gravity_particle(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn gravity_particle(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw {
     z_position: Some(-5.0),
     ..SpriteToDraw::default(
-      &game_textures.effect_textures.gravity_particle,
+      &game_textures.effect_textures.gravity_particle_texture,
       Rect {
         x: 0.0,
         y: 0.0,
@@ -505,9 +521,9 @@ pub fn gravity_particle(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   }]
 }
 
-pub fn laser_gate(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn laser_gate(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.enemy_textures.laser_gate,
+    &game_textures.enemy_textures.laser_gate_texture,
     Rect {
       x: 0.0,
       y: 0.0,
@@ -517,9 +533,9 @@ pub fn laser_gate(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
   )]
 }
 
-pub fn seeker(game_textures: &GameTextures) -> Vec<SpriteToDraw> {
+pub fn seeker(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
-    &game_textures.enemy_textures.seeker,
+    &game_textures.enemy_textures.seeker_texture,
     Rect {
       x: 0.0,
       y: 0.0,
