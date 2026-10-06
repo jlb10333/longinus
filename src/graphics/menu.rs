@@ -1,9 +1,8 @@
-use std::ops::{Deref, Mul};
-
 use super::{GameMaterials, GameTextParams, consts::*, draw_game_text};
 use derive_more::{Add, Div, Sub};
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
+use std::ops::{Deref, Mul};
 
 use crate::{
   GameTextures,
@@ -88,13 +87,13 @@ pub fn draw_menu(
       });
       draw_game_text(
         if menu.cursor_position == vector![0, 0] {
-          "-cancel"
+          "-cancel-"
         } else {
           "cancel"
         },
         Vec2 {
-          x: (SCREEN_WIDTH_TILES * 0.5).to_screen(),
-          y: (SCREEN_HEIGHT_TILES * 0.5).to_screen(),
+          x: (SCREEN_WIDTH_TILES / 2).to_screen(),
+          y: (SCREEN_HEIGHT_TILES / 2).to_screen(),
         },
         GameColor::Color1,
       );
