@@ -62,7 +62,6 @@ pub enum SimpleSpriteTextureKind {
   LaserGate,
   Seeker,
   AraneaEgg,
-  GravityParticle,
   Explosion(Easing<f32>),
   SavePoint,
   Chain(PhysicsVector),

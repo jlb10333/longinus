@@ -22,7 +22,7 @@ fi
 
 # windows x86 build
 
-if [[ "$windows_only" == "true" || ("$windows_only" == "" && "&ubuntu_only" == "") ]]; then
+if [[ "$windows_only" == "true" || ("$windows_only" == "" && "$ubuntu_only" == "") ]]; then
     win_x86_dir="${directory}/longinus-v${version}-win-x86";
 
     if [ ! -d "${win_x86_dir}" ]; then
@@ -60,7 +60,7 @@ fi
 
 # ubuntu x86 build
 
-if [[ "$ubuntu_only" == "true" || ("$ubuntu_only" == "" && "&windows_only" == "") ]]; then
+if [[ "$ubuntu_only" == "true" || ("$ubuntu_only" == "" && "$windows_only" == "") ]]; then
     ubuntu_x86_dir="${directory}/longinus-v${version}-ubuntu-x86";
 
     if [ ! -d "${ubuntu_x86_dir}" ]; then
