@@ -1,3 +1,4 @@
+//b5f735e1a92fa59a99556b495eb1cc7033462d0fbe0ffcfd2f7b4b8abfebe56f  -
 use crate::load_sprites_utils::load_texture_with_filter;
 use macroquad::prelude::Texture2D;
 pub struct SpriteTextures {
@@ -64,10 +65,11 @@ pub struct TilesetTextures {
 pub struct UiTextures {
   pub enemy_offscreen_texture: Texture2D,
   pub menu_texture: Texture2D,
-  pub modules_textures: ModulesTextures,
+  pub module_textures: ModuleTextures,
   pub text_font_texture: Texture2D,
 }
-pub struct ModulesTextures {
+pub struct ModuleTextures {
+  pub module_cursor_texture: Texture2D,
   pub module_double_damage_75_freq_texture: Texture2D,
   pub module_double_freq_75_damage_texture: Texture2D,
   pub module_empty_texture: Texture2D,
@@ -98,22 +100,23 @@ pub async fn load_game_textures() -> SpriteTextures {
   let health_tank_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/pickup/health_tank.png").await;
   let health_pickup_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/pickup/health_pickup.png").await;
   let weapon_module_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/pickup/weapon_module.png").await;
-  let module_fortyfive_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_fortyfive_slot.png").await;
-  let module_front_2_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_front_2_slot.png").await;
-  let module_plasma_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_plasma.png").await;
-  let module_double_freq_75_damage_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_double_freq_75_damage.png").await;
-  let module_status_weakness_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_status_weakness.png").await;
-  let module_status_deteriorate_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_status_deteriorate.png").await;
-  let module_side_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_side_slot.png").await;
-  let module_missile_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_missile.png").await;
-  let module_empty_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_empty.png").await;
-  let module_mana_free_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_mana_free.png").await;
-  let module_status_vulnerable_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_status_vulnerable.png").await;
-  let module_mirror_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_mirror_slot.png").await;
-  let module_mana_cost_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_mana_cost.png").await;
-  let module_double_damage_75_freq_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/modules/module_double_damage_75_freq.png").await;
   let text_font_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/text_font.png").await;
   let enemy_offscreen_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/enemy_offscreen.png").await;
+  let module_fortyfive_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_fortyfive_slot.png").await;
+  let module_front_2_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_front_2_slot.png").await;
+  let module_plasma_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_plasma.png").await;
+  let module_double_freq_75_damage_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_double_freq_75_damage.png").await;
+  let module_status_weakness_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_status_weakness.png").await;
+  let module_status_deteriorate_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_status_deteriorate.png").await;
+  let module_side_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_side_slot.png").await;
+  let module_missile_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_missile.png").await;
+  let module_empty_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_empty.png").await;
+  let module_mana_free_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_mana_free.png").await;
+  let module_status_vulnerable_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_status_vulnerable.png").await;
+  let module_mirror_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_mirror_slot.png").await;
+  let module_cursor_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_cursor.png").await;
+  let module_mana_cost_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_mana_cost.png").await;
+  let module_double_damage_75_freq_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_double_damage_75_freq.png").await;
   let menu_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/menu.png").await;
   let seeker_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/enemy/seeker.png").await;
   let aranea_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/enemy/aranea.png").await;
@@ -189,7 +192,8 @@ pub async fn load_game_textures() -> SpriteTextures {
     ui_textures: UiTextures {
       enemy_offscreen_texture,
       menu_texture,
-      modules_textures: ModulesTextures {
+      module_textures: ModuleTextures {
+        module_cursor_texture,
         module_double_damage_75_freq_texture,
         module_double_freq_75_damage_texture,
         module_empty_texture,

@@ -20,6 +20,10 @@ if [ ! -d "${directory}" ]; then
     exit 1;
 fi
 
+echo "Generating textures: starting";
+codegen_textures
+echo "Generating textures: done";
+
 # windows x86 build
 
 if [[ "$windows_only" == "true" || ("$windows_only" == "" && "$ubuntu_only" == "") ]]; then

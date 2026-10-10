@@ -4,7 +4,16 @@ PROJECT_ROOT=$(git rev-parse --show-toplevel)
 SPRITES_FOLDER="$PROJECT_ROOT/assets/sprite"
 OUTPUT_FILE="$PROJECT_ROOT/src/generated/load_sprites.rs"
 
-echo "use crate::load_sprites_utils::load_texture_with_filter;" > $OUTPUT_FILE
+OLD_HASH=$(head -1 "$OUTPUT_FILE")
+NEW_HASH="//$(find "$SPRITES_FOLDER" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+
+if [[ "$OLD_HASH" == "$NEW_HASH" ]] ; then
+    echo "codegen_textures: Hit cache, exiting"
+    exit 0
+fi
+
+echo "$NEW_HASH" > $OUTPUT_FILE
+echo "use crate::load_sprites_utils::load_texture_with_filter;" >> $OUTPUT_FILE
 echo "use macroquad::prelude::Texture2D;" >> $OUTPUT_FILE
 
 type_gen () {

@@ -8,6 +8,7 @@ use macroquad::{
 
 use crate::{
   SpriteTextures,
+  combat::WeaponModuleKind,
   easing::Easing,
   units::{PhysicsVector, UnitConvert2},
 };
@@ -94,7 +95,6 @@ pub fn get_sprites_to_draw(
     LaserGate => laser_gate(game_textures),
     Seeker => seeker(game_textures),
     AraneaEgg => aranea_egg(game_textures),
-    GravityParticle => gravity_particle(game_textures),
     Explosion(easing) => explosion((easing.at(frame_count as f32) * 5.0) as i32, game_textures),
     SavePoint => save_point((frame_count as i32 / 15) % 5, game_textures),
     Chain(dimensions) => chain(dimensions, game_textures),
@@ -540,6 +540,53 @@ pub fn seeker(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
       y: 0.0,
       w: 16.0,
       h: 16.0,
+    },
+  )]
+}
+
+pub fn module(
+  game_textures: &SpriteTextures,
+  module: Option<WeaponModuleKind>,
+) -> Vec<SpriteToDraw> {
+  let textures = &game_textures.ui_textures.module_textures;
+  let texture = module.map_or(&textures.module_empty_texture, |module| match module {
+    WeaponModuleKind::DoubleDamage75Freq => &textures.module_double_damage_75_freq_texture,
+    WeaponModuleKind::DoubleFreq75Damage => &textures.module_double_freq_75_damage_texture,
+    WeaponModuleKind::FortyFiveSlot => &textures.module_fortyfive_slot_texture,
+    WeaponModuleKind::Front2Slot => &textures.module_front_2_slot_texture,
+    WeaponModuleKind::ManaCost => &textures.module_mana_cost_texture,
+    WeaponModuleKind::ManaFree => &textures.module_mana_free_texture,
+    WeaponModuleKind::MirrorSlot => &textures.module_mirror_slot_texture,
+    WeaponModuleKind::Missile => &textures.module_missile_texture,
+    WeaponModuleKind::Plasma => &textures.module_plasma_texture,
+    WeaponModuleKind::SideSlot => &textures.module_side_slot_texture,
+    WeaponModuleKind::StatusDeteriorate => &textures.module_status_deteriorate_texture,
+    WeaponModuleKind::StatusVulnerable => &textures.module_status_vulnerable_texture,
+    WeaponModuleKind::StatusWeakness => &textures.module_status_weakness_texture,
+  });
+
+  vec![SpriteToDraw::default(
+    texture,
+    Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 8.0,
+      h: 8.0,
+    },
+  )]
+}
+
+pub fn module_cursor(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw::default(
+    &game_textures
+      .ui_textures
+      .module_textures
+      .module_cursor_texture,
+    Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 8.0,
+      h: 8.0,
     },
   )]
 }

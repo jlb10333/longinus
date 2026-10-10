@@ -6,11 +6,11 @@ use std::ops::{Deref, Mul};
 
 use crate::{
   SpriteTextures,
-  combat::{Direction, EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind, weapon_module_from_kind},
+  combat::{EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind, weapon_module_from_kind},
   graphics::{GameColor, draw_sprites},
   menu::{GameMenu, GameMenuKind, INVENTORY_WRAP_WIDTH},
-  sprite::tiled_sprites_to_draw,
-  units::{PhysicsScalar, PhysicsVector, UnitConvert, UnitConvert2},
+  sprite::{self, SpriteToDraw, tiled_sprites_to_draw},
+  units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 
 pub fn draw_menu(
@@ -34,7 +34,7 @@ pub fn draw_menu(
     )
   };
 
-  match menu.kind {
+  match &menu.kind {
     GameMenuKind::PauseMain => {
       draw_menu_box(TileRect {
         x: SCREEN_WIDTH_TILES * 0.5,
@@ -120,7 +120,7 @@ pub fn draw_menu(
           );
         });
     }
-    crate::menu::GameMenuKind::InventoryMain => {
+    GameMenuKind::InventoryMain => {
       draw_menu_box(TileRect {
         x: SCREEN_WIDTH_TILES * 0.5,
         y: SCREEN_HEIGHT_TILES * 0.5,
@@ -163,21 +163,13 @@ pub fn draw_menu(
         GameColor::Color1,
       );
     }
-    _ => draw_menu_deprecated(menu),
-  }
-}
-
-pub fn draw_menu_deprecated(menu: &GameMenu) {
-  match &menu.kind {
-    /* MARK: Inventory pick slot */
-    crate::menu::GameMenuKind::InventoryPickSlot(_, inventory_update) => {
-      draw_rectangle(
-        VIRTUAL_SCREEN_WIDTH * 0.45,
-        VIRTUAL_SCREEN_HEIGHT * 0.4,
-        VIRTUAL_SCREEN_WIDTH * 0.5,
-        VIRTUAL_SCREEN_HEIGHT * 0.5,
-        COLOR_2,
-      );
+    GameMenuKind::InventoryPickSlot(_, inventory_update) => {
+      draw_menu_box(TileRect {
+        x: SCREEN_WIDTH_TILES * 0.7,
+        y: SCREEN_HEIGHT_TILES * 0.65,
+        w: SCREEN_WIDTH_TILES * 0.5,
+        h: SCREEN_HEIGHT_TILES * 0.5,
+      });
 
       draw_text(
         if menu.cursor_position.x == 0 && menu.cursor_position.y == -1 {
@@ -191,33 +183,42 @@ pub fn draw_menu_deprecated(menu: &GameMenu) {
         COLOR_1,
       );
 
-      (0..4).for_each(|x| {
-        (0..4).for_each(|y| {
-          draw_rectangle(
-            (0.5 + (x as f32 * 0.05)) * VIRTUAL_SCREEN_WIDTH,
-            (0.5 + (y as f32 * 0.05)) * VIRTUAL_SCREEN_HEIGHT,
-            0.05 * VIRTUAL_SCREEN_WIDTH,
-            0.05 * VIRTUAL_SCREEN_HEIGHT,
-            COLOR_3,
-          );
+      inventory_update
+        .equipped_modules
+        .iter()
+        .enumerate()
+        .for_each(|(index, &equipped_module)| {
+          let module_x = INVENTORY_OFFSET_X + Tiles(index as i32 % EQUIP_SLOTS_WIDTH);
+          let module_y = INVENTORY_OFFSET_Y + Tiles(index as i32 / EQUIP_SLOTS_WIDTH);
 
-          draw_rectangle(
-            (0.51 + (x as f32 * 0.05)) * VIRTUAL_SCREEN_WIDTH,
-            (0.51 + (y as f32 * 0.05)) * VIRTUAL_SCREEN_HEIGHT,
-            0.03 * VIRTUAL_SCREEN_WIDTH,
-            0.03 * VIRTUAL_SCREEN_HEIGHT,
-            COLOR_2,
+          draw_menu_sprites(
+            &sprite::module(game_textures, equipped_module),
+            module_x,
+            module_y,
           );
-        })
-      });
+        });
+
+      inventory_update
+        .unequipped_modules
+        .iter()
+        .enumerate()
+        .for_each(|(index, &unequipped_module_kind)| {
+          let module_x =
+            INVENTORY_OFFSET_X + Tiles(EQUIP_SLOTS_WIDTH + (index as i32 % INVENTORY_WRAP_WIDTH));
+          let module_y = INVENTORY_OFFSET_Y + Tiles(index as i32 / INVENTORY_WRAP_WIDTH);
+
+          draw_menu_sprites(
+            &sprite::module(game_textures, Some(unequipped_module_kind)),
+            module_x,
+            module_y,
+          );
+        });
 
       if menu.cursor_position.y > -1 {
-        draw_rectangle(
-          (0.5 + (menu.cursor_position.x as f32 * 0.05)) * VIRTUAL_SCREEN_WIDTH,
-          (0.5 + (menu.cursor_position.y as f32 * 0.05)) * VIRTUAL_SCREEN_HEIGHT,
-          0.05 * VIRTUAL_SCREEN_WIDTH,
-          0.05 * VIRTUAL_SCREEN_HEIGHT,
-          COLOR_3,
+        draw_menu_sprites(
+          &sprite::module_cursor(game_textures),
+          INVENTORY_OFFSET_X + Tiles(menu.cursor_position.x),
+          INVENTORY_OFFSET_Y + Tiles(menu.cursor_position.y),
         );
 
         let hovering_module = if menu.cursor_position.x < EQUIP_SLOTS_WIDTH {
@@ -248,133 +249,13 @@ pub fn draw_menu_deprecated(menu: &GameMenu) {
             });
         }
       }
-
-      inventory_update
-        .equipped_modules
-        .iter()
-        .enumerate()
-        .for_each(|(index, &equipped_module)| {
-          if let Some(module_kind) = equipped_module {
-            let module_x = (index as i32 % EQUIP_SLOTS_WIDTH) as f32 * 0.05;
-            let module_y = (index as i32 / EQUIP_SLOTS_WIDTH) as f32 * 0.05;
-
-            draw_text(
-              debug_module_symbol(module_kind),
-              (0.5113 + (module_x)) * VIRTUAL_SCREEN_WIDTH,
-              (0.535 + (module_y)) * VIRTUAL_SCREEN_HEIGHT,
-              30.0,
-              COLOR_1,
-            );
-
-            if let WeaponModule::Modulator(_, attachment_points) =
-              weapon_module_from_kind(module_kind)
-            {
-              attachment_points
-                .iter()
-                .for_each(|attachment_point| match attachment_point {
-                  Direction::Up => {
-                    draw_rectangle(
-                      (0.52 + module_x) * VIRTUAL_SCREEN_WIDTH,
-                      (0.51 + module_y) * VIRTUAL_SCREEN_HEIGHT,
-                      0.01 * VIRTUAL_SCREEN_WIDTH,
-                      0.005 * VIRTUAL_SCREEN_HEIGHT,
-                      COLOR_4,
-                    );
-                  }
-                  Direction::Down => {
-                    draw_rectangle(
-                      (0.52 + module_x) * VIRTUAL_SCREEN_WIDTH,
-                      (0.535 + module_y) * VIRTUAL_SCREEN_HEIGHT,
-                      0.01 * VIRTUAL_SCREEN_WIDTH,
-                      0.005 * VIRTUAL_SCREEN_HEIGHT,
-                      COLOR_4,
-                    );
-                  }
-                  Direction::Left => {
-                    draw_rectangle(
-                      (0.51 + module_x) * VIRTUAL_SCREEN_WIDTH,
-                      (0.52 + module_y) * VIRTUAL_SCREEN_HEIGHT,
-                      0.005 * VIRTUAL_SCREEN_WIDTH,
-                      0.01 * VIRTUAL_SCREEN_HEIGHT,
-                      COLOR_4,
-                    );
-                  }
-                  Direction::Right => {
-                    draw_rectangle(
-                      (0.535 + module_x) * VIRTUAL_SCREEN_WIDTH,
-                      (0.52 + module_y) * VIRTUAL_SCREEN_HEIGHT,
-                      0.005 * VIRTUAL_SCREEN_WIDTH,
-                      0.01 * VIRTUAL_SCREEN_HEIGHT,
-                      COLOR_4,
-                    );
-                  }
-                });
-            }
-          };
-        });
-
-      inventory_update
-        .unequipped_modules
-        .iter()
-        .enumerate()
-        .for_each(|(index, &unequipped_module_kind)| {
-          let module_x = (EQUIP_SLOTS_WIDTH + (index as i32 % INVENTORY_WRAP_WIDTH)) as f32 * 0.05;
-          let module_y = (index as i32 / INVENTORY_WRAP_WIDTH) as f32 * 0.05;
-
-          draw_text(
-            debug_module_symbol(unequipped_module_kind),
-            (0.5113 + (module_x)) * VIRTUAL_SCREEN_WIDTH,
-            (0.535 + (module_y)) * VIRTUAL_SCREEN_HEIGHT,
-            30.0,
-            COLOR_1,
-          );
-
-          if let WeaponModule::Modulator(_, attachment_points) =
-            weapon_module_from_kind(unequipped_module_kind)
-          {
-            attachment_points
-              .iter()
-              .for_each(|attachment_point| match attachment_point {
-                Direction::Up => {
-                  draw_rectangle(
-                    (0.52 + module_x) * VIRTUAL_SCREEN_WIDTH,
-                    (0.51 + module_y) * VIRTUAL_SCREEN_HEIGHT,
-                    0.01 * VIRTUAL_SCREEN_WIDTH,
-                    0.005 * VIRTUAL_SCREEN_HEIGHT,
-                    COLOR_4,
-                  );
-                }
-                Direction::Down => {
-                  draw_rectangle(
-                    (0.52 + module_x) * VIRTUAL_SCREEN_WIDTH,
-                    (0.535 + module_y) * VIRTUAL_SCREEN_HEIGHT,
-                    0.01 * VIRTUAL_SCREEN_WIDTH,
-                    0.005 * VIRTUAL_SCREEN_HEIGHT,
-                    COLOR_4,
-                  );
-                }
-                Direction::Left => {
-                  draw_rectangle(
-                    (0.51 + module_x) * VIRTUAL_SCREEN_WIDTH,
-                    (0.52 + module_y) * VIRTUAL_SCREEN_HEIGHT,
-                    0.005 * VIRTUAL_SCREEN_WIDTH,
-                    0.01 * VIRTUAL_SCREEN_HEIGHT,
-                    COLOR_4,
-                  );
-                }
-                Direction::Right => {
-                  draw_rectangle(
-                    (0.535 + module_x) * VIRTUAL_SCREEN_WIDTH,
-                    (0.52 + module_y) * VIRTUAL_SCREEN_HEIGHT,
-                    0.005 * VIRTUAL_SCREEN_WIDTH,
-                    0.01 * VIRTUAL_SCREEN_HEIGHT,
-                    COLOR_4,
-                  );
-                }
-              });
-          }
-        });
     }
+    _ => draw_menu_deprecated(menu),
+  }
+}
+
+pub fn draw_menu_deprecated(menu: &GameMenu) {
+  match &menu.kind {
     /* MARK: Save Confirm */
     crate::menu::GameMenuKind::SaveConfirm(_) => {
       draw_rectangle(
@@ -635,6 +516,9 @@ struct TileRect {
   pub h: Tiles,
 }
 
+const INVENTORY_OFFSET_X: Tiles = Tiles(10);
+const INVENTORY_OFFSET_Y: Tiles = Tiles(9);
+
 fn draw_menu_box_g(game_textures: &SpriteTextures) -> impl Fn(TileRect) {
   |dest| {
     let sprites_to_draw = tiled_sprites_to_draw(
@@ -654,4 +538,13 @@ fn draw_menu_box_g(game_textures: &SpriteTextures) -> impl Fn(TileRect) {
       false,
     );
   }
+}
+
+fn draw_menu_sprites(sprites_to_draw: &[SpriteToDraw], x: Tiles, y: Tiles) {
+  draw_sprites(
+    sprites_to_draw,
+    ScreenVector::from_vec(vector![x.to_screen(), y.to_screen()]),
+    0.0,
+    false,
+  );
 }
