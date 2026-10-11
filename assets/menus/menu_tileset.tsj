@@ -1,0 +1,14 @@
+{ "columns":3,
+ "image":"..\/sprite\/ui\/menu.png",
+ "imageheight":24,
+ "imagewidth":24,
+ "margin":0,
+ "name":"menu",
+ "spacing":0,
+ "tilecount":9,
+ "tiledversion":"1.8.2",
+ "tileheight":8,
+ "tilewidth":8,
+ "type":"tileset",
+ "version":"1.8"
+}

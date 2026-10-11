@@ -3,23 +3,28 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "maps/generated/boss2.json",
+    "activeFile": "menus/inventory_main.json",
     "automapping.whileDrawing": true,
     "expandedProjectPaths": [
-        "maps/templates",
-        "maps/tilesets",
+        ".",
         "maps/generated/templates",
+        "maps/tilesets",
+        "maps/templates",
+        "maps/generated",
         "maps/templates/enemies",
         "maps",
-        "maps/old",
-        "maps/generated",
-        "."
+        "menus",
+        "maps/old"
     ],
     "fileStates": {
         "": {
             "scaleInDock": 5.5
         },
+        "/home/jack/longinus/menus/menu_tileset.tsj": {
+            "scaleInDock": 1
+        },
         ":/automap-tiles.tsx": {
+            "dynamicWrapping": true,
             "scaleInDock": 1
         },
         "maps/MP1.json": {
@@ -115,7 +120,7 @@
             "selectedLayer": 2,
             "viewCenter": {
                 "x": 320,
-                "y": 200.5
+                "y": 199.5
             }
         },
         "maps/generated/MP14.json": {
@@ -123,7 +128,7 @@
             "selectedLayer": 2,
             "viewCenter": {
                 "x": 200,
-                "y": 200.5
+                "y": 199.5
             }
         },
         "maps/generated/MP15.json": {
@@ -139,7 +144,7 @@
             "selectedLayer": 3,
             "viewCenter": {
                 "x": 120,
-                "y": 199.875
+                "y": 200.125
             }
         },
         "maps/generated/MP19.json": {
@@ -147,7 +152,7 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 120,
-                "y": 201
+                "y": 199
             }
         },
         "maps/generated/MP2.json": {
@@ -155,15 +160,15 @@
             "selectedLayer": 2,
             "viewCenter": {
                 "x": 160.60606060606062,
-                "y": 162.12121212121212
+                "y": 159.09090909090912
             }
         },
         "maps/generated/MP20.json": {
             "scale": 3,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 199.99999999999997,
-                "y": 119.83333333333333
+                "x": 200,
+                "y": 119.83333333333334
             }
         },
         "maps/generated/MP21.json": {
@@ -178,8 +183,8 @@
             "scale": 3,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 79.99999999999999,
-                "y": 80.16666666666666
+                "x": 80,
+                "y": 79.83333333333334
             }
         },
         "maps/generated/MP24.json": {
@@ -194,8 +199,8 @@
             "scale": 1.5,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 199.99999999999997,
-                "y": 239.66666666666666
+                "x": 200,
+                "y": 240.33333333333331
             }
         },
         "maps/generated/MP26.json": {
@@ -203,15 +208,15 @@
             "selectedLayer": 3,
             "viewCenter": {
                 "x": 160,
-                "y": 321
+                "y": 319
             }
         },
         "maps/generated/MP28.json": {
             "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 431.99999999999994,
-                "y": 223.66666666666666
+                "x": 432,
+                "y": 224.33333333333331
             }
         },
         "maps/generated/MP3.json": {
@@ -219,7 +224,7 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 200,
-                "y": 199.75
+                "y": 200.25
             }
         },
         "maps/generated/MP30.json": {
@@ -235,7 +240,7 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 432,
-                "y": 223.83333333333331
+                "y": 224.16666666666666
             }
         },
         "maps/generated/MP4.json": {
@@ -253,8 +258,8 @@
             "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 239.99999999999997,
-                "y": 80.33333333333333
+                "x": 240,
+                "y": 79.66666666666666
             }
         },
         "maps/generated/MP6.json": {
@@ -262,7 +267,7 @@
             "selectedLayer": 3,
             "viewCenter": {
                 "x": 240,
-                "y": 201
+                "y": 199
             }
         },
         "maps/generated/MP7.json": {
@@ -270,7 +275,7 @@
             "selectedLayer": 3,
             "viewCenter": {
                 "x": 160,
-                "y": 199.75
+                "y": 200.25
             }
         },
         "maps/generated/MP9.json": {
@@ -286,7 +291,7 @@
             "selectedLayer": 0,
             "viewCenter": {
                 "x": 320,
-                "y": 199.75
+                "y": 200.25
             }
         },
         "maps/generated/boss1.json": {
@@ -301,16 +306,16 @@
             "scale": 1,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -1131,
-                "y": 1643.5
+                "x": 199.5,
+                "y": 199.5
             }
         },
         "maps/generated/rules.json": {
             "scale": 8,
-            "selectedLayer": 3,
+            "selectedLayer": 0,
             "viewCenter": {
-                "x": 200,
-                "y": 186.5625
+                "x": 216.4375,
+                "y": 176.4375
             }
         },
         "maps/generated/start.json": {
@@ -433,6 +438,7 @@
             }
         },
         "maps/tilesets/colliders.tsx": {
+            "dynamicWrapping": false,
             "scaleInDock": 3,
             "scaleInEditor": 1
         },
@@ -450,27 +456,51 @@
             "scale": 2,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -0.5,
-                "y": -0.25
+                "x": -0.75,
+                "y": -0.75
+            }
+        },
+        "menus/inventory_main.json": {
+            "scale": 8,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 111.3125,
+                "y": 73.3125
+            }
+        },
+        "menus/menu_tileset.tsj": {
+            "scaleInDock": 11,
+            "scaleInEditor": 1
+        },
+        "menus/rules.json": {
+            "scale": 8,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 192.0625,
+                "y": 254.5625
             }
         },
         "tilesets/colliders.tsx": {
             "scaleInDock": 1
+        },
+        "tilesets/tiles.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1
         }
     },
     "last.externalTilesetPath": "/home/jack/longinus/assets/maps/tilesets",
-    "last.imagePath": "/home/jack/longinus/assets/maps/tilesets",
+    "last.imagePath": "/home/jack/longinus/assets/sprite/tileset",
     "last.objectTemplatePath": "/home/jack/longinus/assets/maps/generated/templates",
     "last.worldFilePath": "/home/jack/longinus/assets/maps/generated",
     "loadedWorlds": [
         "/home/jlb10333/game-rs/assets/maps/generated/world.world"
     ],
     "map.fixedSize": true,
-    "map.height": 50,
+    "map.height": 18,
     "map.lastUsedFormat": "json",
     "map.tileHeight": 8,
     "map.tileWidth": 8,
-    "map.width": 50,
+    "map.width": 20,
     "openFiles": [
         "maps/generated/MP20.json",
         "maps/generated/MP11.json",
@@ -484,21 +514,21 @@
         "maps/generated/MP7.json",
         "maps/generated/start.json",
         "maps/generated/MP25.json",
-        "maps/generated/rules.json",
         "maps/generated/MP5.json",
         "maps/generated/MP6.json",
         "maps/generated/MP22.json",
         "maps/generated/MP17.json",
         "maps/generated/MP19.json",
-        "maps/tilesets/tiles.tsx",
         "maps/generated/MP30.json",
         "maps/generated/MP14.json",
         "maps/generated/MP31.json",
         "maps/generated/boss2.json",
-        "maps/world_master.json"
+        "maps/world_master.json",
+        "menus/inventory_main.json",
+        "menus/rules.json"
     ],
     "project": "project.tiled-project",
-    "property.type": "bool",
+    "property.type": "string",
     "recentFiles": [
         "maps/generated/MP20.json",
         "maps/generated/MP11.json",

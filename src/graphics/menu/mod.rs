@@ -1,5 +1,7 @@
 use super::{GameMaterials, GameTextParams, consts::*, draw_game_text};
 use derive_more::{Add, Div, Sub};
+use dynamic::{DynamicMenu, draw_dynamic_menu};
+use generated::GAME_MENUS;
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
 use std::ops::{Deref, Mul};
@@ -12,6 +14,10 @@ use crate::{
   sprite::{self, SpriteToDraw, tiled_sprites_to_draw},
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
+
+mod dynamic;
+mod dynamic_load;
+mod generated;
 
 pub fn draw_menu(
   menu: &GameMenu,
@@ -34,6 +40,15 @@ pub fn draw_menu(
     )
   };
 
+  let draw_dynamic_menu = |dynamic_menu: &DynamicMenu| {
+    draw_dynamic_menu(
+      dynamic_menu,
+      menu.cursor_position,
+      game_textures,
+      game_materials,
+    );
+  };
+
   match &menu.kind {
     GameMenuKind::PauseMain => {
       draw_menu_box(TileRect {
@@ -43,40 +58,40 @@ pub fn draw_menu(
         h: SCREEN_HEIGHT_TILES * 0.66,
       });
       draw_game_text(
-        if menu.cursor_position == vector![0, 0] {
-          "-resume-"
-        } else {
-          "resume"
-        },
+        "resume",
         Vec2 {
           x: Tiles(4).to_screen(),
           y: Tiles(8).to_screen(),
         },
-        GameColor::Color1,
+        if menu.cursor_position == vector![0, 0] {
+          GameColor::Color1
+        } else {
+          GameColor::Color3
+        },
       );
       draw_game_text(
-        if menu.cursor_position == vector![0, 1] {
-          "-load game-"
-        } else {
-          "load game"
-        },
+        "load game",
         Vec2 {
           x: Tiles(4).to_screen(),
           y: Tiles(11).to_screen(),
         },
-        GameColor::Color1,
+        if menu.cursor_position == vector![0, 1] {
+          GameColor::Color1
+        } else {
+          GameColor::Color3
+        },
       );
       draw_game_text(
-        if menu.cursor_position == vector![0, 2] {
-          "-quit to menu-"
-        } else {
-          "quit to menu"
-        },
+        "quit to menu",
         Vec2 {
           x: Tiles(4).to_screen(),
           y: Tiles(14).to_screen(),
         },
-        GameColor::Color1,
+        if menu.cursor_position == vector![0, 2] {
+          GameColor::Color1
+        } else {
+          GameColor::Color3
+        },
       );
     }
     GameMenuKind::PauseLoadSave => {
@@ -96,7 +111,7 @@ pub fn draw_menu(
           x: (SCREEN_WIDTH_TILES / 2).to_screen(),
           y: (SCREEN_HEIGHT_TILES / 2).to_screen(),
         },
-        GameColor::Color1,
+        GameColor::Color3,
       );
       available_sava_data
         .iter()
@@ -116,52 +131,12 @@ pub fn draw_menu(
               x: (SCREEN_WIDTH_TILES * 0.5).to_screen(),
               y: (SCREEN_HEIGHT_TILES * (0.6 + (index as f32 * 0.07))).to_screen(),
             },
-            GameColor::Color1,
+            GameColor::Color3,
           );
         });
     }
     GameMenuKind::InventoryMain => {
-      draw_menu_box(TileRect {
-        x: SCREEN_WIDTH_TILES * 0.5,
-        y: SCREEN_HEIGHT_TILES * 0.5,
-        w: SCREEN_WIDTH_TILES * 0.8,
-        h: SCREEN_HEIGHT_TILES * 0.8,
-      });
-
-      draw_game_text(
-        "inventory",
-        Vec2 {
-          x: (SCREEN_WIDTH_TILES * 0.2).to_screen(),
-          y: (SCREEN_HEIGHT_TILES * 0.4).to_screen(),
-        },
-        GameColor::Color1,
-      );
-
-      draw_game_text(
-        if menu.cursor_position == vector![0, 0] {
-          "-edit-"
-        } else {
-          "edit"
-        },
-        Vec2 {
-          x: (SCREEN_WIDTH_TILES * 0.2).to_screen(),
-          y: (SCREEN_HEIGHT_TILES * 0.6).to_screen(),
-        },
-        GameColor::Color1,
-      );
-
-      draw_game_text(
-        if menu.cursor_position == vector![1, 0] {
-          "-close-"
-        } else {
-          "close"
-        },
-        Vec2 {
-          x: (SCREEN_WIDTH_TILES * 0.5).to_screen(),
-          y: (SCREEN_HEIGHT_TILES * 0.6).to_screen(),
-        },
-        GameColor::Color1,
-      );
+      draw_dynamic_menu(&GAME_MENUS.inventory_main);
     }
     GameMenuKind::InventoryPickSlot(_, inventory_update) => {
       draw_menu_box(TileRect {
@@ -171,16 +146,17 @@ pub fn draw_menu(
         h: SCREEN_HEIGHT_TILES * 0.5,
       });
 
-      draw_text(
-        if menu.cursor_position.x == 0 && menu.cursor_position.y == -1 {
-          "-confirm-"
-        } else {
-          "confirm"
+      draw_game_text(
+        "confirm",
+        Vec2 {
+          x: (SCREEN_WIDTH_TILES * 0.5).to_screen(),
+          y: (SCREEN_HEIGHT_TILES * 0.45).to_screen(),
         },
-        0.5 * VIRTUAL_SCREEN_WIDTH,
-        0.45 * VIRTUAL_SCREEN_HEIGHT,
-        40.0,
-        COLOR_1,
+        if menu.cursor_position.x == 0 && menu.cursor_position.y == -1 {
+          GameColor::Color1
+        } else {
+          GameColor::Color3
+        },
       );
 
       inventory_update
@@ -504,7 +480,7 @@ impl Mul<f32> for Tiles {
 }
 
 impl Tiles {
-  fn to_screen(self) -> f32 {
+  const fn to_screen(self) -> f32 {
     self.0 as f32 * 8.0 * VIRTUAL_PIXEL_FACTOR
   }
 }

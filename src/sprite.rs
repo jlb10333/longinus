@@ -622,15 +622,15 @@ pub fn text(input_text: &str, wrap: Option<u32>, text_texture: &Texture2D) -> Ve
     .collect()
 }
 
-struct SpriteSheetArgs {
-  num_sprites: i32,
-  num_columns: i32,
-  width: i32,
-  height: i32,
-  offset: Option<Vec2>,
-  z_position: Option<f32>,
+pub struct SpriteSheetArgs {
+  pub num_sprites: i32,
+  pub num_columns: i32,
+  pub width: i32,
+  pub height: i32,
+  pub offset: Option<Vec2>,
+  pub z_position: Option<f32>,
 }
-fn draw_from_sprite_sheet(
+pub fn draw_from_sprite_sheet(
   index: i32,
   args: SpriteSheetArgs,
   texture: &Texture2D,

@@ -1,0 +1,53 @@
+#!/bin/bash
+
+while getopts "f" opt; do
+  case ${opt} in
+    f )
+      SKIP_CACHE=1
+      ;;
+    \? )
+      echo "Invalid option"
+      exit 1
+      ;;
+  esac
+done
+
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+MENUS_FOLDER="$PROJECT_ROOT/assets/menus"
+OUTPUT_FILE="$PROJECT_ROOT/src/graphics/menu/generated/mod.rs"
+
+OLD_HASH=$(head -1 "$OUTPUT_FILE")
+NEW_HASH="//$(find "$MENUS_FOLDER" -maxdepth 1 -name "*.menu.json" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+
+if [[ "$OLD_HASH" == "$NEW_HASH" && $SKIP_CACHE -ne 1 ]] ; then
+    echo "codegen_textures: Hit cache, exiting"
+    exit 0
+fi
+
+echo "$NEW_HASH" > $OUTPUT_FILE
+echo "use std::sync::LazyLock;" >> $OUTPUT_FILE
+echo "use super::{dynamic::DynamicMenu, dynamic_load::load_dynamic_menu};" >> $OUTPUT_FILE
+echo "pub struct GameMenus {" >> $OUTPUT_FILE
+
+for f in "$MENUS_FOLDER"/*.menu.json ; do
+    item_name=$(basename "$f")
+    field_name="${item_name%.menu.json}"
+
+    echo "  pub ${field_name}: DynamicMenu," >> $OUTPUT_FILE
+done
+
+echo "}" >> $OUTPUT_FILE
+echo "fn load_game_menus() -> GameMenus {" >> $OUTPUT_FILE
+echo "  GameMenus {" >> $OUTPUT_FILE
+
+for f in "$MENUS_FOLDER"/*.menu.json ; do
+    item_name=$(basename "$f")
+    field_name="${item_name%.menu.json}"
+    relative_path=$(realpath --relative-to="$PROJECT_ROOT" "$f")
+
+    echo "    ${field_name}: load_dynamic_menu("$relative_path")," >> $OUTPUT_FILE
+done
+
+echo "  }" >> $OUTPUT_FILE
+echo "}" >> $OUTPUT_FILE
+echo "pub const GAME_MENUS: LazyLock<GameMenus> = LazyLock::new(load_game_menus);" >> $OUTPUT_FILE
