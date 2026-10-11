@@ -24,6 +24,10 @@ echo "Generating textures: starting";
 codegen_textures
 echo "Generating textures: done";
 
+echo "Generating dynamic menus: starting";
+codegen_dynamic_menus
+echo "Generating dynamic menus: done";
+
 # windows x86 build
 
 if [[ "$windows_only" == "true" || ("$windows_only" == "" && "$ubuntu_only" == "") ]]; then

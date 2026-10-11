@@ -20,7 +20,7 @@ OLD_HASH=$(head -1 "$OUTPUT_FILE")
 NEW_HASH="//$(find "$MENUS_FOLDER" -maxdepth 1 -name "*.menu.json" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
 
 if [[ "$OLD_HASH" == "$NEW_HASH" && $SKIP_CACHE -ne 1 ]] ; then
-    echo "codegen_textures: Hit cache, exiting"
+    echo "codegen_dynamic_menus: Hit cache, exiting"
     exit 0
 fi
 
@@ -45,7 +45,7 @@ for f in "$MENUS_FOLDER"/*.menu.json ; do
     field_name="${item_name%.menu.json}"
     relative_path=$(realpath --relative-to="$PROJECT_ROOT" "$f")
 
-    echo "    ${field_name}: load_dynamic_menu("$relative_path")," >> $OUTPUT_FILE
+    echo "    ${field_name}: load_dynamic_menu(\"${relative_path}\")," >> $OUTPUT_FILE
 done
 
 echo "  }" >> $OUTPUT_FILE

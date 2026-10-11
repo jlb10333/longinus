@@ -456,8 +456,8 @@
             "scale": 2,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -0.75,
-                "y": -0.75
+                "x": -541.75,
+                "y": -147.25
             }
         },
         "menus/inventory_main.json": {
@@ -468,16 +468,46 @@
                 "y": 73.3125
             }
         },
+        "menus/inventory_main.menu.json": {
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 2,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 22.75,
+                "y": 87.75
+            }
+        },
         "menus/menu_tileset.tsj": {
             "scaleInDock": 11,
             "scaleInEditor": 1
+        },
+        "menus/pause_main.menu.json": {
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 2,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 71.75,
+                "y": 130.75
+            }
         },
         "menus/rules.json": {
             "scale": 8,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 192.0625,
-                "y": 254.5625
+                "x": 56.8125,
+                "y": 217.9375
+            }
+        },
+        "menus/save.menu.json": {
+            "scale": 4,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 55.125,
+                "y": 78.625
             }
         },
         "tilesets/colliders.tsx": {

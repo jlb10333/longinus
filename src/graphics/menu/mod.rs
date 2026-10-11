@@ -50,50 +50,7 @@ pub fn draw_menu(
   };
 
   match &menu.kind {
-    GameMenuKind::PauseMain => {
-      draw_menu_box(TileRect {
-        x: SCREEN_WIDTH_TILES * 0.5,
-        y: SCREEN_HEIGHT_TILES * 0.5,
-        w: SCREEN_WIDTH_TILES * 0.7,
-        h: SCREEN_HEIGHT_TILES * 0.66,
-      });
-      draw_game_text(
-        "resume",
-        Vec2 {
-          x: Tiles(4).to_screen(),
-          y: Tiles(8).to_screen(),
-        },
-        if menu.cursor_position == vector![0, 0] {
-          GameColor::Color1
-        } else {
-          GameColor::Color3
-        },
-      );
-      draw_game_text(
-        "load game",
-        Vec2 {
-          x: Tiles(4).to_screen(),
-          y: Tiles(11).to_screen(),
-        },
-        if menu.cursor_position == vector![0, 1] {
-          GameColor::Color1
-        } else {
-          GameColor::Color3
-        },
-      );
-      draw_game_text(
-        "quit to menu",
-        Vec2 {
-          x: Tiles(4).to_screen(),
-          y: Tiles(14).to_screen(),
-        },
-        if menu.cursor_position == vector![0, 2] {
-          GameColor::Color1
-        } else {
-          GameColor::Color3
-        },
-      );
-    }
+    GameMenuKind::PauseMain => draw_dynamic_menu(&GAME_MENUS.pause_main),
     GameMenuKind::PauseLoadSave => {
       draw_menu_box(TileRect {
         x: (SCREEN_WIDTH_TILES * 0.7),
@@ -226,6 +183,7 @@ pub fn draw_menu(
         }
       }
     }
+    GameMenuKind::SaveConfirm(_) => draw_dynamic_menu(&GAME_MENUS.save_confirm),
     _ => draw_menu_deprecated(menu),
   }
 }
