@@ -106,7 +106,7 @@ async fn main() {
             .map(load_save)
         })
         .await;
-        State::Game(save_data)
+        State::Game(save_data.expect("Failed to load save"))
       }
       State::Game(save_data) => {
         let game_input = GameInput {
@@ -136,9 +136,10 @@ async fn main() {
           .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())
           .await;
         match quit_decision {
-          QuitDecision::LoadSave(save_to_load) => {
-            State::Game(load_save(&menu::SaveToLoad::SaveData(save_to_load.clone())))
-          }
+          QuitDecision::LoadSave(save_to_load) => State::Game(
+            load_save(&menu::SaveToLoad::SaveData(save_to_load.clone()))
+              .expect("Failed to load save"),
+          ),
           QuitDecision::ToMainMenu => State::MainMenu,
           QuitDecision::ToDesktop => State::Exit,
         }

@@ -483,6 +483,14 @@
             "scaleInDock": 11,
             "scaleInEditor": 1
         },
+        "menus/pause_load_save.menu.json": {
+            "scale": 5.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 104.45454545454545,
+                "y": 64.63636363636364
+            }
+        },
         "menus/pause_main.menu.json": {
             "expandedObjectLayers": [
                 2
@@ -508,6 +516,14 @@
             "viewCenter": {
                 "x": 55.125,
                 "y": 78.625
+            }
+        },
+        "menus/save_confirm.menu.json": {
+            "scale": 8.253124999999999,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 80.03029155622872,
+                "y": 72.03332071185157
             }
         },
         "tilesets/colliders.tsx": {

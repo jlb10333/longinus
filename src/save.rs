@@ -1,8 +1,9 @@
-use std::{env::current_dir, fs, marker::PhantomData, path::Path, rc::Rc, time};
+use std::{env::current_dir, fs, iter::once, marker::PhantomData, path::Path, rc::Rc, time};
 
 use chrono::{DateTime, Utc};
 use rpds::HashTrieSet;
 use serde::{Deserialize, Serialize};
+use serde_json::Result;
 
 use crate::{
   GameInput,
@@ -31,6 +32,15 @@ pub struct SaveData {
   pub acquired_chain: bool,
   pub visited_maps: Vec<String>,
   pub mana_tanks_capacity: ManaTanksCapacityInfo,
+  pub frame_count: i64,
+  #[serde(with = "chrono::serde::ts_seconds")]
+  pub saved_at: DateTime<Utc>,
+}
+
+impl SaveData {
+  pub fn canonical_name(&self) -> String {
+    format!("save_{}", self.saved_at.timestamp())
+  }
 }
 
 fn initital_save_file_path() -> String {
@@ -62,7 +72,7 @@ fn save_dir_path() -> String {
     .to_string()
 }
 
-pub fn load_save(save_to_load: &SaveToLoad) -> SaveData {
+pub fn load_save(save_to_load: &SaveToLoad) -> Result<SaveData> {
   serde_json::from_str(
     &fs::read_to_string(match save_to_load {
       SaveToLoad::Initial => initital_save_file_path(),
@@ -70,12 +80,11 @@ pub fn load_save(save_to_load: &SaveToLoad) -> SaveData {
     })
     .unwrap(),
   )
-  .expect("JSON was not well-formatted")
 }
 
 #[derive(Clone)]
 pub struct SaveSystem<Input> {
-  pub available_save_data: Vec<String>,
+  pub available_save_data: Rc<Vec<SaveData>>,
   phantom: PhantomData<Input>,
 }
 
@@ -92,10 +101,11 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
       .unwrap()
       .flatten()
       .flat_map(|dir_entry| dir_entry.file_name().into_string())
+      .filter_map(|path| load_save(&SaveToLoad::SaveData(path)).ok())
       .collect::<Vec<_>>();
-    available_save_data.sort();
+    available_save_data.sort_by(|a, b| a.saved_at.cmp(&b.saved_at).reverse());
     Rc::new(Self {
-      available_save_data,
+      available_save_data: Rc::new(available_save_data),
       phantom: PhantomData,
     })
   }
@@ -120,6 +130,8 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
 
         let player_damageable = player_entity.components.get::<Damageable>().unwrap();
 
+        let sys_time: DateTime<Utc> = time::SystemTime::now().into();
+
         let save_data = SaveData {
           player_spawn_id,
           map_name: map_system.current_map_name.clone(),
@@ -132,11 +144,11 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
           acquired_chain: ability_system.acquired_chain,
           mana_tanks_capacity: ability_system.mana_tanks.capacity,
           visited_maps: map_system.map_registry.keys().cloned().collect(),
+          frame_count: physics_system.frame_count,
+          saved_at: sys_time,
         };
 
-        let sys_time: DateTime<Utc> = time::SystemTime::now().into();
-
-        let new_save_path = format!("save_{}", sys_time.format("%+"));
+        let new_save_path = save_data.canonical_name();
 
         fs::write(
           save_data_path(&new_save_path),
@@ -144,25 +156,34 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
         )
         .unwrap();
 
-        new_save_path
+        save_data
       })
     });
 
-    Rc::new(SaveSystem {
-      available_save_data: self
-        .available_save_data
-        .iter()
-        .chain(new_save_data.iter())
-        .cloned()
-        .collect(),
-      phantom: PhantomData,
-    })
+    if let Some(new_save_data) = new_save_data {
+      Rc::new(SaveSystem {
+        available_save_data: Rc::new(
+          once(new_save_data)
+            .chain(self.available_save_data.iter().cloned())
+            .collect(),
+        ),
+        phantom: PhantomData,
+      })
+    } else {
+      Rc::new(SaveSystem {
+        available_save_data: Rc::clone(&self.available_save_data),
+        phantom: PhantomData,
+      })
+    }
   }
 
   fn fixed_update(
     &self,
     _: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    Rc::new(self.clone())
+    Rc::new(SaveSystem {
+      available_save_data: Rc::clone(&self.available_save_data),
+      phantom: PhantomData,
+    })
   }
 }

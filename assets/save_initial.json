@@ -37,5 +37,7 @@
   "mana_tanks_capacity": {
     "auto_recharge_mana_tanks": 3,
     "non_recharge_mana_tanks": 0
-  }
+  },
+  "frame_count": 0,
+  "saved_at": 0
 }

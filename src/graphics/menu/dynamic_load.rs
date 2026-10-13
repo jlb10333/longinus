@@ -8,7 +8,7 @@ use crate::graphics::consts::{SCREEN_HEIGHT_TILES, SCREEN_WIDTH_TILES};
 
 use super::{
   Tiles,
-  dynamic::{DynamicMenu, DynamicMenuText},
+  dynamic::{DynamicMenu, DynamicMenuAnchor, DynamicMenuText},
 };
 
 #[derive(Deserialize)]
@@ -30,6 +30,7 @@ struct ObjectLayer {
 #[serde(tag = "type")]
 enum Object {
   Text(Text),
+  Anchor(Anchor),
 }
 
 #[derive(Deserialize)]
@@ -51,6 +52,13 @@ struct SelectCoordsProperty {
   #[serde(rename = "name")]
   _name: SelectCoordsPropertyName,
   value: String,
+}
+
+#[derive(Deserialize)]
+struct Anchor {
+  x: i32,
+  y: i32,
+  name: String,
 }
 
 #[derive(Deserialize)]
@@ -104,9 +112,28 @@ impl MenuMap {
       })
       .collect_vec();
 
+    let anchors = self
+      .layers
+      .1
+      .objects
+      .iter()
+      .filter_map(|object| {
+        if let Object::Anchor(anchor) = object {
+          Some(DynamicMenuAnchor {
+            x: Tiles(anchor.x / MENU_MAP_PIXEL_FACTOR),
+            y: Tiles(anchor.y / MENU_MAP_PIXEL_FACTOR),
+            slug: anchor.name.clone(),
+          })
+        } else {
+          None
+        }
+      })
+      .collect_vec();
+
     DynamicMenu {
       data: self.layers.0.data,
       text,
+      anchors,
     }
   }
 }

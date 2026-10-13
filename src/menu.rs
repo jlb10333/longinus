@@ -303,7 +303,7 @@ struct NextMainMenuUpdate {
 fn next_main_menus(
   current_menu: &MainMenu,
   input: &MenuInput,
-  available_saves: &[String],
+  available_saves: &Rc<Vec<SaveData>>,
 ) -> NextMainMenuUpdate {
   if !(input.up || input.down || input.left || input.right || input.confirm || input.cancel) {
     return NextMainMenuUpdate {
@@ -351,7 +351,7 @@ fn next_menus(
   input: &MenuInput,
   unequipped_modules: &UnequippedModules,
   equipped_modules: &EquippedModules,
-  available_saves: &Vec<String>,
+  available_saves: &Rc<Vec<SaveData>>,
 ) -> NextMenuUpdate {
   if !(input.up || input.down || input.left || input.right || input.confirm || input.cancel) {
     return NextMenuUpdate {
@@ -469,7 +469,7 @@ fn next_menus(
 
 fn menu_main(
   cursor_position: Vector2<i32>,
-  available_saves: &[String],
+  available_saves: &Rc<Vec<SaveData>>,
   input: &MenuInput,
   should_include_continue_option: bool,
 ) -> (Vec<MainMenu>, Option<SaveToLoad>) {
@@ -509,10 +509,11 @@ fn menu_main(
   if continue_game {
     let most_recent_save = available_saves
       .iter()
-      .fold("", |init, elem| if *init > **elem { init } else { elem });
+      .reduce(|a, b| if a.saved_at > b.saved_at { a } else { b })
+      .expect("Continue selected but 0 length save list");
     return (
       vec![],
-      Some(SaveToLoad::SaveData(most_recent_save.to_string())),
+      Some(SaveToLoad::SaveData(most_recent_save.canonical_name())),
     );
   }
 
@@ -549,7 +550,7 @@ pub enum QuitDecision {
 fn menu_load_game(
   cursor_position: Vector2<i32>,
   input: &MenuInput,
-  available_saves: &[String],
+  available_saves: &Rc<Vec<SaveData>>,
 ) -> (Vec<MainMenu>, Option<String>) {
   let cursor_position = handle_cursor_movement(
     cursor_position,
@@ -578,7 +579,10 @@ fn menu_load_game(
 
   let save_index_to_load = (cursor_position.y - 1) as usize;
 
-  (vec![], Some(available_saves[save_index_to_load].clone()))
+  (
+    vec![],
+    Some(available_saves[save_index_to_load].canonical_name()),
+  )
 }
 
 fn pause_main(
@@ -633,7 +637,7 @@ fn pause_main(
 fn pause_load_game(
   cursor_position: Vector2<i32>,
   input: &MenuInput,
-  available_saves: &Vec<String>,
+  available_saves: &Rc<Vec<SaveData>>,
 ) -> (Vec<GameMenu>, Option<String>) {
   let cursor_position = handle_cursor_movement(
     cursor_position,
@@ -662,7 +666,10 @@ fn pause_load_game(
 
   let save_index_to_load = (cursor_position.y - 1) as usize;
 
-  return (vec![], Some(available_saves[save_index_to_load].clone()));
+  return (
+    vec![],
+    Some(available_saves[save_index_to_load].canonical_name()),
+  );
 }
 
 const EDIT_CURSOR: Vector2<i32> = vector![0, 0];

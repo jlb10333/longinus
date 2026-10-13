@@ -1,6 +1,6 @@
 use super::{GameMaterials, GameTextParams, consts::*, draw_game_text};
 use derive_more::{Add, Div, Sub};
-use dynamic::{DynamicMenu, draw_dynamic_menu};
+use dynamic::{DynamicMenu, DynamicMenuItem, draw_dynamic_menu};
 use generated::GAME_MENUS;
 use macroquad::prelude::*;
 use rapier2d::prelude::*;
@@ -11,6 +11,7 @@ use crate::{
   combat::{EQUIP_SLOTS_WIDTH, WeaponModule, WeaponModuleKind, weapon_module_from_kind},
   graphics::{GameColor, draw_sprites},
   menu::{GameMenu, GameMenuKind, INVENTORY_WRAP_WIDTH},
+  save::SaveData,
   sprite::{self, SpriteToDraw, tiled_sprites_to_draw},
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -19,9 +20,15 @@ mod dynamic;
 mod dynamic_load;
 mod generated;
 
+const SAVE_LIST_ANCHOR_SLUG: &str = "LIST_OF_SAVES";
+const SAVE_TIMESTAMP_ANCHOR_SLUG: &str = "SAVE_TIMESTAMP";
+const PLAYER_HEALTH_ANCHOR_SLUG: &str = "PLAYER_HEALTH";
+const PLAYER_MANA_ANCHOR_SLUG: &str = "PLAYER_MANA";
+const PLAYER_ABILITIES_ANCHOR_SLUG: &str = "PLAYER_ABILITIES";
+
 pub fn draw_menu(
   menu: &GameMenu,
-  available_sava_data: &[String],
+  available_save_data: &[SaveData],
   game_textures: &SpriteTextures,
   game_materials: &GameMaterials,
 ) {
@@ -49,51 +56,119 @@ pub fn draw_menu(
     );
   };
 
+  let game_menus = GAME_MENUS;
+
   match &menu.kind {
-    GameMenuKind::PauseMain => draw_dynamic_menu(&GAME_MENUS.pause_main),
+    GameMenuKind::PauseMain => draw_dynamic_menu(&game_menus.pause_main),
     GameMenuKind::PauseLoadSave => {
-      draw_menu_box(TileRect {
-        x: (SCREEN_WIDTH_TILES * 0.7),
-        y: (SCREEN_HEIGHT_TILES * 0.52),
-        w: SCREEN_WIDTH_TILES * 0.5,
-        h: SCREEN_HEIGHT_TILES * 0.5,
-      });
-      draw_game_text(
-        if menu.cursor_position == vector![0, 0] {
-          "-cancel-"
-        } else {
-          "cancel"
-        },
-        Vec2 {
-          x: (SCREEN_WIDTH_TILES / 2).to_screen(),
-          y: (SCREEN_HEIGHT_TILES / 2).to_screen(),
-        },
-        GameColor::Color3,
-      );
-      available_sava_data
+      draw_dynamic_menu(&game_menus.pause_load_save);
+
+      let adjusted_cursor = menu.cursor_position.y - 1;
+
+      let upper_padding = 4;
+      let lower_padding = 4;
+
+      let start = (adjusted_cursor - upper_padding).max(0) as usize;
+      let end = (menu.cursor_position.y
+        + lower_padding
+        + (start as i32 - (adjusted_cursor - upper_padding)))
+        .min(available_save_data.len() as i32) as usize;
+
+      let save_list_anchor = game_menus.pause_load_save.get_anchor(SAVE_LIST_ANCHOR_SLUG);
+      let save_timestamp_anchor = game_menus
+        .pause_load_save
+        .get_anchor(SAVE_TIMESTAMP_ANCHOR_SLUG);
+      let player_health_anchor = game_menus
+        .pause_load_save
+        .get_anchor(PLAYER_HEALTH_ANCHOR_SLUG);
+      let player_mana_anchor = game_menus
+        .pause_load_save
+        .get_anchor(PLAYER_MANA_ANCHOR_SLUG);
+      let player_abilities_anchor = game_menus
+        .pause_load_save
+        .get_anchor(PLAYER_ABILITIES_ANCHOR_SLUG);
+
+      println!("{} {} {}", start, end, adjusted_cursor);
+
+      available_save_data
+        .get(start..end)
+        .expect("array index out of bounds")
         .iter()
         .enumerate()
         .for_each(|(index, save)| {
           draw_game_text(
-            &format!(
-              "{}{}",
-              if menu.cursor_position.y - 1 == index as i32 {
-                "-"
-              } else {
-                ""
-              },
-              save
-            ),
+            "load",
             Vec2 {
-              x: (SCREEN_WIDTH_TILES * 0.5).to_screen(),
-              y: (SCREEN_HEIGHT_TILES * (0.6 + (index as f32 * 0.07))).to_screen(),
+              x: save_list_anchor.x.to_screen(),
+              y: (save_list_anchor.y + Tiles(index as i32)).to_screen(),
             },
-            GameColor::Color3,
+            if adjusted_cursor == (index + start) as i32 {
+              GameColor::Color1
+            } else {
+              GameColor::Color3
+            },
           );
         });
+
+      let highlighted_save = available_save_data.get(adjusted_cursor as usize);
+
+      if let Some(highlighted_save) = highlighted_save {
+        draw_game_text(
+          &format!("{}", highlighted_save.saved_at.format("%m/%d/%y")),
+          save_timestamp_anchor.to_screen_vec2(),
+          GameColor::Color3,
+        );
+        draw_game_text(
+          &format!("{}", highlighted_save.saved_at.format("%H:%M:%S")),
+          Vec2 {
+            x: save_timestamp_anchor.x.to_screen(),
+            y: (save_timestamp_anchor.y + Tiles(1)).to_screen(),
+          },
+          GameColor::Color3,
+        );
+
+        draw_game_text(
+          &format!(
+            "{}/{}",
+            highlighted_save.player_health, highlighted_save.player_max_health
+          ),
+          player_health_anchor.to_screen_vec2(),
+          GameColor::Color3,
+        );
+        draw_game_text(
+          &format!(
+            "MP {}+{}",
+            highlighted_save
+              .mana_tanks_capacity
+              .max_rechargeable_mana_level(),
+            highlighted_save
+              .mana_tanks_capacity
+              .max_non_rechargeable_mana_level()
+          ),
+          player_mana_anchor.to_screen_vec2(),
+          GameColor::Color3,
+        );
+        draw_game_text(
+          &format!(
+            "{} {}",
+            if highlighted_save.acquired_boost {
+              "B"
+            } else {
+              " "
+            },
+            if highlighted_save.acquired_chain {
+              "C"
+            } else {
+              " "
+            }
+          ),
+          player_abilities_anchor.to_screen_vec2(),
+          GameColor::Color3,
+        );
+      }
     }
     GameMenuKind::InventoryMain => {
-      draw_dynamic_menu(&GAME_MENUS.inventory_main);
+      draw_dynamic_menu(&game_menus.inventory_main);
     }
     GameMenuKind::InventoryPickSlot(_, inventory_update) => {
       draw_menu_box(TileRect {
@@ -183,7 +258,7 @@ pub fn draw_menu(
         }
       }
     }
-    GameMenuKind::SaveConfirm(_) => draw_dynamic_menu(&GAME_MENUS.save_confirm),
+    GameMenuKind::SaveConfirm(_) => draw_dynamic_menu(&game_menus.save_confirm),
     _ => draw_menu_deprecated(menu),
   }
 }
@@ -439,7 +514,7 @@ impl Mul<f32> for Tiles {
 
 impl Tiles {
   const fn to_screen(self) -> f32 {
-    self.0 as f32 * 8.0 * VIRTUAL_PIXEL_FACTOR
+    (self.0 as f32 + 0.5) * 8.0 * VIRTUAL_PIXEL_FACTOR
   }
 }
 

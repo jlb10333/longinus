@@ -17,6 +17,17 @@ use super::Tiles;
 pub struct DynamicMenu {
   pub data: Vec<u8>,
   pub text: Vec<DynamicMenuText>,
+  pub anchors: Vec<DynamicMenuAnchor>,
+}
+
+impl DynamicMenu {
+  pub fn get_anchor(&self, slug: &str) -> &DynamicMenuAnchor {
+    self
+      .anchors
+      .iter()
+      .find(|anchor| anchor.slug == slug)
+      .expect(&format!("Couldn't find anchor under slug {}", slug))
+  }
 }
 
 pub struct DynamicMenuText {
@@ -26,7 +37,40 @@ pub struct DynamicMenuText {
   pub select_coords: Vec<Vector2<i32>>,
 }
 
-const HALF_TILE_OFFSET: f32 = Tiles(1).to_screen() / 2.0;
+pub struct DynamicMenuAnchor {
+  pub x: Tiles,
+  pub y: Tiles,
+  pub slug: String,
+}
+
+pub trait DynamicMenuItem {
+  fn x(&self) -> Tiles;
+  fn y(&self) -> Tiles;
+  fn to_screen_vec2(&self) -> Vec2 {
+    Vec2 {
+      x: self.x().to_screen(),
+      y: self.y().to_screen(),
+    }
+  }
+}
+
+impl DynamicMenuItem for DynamicMenuText {
+  fn x(&self) -> Tiles {
+    self.x
+  }
+  fn y(&self) -> Tiles {
+    self.y
+  }
+}
+
+impl DynamicMenuItem for DynamicMenuAnchor {
+  fn x(&self) -> Tiles {
+    self.x
+  }
+  fn y(&self) -> Tiles {
+    self.y
+  }
+}
 
 pub fn draw_dynamic_menu(
   menu: &DynamicMenu,
@@ -59,10 +103,7 @@ pub fn draw_dynamic_menu(
     let y = Tiles(index as i32 / SCREEN_WIDTH_TILES.0);
     draw_sprites(
       &sprites_to_draw,
-      ScreenVector::from_vec(vector![
-        x.to_screen() + HALF_TILE_OFFSET,
-        y.to_screen() + HALF_TILE_OFFSET
-      ]),
+      ScreenVector::from_vec(vector![x.to_screen(), y.to_screen()]),
       0.0,
       false,
     );

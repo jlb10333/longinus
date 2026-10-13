@@ -29,7 +29,7 @@ use crate::{
   load_map::{ColliderLayer, MapSystem, physics_scalar_to_map, physics_translation_from_map},
   menu::{MainMenu, MenuSystem},
   physics::PhysicsSystem,
-  save::SaveSystem,
+  save::{SaveData, SaveSystem},
   shaders::{COLOR_MAP_FRAGMENT_SHADER, DISSOLVE_FRAGMENT_SHADER, IDENTITY_VERTEX_SHADER},
   sprite::{self, SpriteToDraw, get_sprites_to_draw},
   system::System,
@@ -1296,7 +1296,7 @@ fn draw_tile_layer(
 fn draw_main_menu(
   menu: &MainMenu,
   text_font: &Texture2D,
-  available_sava_data: &[String],
+  available_sava_data: &Rc<Vec<SaveData>>,
   materials: &GameMaterials,
 ) {
   match menu.kind.clone() {
@@ -1414,7 +1414,7 @@ fn draw_main_menu(
               } else {
                 ""
               },
-              save
+              save.canonical_name()
             ),
             VIRTUAL_SCREEN_WIDTH * 0.5,
             VIRTUAL_SCREEN_HEIGHT * (0.55 + (index as f32 * 0.05)),
