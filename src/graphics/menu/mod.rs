@@ -25,6 +25,7 @@ const SAVE_TIMESTAMP_ANCHOR_SLUG: &str = "SAVE_TIMESTAMP";
 const PLAYER_HEALTH_ANCHOR_SLUG: &str = "PLAYER_HEALTH";
 const PLAYER_MANA_ANCHOR_SLUG: &str = "PLAYER_MANA";
 const PLAYER_ABILITIES_ANCHOR_SLUG: &str = "PLAYER_ABILITIES";
+const MODULE_ACQUIRED_ANCHOR_SLUG: &str = "MODULE_ACQUIRED";
 
 pub fn draw_menu(
   menu: &GameMenu,
@@ -259,82 +260,25 @@ pub fn draw_menu(
       }
     }
     GameMenuKind::SaveConfirm(_) => draw_dynamic_menu(&game_menus.save_confirm),
+    GameMenuKind::ModulePickupConfirm(module_kind) => {
+      draw_dynamic_menu(&game_menus.module_pickup);
+
+      let module_anchor = game_menus
+        .module_pickup
+        .get_anchor(MODULE_ACQUIRED_ANCHOR_SLUG);
+
+      draw_menu_sprites(
+        &sprite::module(game_textures, Some(*module_kind)),
+        module_anchor.x,
+        module_anchor.y,
+      );
+    }
     _ => draw_menu_deprecated(menu),
   }
 }
 
 pub fn draw_menu_deprecated(menu: &GameMenu) {
   match &menu.kind {
-    /* MARK: Save Confirm */
-    crate::menu::GameMenuKind::SaveConfirm(_) => {
-      draw_rectangle(
-        VIRTUAL_SCREEN_WIDTH * 0.3,
-        VIRTUAL_SCREEN_HEIGHT * 0.45,
-        VIRTUAL_SCREEN_WIDTH * 0.4,
-        VIRTUAL_SCREEN_HEIGHT * 0.1,
-        COLOR_2,
-      );
-
-      draw_text(
-        "Cancel",
-        0.4 * VIRTUAL_SCREEN_WIDTH,
-        0.5 * VIRTUAL_SCREEN_HEIGHT,
-        40.0,
-        COLOR_1,
-      );
-
-      draw_text(
-        "Save",
-        0.6 * VIRTUAL_SCREEN_WIDTH,
-        0.5 * VIRTUAL_SCREEN_HEIGHT,
-        40.0,
-        COLOR_1,
-      );
-
-      draw_text(
-        "-",
-        (0.4 + (menu.cursor_position.x as f32 * 0.2)) * VIRTUAL_SCREEN_WIDTH,
-        0.53 * VIRTUAL_SCREEN_HEIGHT,
-        40.0,
-        COLOR_1,
-      );
-    }
-    crate::menu::GameMenuKind::ModulePickupConfirm(weapon_module_kind) => {
-      draw_rectangle(
-        VIRTUAL_SCREEN_WIDTH * 0.3,
-        VIRTUAL_SCREEN_HEIGHT * 0.4,
-        VIRTUAL_SCREEN_WIDTH * 0.4,
-        VIRTUAL_SCREEN_HEIGHT * 0.15,
-        COLOR_2,
-      );
-
-      draw_text(
-        &format!(
-          "{} {} aquired",
-          match weapon_module_from_kind(*weapon_module_kind) {
-            WeaponModule::Generator(_) => {
-              "Weapon"
-            }
-            WeaponModule::Modulator(_, _) => {
-              "Modifier"
-            }
-          },
-          debug_module_symbol(*weapon_module_kind)
-        ),
-        0.4 * VIRTUAL_SCREEN_WIDTH,
-        0.45 * VIRTUAL_SCREEN_HEIGHT,
-        40.0,
-        COLOR_1,
-      );
-
-      draw_text(
-        "-edit-",
-        0.4 * VIRTUAL_SCREEN_WIDTH,
-        0.5 * VIRTUAL_SCREEN_HEIGHT,
-        40.0,
-        COLOR_1,
-      );
-    }
     crate::menu::GameMenuKind::AbilityPickupConfirm(ability) => {
       draw_rectangle(
         VIRTUAL_SCREEN_WIDTH * 0.3,

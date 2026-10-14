@@ -3,18 +3,18 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "menus/inventory_main.json",
+    "activeFile": "menus/pause_load_save.menu.json",
     "automapping.whileDrawing": true,
     "expandedProjectPaths": [
-        ".",
-        "maps/generated/templates",
-        "maps/tilesets",
-        "maps/templates",
         "maps/generated",
-        "maps/templates/enemies",
-        "maps",
+        "maps/tilesets",
         "menus",
-        "maps/old"
+        "maps/old",
+        "maps",
+        ".",
+        "maps/templates/enemies",
+        "maps/templates",
+        "maps/generated/templates"
     ],
     "fileStates": {
         "": {
@@ -111,7 +111,7 @@
             "scale": 2,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 120,
+                "x": 120.25,
                 "y": 159.75
             }
         },
@@ -119,7 +119,7 @@
             "scale": 1,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 320,
+                "x": 320.5,
                 "y": 199.5
             }
         },
@@ -127,7 +127,7 @@
             "scale": 1,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 200,
+                "x": 200.5,
                 "y": 199.5
             }
         },
@@ -143,7 +143,7 @@
             "scale": 4,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 120,
+                "x": 120.125,
                 "y": 200.125
             }
         },
@@ -151,7 +151,7 @@
             "scale": 0.5,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 120,
+                "x": 119,
                 "y": 199
             }
         },
@@ -159,7 +159,7 @@
             "scale": 0.33,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 160.60606060606062,
+                "x": 159.09090909090907,
                 "y": 159.09090909090912
             }
         },
@@ -167,7 +167,7 @@
             "scale": 3,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 200,
+                "x": 200.16666666666666,
                 "y": 119.83333333333334
             }
         },
@@ -175,7 +175,7 @@
             "scale": 4,
             "selectedLayer": 2,
             "viewCenter": {
-                "x": 120,
+                "x": 120.125,
                 "y": 79.875
             }
         },
@@ -183,7 +183,7 @@
             "scale": 3,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 80,
+                "x": 80.16666666666666,
                 "y": 79.83333333333334
             }
         },
@@ -197,17 +197,17 @@
         },
         "maps/generated/MP25.json": {
             "scale": 1.5,
-            "selectedLayer": 2,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 200,
-                "y": 240.33333333333331
+                "x": 428.9999999999999,
+                "y": 1466.3333333333333
             }
         },
         "maps/generated/MP26.json": {
             "scale": 0.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 160,
+                "x": 159,
                 "y": 319
             }
         },
@@ -215,7 +215,7 @@
             "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 432,
+                "x": 432.3333333333333,
                 "y": 224.33333333333331
             }
         },
@@ -223,7 +223,7 @@
             "scale": 2,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 200,
+                "x": 200.25,
                 "y": 200.25
             }
         },
@@ -231,7 +231,7 @@
             "scale": 0.75,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 612,
+                "x": 612.6666666666666,
                 "y": 255.33333333333331
             }
         },
@@ -239,7 +239,7 @@
             "scale": 3,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 432,
+                "x": 432.16666666666663,
                 "y": 224.16666666666666
             }
         },
@@ -258,7 +258,7 @@
             "scale": 1.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 240,
+                "x": 240.33333333333331,
                 "y": 79.66666666666666
             }
         },
@@ -266,7 +266,7 @@
             "scale": 0.5,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 240,
+                "x": 239,
                 "y": 199
             }
         },
@@ -274,7 +274,7 @@
             "scale": 2,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 160,
+                "x": 160.25,
                 "y": 200.25
             }
         },
@@ -287,11 +287,11 @@
             }
         },
         "maps/generated/boost.json": {
-            "scale": 2,
-            "selectedLayer": 0,
+            "scale": 1.5,
+            "selectedLayer": 3,
             "viewCenter": {
-                "x": 320,
-                "y": 200.25
+                "x": 25,
+                "y": 1718.3333333333333
             }
         },
         "maps/generated/boss1.json": {
@@ -306,7 +306,7 @@
             "scale": 1,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 199.5,
+                "x": 200.5,
                 "y": 199.5
             }
         },
@@ -319,11 +319,14 @@
             }
         },
         "maps/generated/start.json": {
-            "scale": 2,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 3,
             "selectedLayer": 3,
             "viewCenter": {
-                "x": 160,
-                "y": 159.75
+                "x": 283.8333333333333,
+                "y": 255.83333333333331
             }
         },
         "maps/generated/start.json#colliders": {
@@ -456,8 +459,16 @@
             "scale": 2,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": -541.75,
-                "y": -147.25
+                "x": -0.75,
+                "y": -0.75
+            }
+        },
+        "menus/ability_pickup.menu.json": {
+            "scale": 8,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 90.6875,
+                "y": 56.4375
             }
         },
         "menus/inventory_main.json": {
@@ -475,20 +486,34 @@
             "scale": 2,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 22.75,
-                "y": 87.75
+                "x": 563.75,
+                "y": 234.25
             }
         },
         "menus/menu_tileset.tsj": {
             "scaleInDock": 11,
             "scaleInEditor": 1
         },
+        "menus/module_pickup.menu.json": {
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 8,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 90.6875,
+                "y": 56.4375
+            }
+        },
         "menus/pause_load_save.menu.json": {
-            "scale": 5.5,
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 3,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 104.45454545454545,
-                "y": 64.63636363636364
+                "x": 392.8333333333333,
+                "y": 165.5
             }
         },
         "menus/pause_main.menu.json": {
@@ -498,16 +523,16 @@
             "scale": 2,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 71.75,
-                "y": 130.75
+                "x": 612.75,
+                "y": 277.25
             }
         },
         "menus/rules.json": {
             "scale": 8,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 56.8125,
-                "y": 217.9375
+                "x": 192.0625,
+                "y": 254.5625
             }
         },
         "menus/save.menu.json": {
@@ -519,6 +544,9 @@
             }
         },
         "menus/save_confirm.menu.json": {
+            "expandedObjectLayers": [
+                2
+            ],
             "scale": 8.253124999999999,
             "selectedLayer": 1,
             "viewCenter": {
@@ -539,7 +567,7 @@
     "last.objectTemplatePath": "/home/jack/longinus/assets/maps/generated/templates",
     "last.worldFilePath": "/home/jack/longinus/assets/maps/generated",
     "loadedWorlds": [
-        "/home/jlb10333/game-rs/assets/maps/generated/world.world"
+        "/home/jack/longinus/assets/maps/generated/world.world"
     ],
     "map.fixedSize": true,
     "map.height": 18,
@@ -570,8 +598,11 @@
         "maps/generated/MP31.json",
         "maps/generated/boss2.json",
         "maps/world_master.json",
-        "menus/inventory_main.json",
-        "menus/rules.json"
+        "menus/inventory_main.menu.json",
+        "menus/rules.json",
+        "menus/pause_main.menu.json",
+        "menus/pause_load_save.menu.json",
+        "menus/save_confirm.menu.json"
     ],
     "project": "project.tiled-project",
     "property.type": "string",

@@ -74,11 +74,11 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
 
   let front_ahead = slot(0.0, 0.0);
 
-  let front_double_left = slot(-PI / 6.0, 0.0);
-  let front_double_right = slot(PI / 6.0, 0.0);
+  let front_double_left = slot(-PI / 8.0, 0.0);
+  let front_double_right = slot(PI / 8.0, 0.0);
 
-  let front_45_left = slot(-PI / 4.0, -PI / 4.0);
-  let front_45_right = slot(PI / 4.0, PI / 4.0);
+  let front_45_left = slot(-PI / 5.0, -PI / 5.0);
+  let front_45_right = slot(PI / 5.0, PI / 5.0);
 
   /* SIDE */
 
@@ -89,11 +89,11 @@ pub fn get_slot_positions(reticle_angle: f32) -> ProjectileSlots {
 
   let back_ahead = slot(PI, PI);
 
-  let back_double_left = slot(PI - PI / 6.0, PI);
-  let back_double_right = slot(PI + PI / 6.0, PI);
+  let back_double_left = slot(PI - PI / 8.0, PI);
+  let back_double_right = slot(PI + PI / 8.0, PI);
 
-  let back_45_left = slot(PI - PI / 4.0, PI - PI / 4.0);
-  let back_45_right = slot(PI + PI / 4.0, PI + PI / 4.0);
+  let back_45_left = slot(PI - PI / 5.0, PI - PI / 5.0);
+  let back_45_right = slot(PI + PI / 5.0, PI + PI / 5.0);
 
   HashMap::from([
     (SlotPosition::FrontAhead, front_ahead),

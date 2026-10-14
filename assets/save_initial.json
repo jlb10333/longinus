@@ -4,14 +4,14 @@
   "unequipped_modules": [],
   "equipped_modules": [
     [
-      "Plasma",
-      "Front2Slot",
+      null,
+      null,
       null,
       null
     ],
     [
       null,
-      "Missile",
+      null,
       null,
       null
     ],
@@ -32,8 +32,8 @@
   "player_health": 100.0,
   "player_max_health": 100.0,
   "visited_maps": ["start"],
-  "acquired_boost": true,
-  "acquired_chain": true,
+  "acquired_boost": false,
+  "acquired_chain": false,
   "mana_tanks_capacity": {
     "auto_recharge_mana_tanks": 3,
     "non_recharge_mana_tanks": 0

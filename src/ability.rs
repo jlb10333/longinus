@@ -271,13 +271,9 @@ impl System for AbilitySystem {
     let chain_activated =
       (self.chain_activated || chain_to_mount_point.is_some()) && !self.kill_chain;
 
-    // println!("{chain_activated} activated");
-
     let kill_chain = self.chain_activated
       && controls_system.chain
       && !controls_system.last_frame.as_ref().unwrap().chain;
-
-    // println!("{kill_chain} kill");
 
     Rc::new(AbilitySystem {
       acquired_boost,
