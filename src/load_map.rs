@@ -2764,7 +2764,7 @@ impl System for MapSystem {
   }
 
   fn update(
-    &self,
+    self: Rc<Self>,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
     let physics_system = ctx.get::<PhysicsSystem>().unwrap();
@@ -2811,9 +2811,9 @@ impl System for MapSystem {
   }
 
   fn fixed_update(
-    &self,
+    self: Rc<Self>,
     _: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    Rc::new(self.clone())
+    self
   }
 }

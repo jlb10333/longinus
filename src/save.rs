@@ -111,7 +111,7 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
   }
 
   fn update(
-    &self,
+    self: Rc<Self>,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     let new_save_data = ctx.downcast::<GameInput>().and_then(|ctx| {
@@ -170,20 +170,14 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
         phantom: PhantomData,
       })
     } else {
-      Rc::new(SaveSystem {
-        available_save_data: Rc::clone(&self.available_save_data),
-        phantom: PhantomData,
-      })
+      self
     }
   }
 
   fn fixed_update(
-    &self,
+    self: Rc<Self>,
     _: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    Rc::new(SaveSystem {
-      available_save_data: Rc::clone(&self.available_save_data),
-      phantom: PhantomData,
-    })
+    self
   }
 }

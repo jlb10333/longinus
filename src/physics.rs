@@ -955,17 +955,14 @@ impl System for PhysicsSystem {
   }
 
   fn update(
-    &self,
+    self: Rc<Self>,
     _: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    Rc::new(Self {
-      hitstop_frames_left: (self.hitstop_frames_left - 1).max(0),
-      ..self.clone()
-    })
+    self
   }
 
   fn fixed_update(
-    &self,
+    self: Rc<Self>,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     let map_system = ctx.get::<MapSystem>().unwrap();

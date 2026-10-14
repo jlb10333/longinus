@@ -83,7 +83,7 @@ impl System for CameraSystem {
   }
 
   fn update(
-    &self,
+    self: Rc<Self>,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     let map_system = ctx.get::<MapSystem>().unwrap();
@@ -151,9 +151,9 @@ impl System for CameraSystem {
   }
 
   fn fixed_update(
-    &self,
+    self: Rc<Self>,
     _: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    Rc::new(self.clone())
+    self
   }
 }

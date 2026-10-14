@@ -772,7 +772,7 @@ impl System for CombatSystem {
   }
 
   fn update(
-    &self,
+    self: Rc<Self>,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
@@ -790,11 +790,11 @@ impl System for CombatSystem {
       });
     }
 
-    Rc::new(self.clone())
+    self
   }
 
   fn fixed_update(
-    &self,
+    self: Rc<Self>,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     /* Add new unequipped modules from item pickups */

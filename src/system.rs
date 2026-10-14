@@ -14,9 +14,13 @@ pub trait System: Any {
   where
     Self: Sized;
 
-  fn update(&self, _: &ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>;
+  fn update(self: Rc<Self>, _: &ProcessContext<Self::Input>)
+  -> Rc<dyn System<Input = Self::Input>>;
 
-  fn fixed_update(&self, _: &ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>;
+  fn fixed_update(
+    self: Rc<Self>,
+    _: &ProcessContext<Self::Input>,
+  ) -> Rc<dyn System<Input = Self::Input>>;
 }
 
 #[derive(Clone)]
@@ -105,7 +109,7 @@ impl<Input: Clone + 'static> ProcessContext<Input> {
         .iter()
         .enumerate()
         .fold(game_state.clone(), |temp_state, (index, system)| {
-          temp_state.with(index, &system.update(&temp_state))
+          temp_state.with(index, &system.clone().update(&temp_state))
         });
 
       next_frame().await;
@@ -125,13 +129,12 @@ impl<Input: Clone + 'static> ProcessContext<Input> {
           game_state.options.fixed_time_interval * 1_000_000.0 * fixed_update_count as f32;
 
         game_state = (0..fixed_update_count).fold(game_state.clone(), |temp_state, _| {
-          temp_state
-            .systems
-            .iter()
-            .enumerate()
-            .fold(temp_state.clone(), |temp_state, (index, system)| {
-              temp_state.with(index, &system.fixed_update(&temp_state))
-            })
+          temp_state.systems.iter().enumerate().fold(
+            temp_state.clone(),
+            |temp_state, (index, system)| {
+              temp_state.with(index, &system.clone().fixed_update(&temp_state))
+            },
+          )
         });
       }
 

@@ -111,13 +111,13 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
   }
 
   fn update(
-    &self,
+    self: Rc<Self>,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
     if controls_system.last_frame.is_none() {
-      return Rc::new(self.clone());
+      return self;
     }
     let last_frame = controls_system.last_frame.clone().unwrap();
 
@@ -201,10 +201,10 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
   }
 
   fn fixed_update(
-    &self,
+    self: Rc<Self>,
     _: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    Rc::new(self.clone())
+    self
   }
 }
 

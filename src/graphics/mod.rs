@@ -92,7 +92,7 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
   }
 
   fn update(
-    &self,
+    self: Rc<Self>,
     ctx: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
     // 426×320
@@ -1163,19 +1163,14 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
     }
 
     draw_render_target(&self.materials, &self.camera);
-    Rc::new(GraphicsSystem {
-      effects: self.effects.clone(),
-      materials: Rc::clone(&self.materials),
-      camera: Rc::clone(&self.camera),
-      _phantom_data: PhantomData,
-    })
+    self
   }
 
   fn fixed_update(
-    &self,
+    self: Rc<Self>,
     _: &crate::system::ProcessContext<Self::Input>,
   ) -> Rc<dyn System<Input = Self::Input>> {
-    Rc::new(self.clone())
+    self
   }
 }
 
