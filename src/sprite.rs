@@ -213,8 +213,8 @@ pub fn enemy_offscreen(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
       Rect {
         x: 0.0,
         y: 0.0,
-        w: 16.0,
-        h: 16.0,
+        w: 9.0,
+        h: 9.0,
       },
     )
   }]
@@ -244,6 +244,31 @@ pub fn mana_tank_pickup(frame_count: i64, game_textures: &SpriteTextures) -> Vec
       z_position: None,
     },
     &game_textures.pickup_textures.mana_tank_texture,
+  )
+}
+
+#[derive(Clone, Copy)]
+pub enum BarCellStatus {
+  Empty,
+  Half,
+  Full,
+}
+pub fn bar_cell(status: BarCellStatus, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
+  draw_from_sprite_sheet(
+    match status {
+      BarCellStatus::Empty => 0,
+      BarCellStatus::Half => 1,
+      BarCellStatus::Full => 2,
+    },
+    SpriteSheetArgs {
+      width: 8,
+      height: 8,
+      num_columns: 2,
+      num_sprites: 3,
+      offset: None,
+      z_position: None,
+    },
+    &game_textures.ui_textures.bar_cell_texture,
   )
 }
 

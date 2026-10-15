@@ -1,4 +1,4 @@
-//801e7e0595cf0b3c9103b979afa289c470075b2fdcca48e57242d4ade6e1bc90  -
+//3dc770f69cdf47ec956d5fabcb586ac912721e1d4ea92aea7549301d5d99d604  -
 use crate::load_sprites_utils::load_texture_with_filter;
 use macroquad::prelude::Texture2D;
 pub struct SpriteTextures {
@@ -63,6 +63,7 @@ pub struct TilesetTextures {
   pub tiles_texture: Texture2D,
 }
 pub struct UiTextures {
+  pub bar_cell_texture: Texture2D,
   pub enemy_offscreen_texture: Texture2D,
   pub menu_texture: Texture2D,
   pub module_textures: ModuleTextures,
@@ -102,6 +103,7 @@ pub async fn load_game_textures() -> SpriteTextures {
   let weapon_module_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/pickup/weapon_module.png").await;
   let text_font_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/text_font.png").await;
   let enemy_offscreen_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/enemy_offscreen.png").await;
+  let bar_cell_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/bar_cell.png").await;
   let module_fortyfive_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_fortyfive_slot.png").await;
   let module_front_2_slot_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_front_2_slot.png").await;
   let module_plasma_texture = load_texture_with_filter("/home/jack/longinus/assets/sprite/ui/module/module_plasma.png").await;
@@ -190,6 +192,7 @@ pub async fn load_game_textures() -> SpriteTextures {
       tiles_texture,
     },
     ui_textures: UiTextures {
+      bar_cell_texture,
       enemy_offscreen_texture,
       menu_texture,
       module_textures: ModuleTextures {

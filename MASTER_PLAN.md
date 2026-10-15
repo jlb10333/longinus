@@ -10,14 +10,20 @@
       - Ability pickup
       - Boost?
   - Core elements
+    - Crawler enemy
+      - Slowly crawls along walls before stopping to shoot two shots at the player
     - 2nd boss
       - Per quadrant, chain mount point appears after quadrant has taken damage above a threshold, and pulling on this detaches the quadrant, destroying it (removing as a possible spawn point). Shooting in the hole left by the quadrant deals damage to the underlying enemy, but the enemy tries to rotate to face its non-destroyed quadrants towards the player at all times
   - Full blocking
+    - Leadup to 2nd boss is shit
     - Settle on distribution and selection of upgrade modules/mana bars/health bars
   - Polish
     - Bugs
       - Fix incorrect mouse aim
       - Fix backing out at game over screen causing visual glitch
+      - Chain sometimes attaches wrong and "bounces"
+      - Enemy death animation sometimes glitches 
+      - Laser can't activate in gravity
     - Visual explainability
       - Show all health tank and mana tanks in inventory
   - Testing

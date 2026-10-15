@@ -228,11 +228,11 @@
             }
         },
         "maps/generated/MP30.json": {
-            "scale": 0.75,
-            "selectedLayer": 3,
+            "scale": 0.5,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 612.6666666666666,
-                "y": 255.33333333333331
+                "x": -411,
+                "y": -61
             }
         },
         "maps/generated/MP31.json": {
@@ -322,11 +322,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 3,
-            "selectedLayer": 3,
+            "scale": 0.75,
+            "selectedLayer": 2,
             "viewCenter": {
-                "x": 283.8333333333333,
-                "y": 255.83333333333331
+                "x": 1248.6666666666665,
+                "y": -204.66666666666674
             }
         },
         "maps/generated/start.json#colliders": {
@@ -471,6 +471,17 @@
                 "y": 56.4375
             }
         },
+        "menus/game_overlay.menu.json": {
+            "expandedObjectLayers": [
+                2
+            ],
+            "scale": 5.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 91.54545454545453,
+                "y": 80.27272727272728
+            }
+        },
         "menus/inventory_main.json": {
             "scale": 8,
             "selectedLayer": 0,
@@ -499,7 +510,7 @@
                 2
             ],
             "scale": 8,
-            "selectedLayer": 0,
+            "selectedLayer": 1,
             "viewCenter": {
                 "x": 90.6875,
                 "y": 56.4375

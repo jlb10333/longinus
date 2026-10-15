@@ -3,7 +3,11 @@ use std::{cmp::Ordering, f32::consts::PI, marker::PhantomData, rc::Rc};
 use consts::*;
 use itertools::Itertools;
 use macroquad::prelude::*;
-use menu::draw_menu;
+use menu::{
+  Tiles, draw_menu, draw_menu_text_g,
+  dynamic::{DynamicMenuItem, draw_dynamic_menu},
+  generated::GAME_MENUS,
+};
 use rapier2d::prelude::*;
 use utils::{angle_from_vec, draw_collider, draw_label};
 
@@ -31,7 +35,7 @@ use crate::{
   physics::PhysicsSystem,
   save::{SaveData, SaveSystem},
   shaders::{COLOR_MAP_FRAGMENT_SHADER, DISSOLVE_FRAGMENT_SHADER, IDENTITY_VERTEX_SHADER},
-  sprite::{self, SpriteToDraw, get_sprites_to_draw},
+  sprite::{self, BarCellStatus, SpriteToDraw, get_sprites_to_draw},
   system::System,
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -41,8 +45,8 @@ mod menu;
 mod utils;
 
 pub use consts::{
-  ColorPalette, ColorPalettePresets, VIRTUAL_PIXEL_FACTOR, VIRTUAL_SCREEN_HEIGHT,
-  VIRTUAL_SCREEN_WIDTH,
+  ColorPalette, ColorPalettePresets, VIRTUAL_GAME_VIEWPORT_HEIGHT, VIRTUAL_GAME_VIEWPORT_WIDTH,
+  VIRTUAL_PIXEL_FACTOR, VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH,
 };
 
 const RETICLE_SIZE: f32 = 3.0;
@@ -986,6 +990,60 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       }
 
       /* Draw overlays */
+      let draw_bar = |num_cells: i32,
+                      wrap_after: Option<i32>,
+                      min: f32,
+                      max: f32,
+                      level: f32,
+                      translation: Vec2| {
+        let normalized_level = ((level - min) / max) * num_cells as f32;
+
+        (0..num_cells).for_each(|index| {
+          let x_offset = match wrap_after {
+            Some(wrap_after) => Tiles(index % wrap_after),
+            None => Tiles(index),
+          };
+          let y_offset = match wrap_after {
+            Some(wrap_after) => Tiles(index / wrap_after),
+            None => Tiles(0),
+          };
+
+          let translation = translation
+            + Vec2 {
+              x: x_offset.to_screen() - Tiles(0).to_screen(),
+              y: y_offset.to_screen() - Tiles(0).to_screen(),
+            };
+          let translation = ScreenVector::from_vec(vector![translation.x, translation.y]);
+
+          let status = if normalized_level > index as f32 {
+            if (normalized_level - 0.5) > index as f32 {
+              BarCellStatus::Full
+            } else {
+              BarCellStatus::Half
+            }
+          } else {
+            BarCellStatus::Empty
+          };
+
+          draw_sprites(
+            &sprite::bar_cell(status, game_textures),
+            translation,
+            0.0,
+            false,
+          );
+        });
+      };
+
+      let draw_menu_text = draw_menu_text_g(game_textures, &self.materials);
+      let game_menus = GAME_MENUS;
+
+      draw_dynamic_menu(
+        &game_menus.game_overlay,
+        vector![0, 0],
+        game_textures,
+        &self.materials,
+      );
+
       let player = physics_system
         .entities
         .get(&EntityHandle::RigidBody(physics_system.player_handle))
@@ -993,21 +1051,16 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
       let player_damageable = player.components.get::<Damageable>().unwrap();
 
-      draw_game_text(
-        &format!(
-          "HP {}/{}",
-          player_damageable.health.round(),
-          player_damageable.max_health.round()
-        ),
-        &ctx.input.textures.ui_textures.text_font_texture,
-        vec2(
-          16.0 * VIRTUAL_PIXEL_FACTOR,
-          VIRTUAL_SCREEN_HEIGHT - (24.0 * VIRTUAL_PIXEL_FACTOR),
-        ),
-        GameTextParams {
-          ..Default::default()
-        },
-        &self.materials,
+      draw_bar(
+        player_damageable.max_health as i32 / 15,
+        Some(6),
+        0.0,
+        player_damageable.max_health,
+        player_damageable.health,
+        game_menus
+          .game_overlay
+          .get_anchor("PLAYER_HEALTH")
+          .to_screen_vec2(),
       );
 
       let ability_system = ctx.get::<AbilitySystem>().unwrap();
@@ -1069,44 +1122,40 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         COLOR_3,
       );
 
-      draw_game_text(
-        &format!(
-          "MANA {}/{}",
-          ability_system.mana_tanks.rechargeable_mana_level as i32,
-          ability_system
-            .mana_tanks
-            .capacity
-            .max_rechargeable_mana_level() as i32
-        ),
-        &ctx.input.textures.ui_textures.text_font_texture,
-        vec2(
-          16.0 * VIRTUAL_PIXEL_FACTOR,
-          VIRTUAL_SCREEN_HEIGHT - (16.0 * VIRTUAL_PIXEL_FACTOR),
-        ),
-        GameTextParams {
-          ..Default::default()
-        },
-        &self.materials,
+      draw_bar(
+        ability_system
+          .mana_tanks
+          .capacity
+          .max_rechargeable_mana_level() as i32,
+        None,
+        0.0,
+        ability_system
+          .mana_tanks
+          .capacity
+          .max_rechargeable_mana_level(),
+        ability_system.mana_tanks.rechargeable_mana_level,
+        game_menus
+          .game_overlay
+          .get_anchor("PLAYER_MANA")
+          .to_screen_vec2(),
       );
 
-      draw_game_text(
-        &format!(
-          "MANA Backup {}/{}",
-          ability_system.mana_tanks.non_rechargeable_mana_level as i32,
-          ability_system
-            .mana_tanks
-            .capacity
-            .max_non_rechargeable_mana_level() as i32
-        ),
-        &ctx.input.textures.ui_textures.text_font_texture,
-        vec2(
-          16.0 * VIRTUAL_PIXEL_FACTOR,
-          VIRTUAL_SCREEN_HEIGHT - (8.0 * VIRTUAL_PIXEL_FACTOR),
-        ),
-        GameTextParams {
-          ..Default::default()
-        },
-        &self.materials,
+      draw_bar(
+        ability_system
+          .mana_tanks
+          .capacity
+          .max_non_rechargeable_mana_level() as i32,
+        None,
+        0.0,
+        ability_system
+          .mana_tanks
+          .capacity
+          .max_non_rechargeable_mana_level(),
+        ability_system.mana_tanks.non_rechargeable_mana_level,
+        game_menus
+          .game_overlay
+          .get_anchor("PLAYER_BACKUP_MANA")
+          .to_screen_vec2(),
       );
 
       /* Draw the scuffed menu */

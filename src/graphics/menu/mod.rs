@@ -16,9 +16,9 @@ use crate::{
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 
-mod dynamic;
+pub mod dynamic;
 mod dynamic_load;
-mod generated;
+pub mod generated;
 
 const SAVE_LIST_ANCHOR_SLUG: &str = "LIST_OF_SAVES";
 const SAVE_TIMESTAMP_ANCHOR_SLUG: &str = "SAVE_TIMESTAMP";
@@ -35,18 +35,8 @@ pub fn draw_menu(
 ) {
   // Centered on (x, y), unlike draw_rectangle where (x, y) is the top-left corner
   let draw_menu_box = draw_menu_box_g(game_textures);
-  let draw_game_text = |text: &str, dest, color| {
-    draw_game_text(
-      text,
-      &game_textures.ui_textures.text_font_texture,
-      dest,
-      GameTextParams {
-        color,
-        ..Default::default()
-      },
-      game_materials,
-    )
-  };
+
+  let draw_game_text = draw_menu_text_g(game_textures, game_materials);
 
   let draw_dynamic_menu = |dynamic_menu: &DynamicMenu| {
     draw_dynamic_menu(
@@ -67,7 +57,7 @@ pub fn draw_menu(
       let adjusted_cursor = menu.cursor_position.y - 1;
 
       let upper_padding = 4;
-      let lower_padding = 4;
+      let lower_padding = 5;
 
       let start = (adjusted_cursor - upper_padding).max(0) as usize;
       let end = (menu.cursor_position.y
@@ -89,16 +79,14 @@ pub fn draw_menu(
         .pause_load_save
         .get_anchor(PLAYER_ABILITIES_ANCHOR_SLUG);
 
-      println!("{} {} {}", start, end, adjusted_cursor);
-
       available_save_data
         .get(start..end)
         .expect("array index out of bounds")
         .iter()
         .enumerate()
-        .for_each(|(index, save)| {
+        .for_each(|(index, _)| {
           draw_game_text(
-            "load",
+            &format!("load{}", available_save_data.len() - (start + index)),
             Vec2 {
               x: save_list_anchor.x.to_screen(),
               y: (save_list_anchor.y + Tiles(index as i32)).to_screen(),
@@ -457,7 +445,7 @@ impl Mul<f32> for Tiles {
 }
 
 impl Tiles {
-  const fn to_screen(self) -> f32 {
+  pub const fn to_screen(self) -> f32 {
     (self.0 as f32 + 0.5) * 8.0 * VIRTUAL_PIXEL_FACTOR
   }
 }
@@ -500,4 +488,22 @@ fn draw_menu_sprites(sprites_to_draw: &[SpriteToDraw], x: Tiles, y: Tiles) {
     0.0,
     false,
   );
+}
+
+pub fn draw_menu_text_g(
+  game_textures: &SpriteTextures,
+  game_materials: &GameMaterials,
+) -> impl Fn(&str, Vec2, GameColor) {
+  |text: &str, dest, color| {
+    draw_game_text(
+      text,
+      &game_textures.ui_textures.text_font_texture,
+      dest,
+      GameTextParams {
+        color,
+        ..Default::default()
+      },
+      game_materials,
+    )
+  }
 }
