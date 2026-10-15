@@ -306,7 +306,7 @@
             "scale": 1,
             "selectedLayer": 0,
             "viewCenter": {
-                "x": 200.5,
+                "x": 199.5,
                 "y": 199.5
             }
         },
@@ -476,7 +476,7 @@
                 2
             ],
             "scale": 5.5,
-            "selectedLayer": 1,
+            "selectedLayer": 0,
             "viewCenter": {
                 "x": 91.54545454545453,
                 "y": 80.27272727272728
@@ -520,11 +520,11 @@
             "expandedObjectLayers": [
                 2
             ],
-            "scale": 3,
+            "scale": 4,
             "selectedLayer": 1,
             "viewCenter": {
-                "x": 392.8333333333333,
-                "y": 165.5
+                "x": 162.125,
+                "y": 77.875
             }
         },
         "menus/pause_main.menu.json": {

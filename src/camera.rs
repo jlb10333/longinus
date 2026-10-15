@@ -6,7 +6,10 @@ use rapier2d::{na::Vector2, prelude::*};
 use crate::{
   GameInput,
   balance::BALANCING,
-  graphics::{VIRTUAL_GAME_VIEWPORT_HEIGHT, VIRTUAL_GAME_VIEWPORT_WIDTH, VIRTUAL_PIXEL_FACTOR},
+  graphics::{
+    VIRTUAL_GAME_VIEWPORT_HEIGHT, VIRTUAL_GAME_VIEWPORT_WIDTH, VIRTUAL_PIXEL_FACTOR,
+    VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH,
+  },
   load_map::MapSystem,
   physics::PhysicsSystem,
   system::System,
@@ -19,7 +22,8 @@ fn camera_screen_bounds() -> Rect {
       / VIRTUAL_PIXEL_FACTOR)
       .round()
       * VIRTUAL_PIXEL_FACTOR,
-    y: (BALANCING.graphics_config.camera_deadzone * VIRTUAL_GAME_VIEWPORT_HEIGHT
+    y: ((BALANCING.graphics_config.camera_deadzone * VIRTUAL_GAME_VIEWPORT_HEIGHT
+      + (VIRTUAL_SCREEN_HEIGHT - VIRTUAL_GAME_VIEWPORT_HEIGHT))
       / VIRTUAL_PIXEL_FACTOR)
       .round()
       * VIRTUAL_PIXEL_FACTOR,
@@ -81,6 +85,10 @@ impl System for CameraSystem {
         - vector![
           VIRTUAL_GAME_VIEWPORT_WIDTH / 2.0,
           VIRTUAL_GAME_VIEWPORT_HEIGHT / 2.0
+        ]
+        + vector![
+          VIRTUAL_SCREEN_WIDTH - VIRTUAL_GAME_VIEWPORT_WIDTH,
+          VIRTUAL_SCREEN_HEIGHT - VIRTUAL_GAME_VIEWPORT_HEIGHT,
         ],
       map_top_left: map.top_left,
       map_bottom_right: map.bottom_right,
@@ -108,6 +116,10 @@ impl System for CameraSystem {
           - vector![
             VIRTUAL_GAME_VIEWPORT_WIDTH / 2.0,
             VIRTUAL_GAME_VIEWPORT_HEIGHT / 2.0
+          ]
+          + vector![
+            VIRTUAL_SCREEN_WIDTH - VIRTUAL_GAME_VIEWPORT_WIDTH,
+            VIRTUAL_SCREEN_HEIGHT - VIRTUAL_GAME_VIEWPORT_HEIGHT,
           ],
         map_top_left: map.top_left,
         map_bottom_right: map.bottom_right,
@@ -129,9 +141,11 @@ impl System for CameraSystem {
       PhysicsVector::from_vec(self.map_bottom_right).into_pos(attempted_translation);
 
     let width = VIRTUAL_GAME_VIEWPORT_WIDTH.min(map_bottom_right.x() - map_top_left.x());
-    let x_offset = (VIRTUAL_GAME_VIEWPORT_WIDTH - width) / 2.0;
+    let x_offset = (VIRTUAL_GAME_VIEWPORT_WIDTH - width) / 2.0
+      + (VIRTUAL_SCREEN_WIDTH - VIRTUAL_GAME_VIEWPORT_WIDTH);
     let height = VIRTUAL_GAME_VIEWPORT_HEIGHT.min(map_bottom_right.y() - map_top_left.y());
-    let y_offset = (VIRTUAL_GAME_VIEWPORT_HEIGHT - height) / 2.0;
+    let y_offset = (VIRTUAL_GAME_VIEWPORT_HEIGHT - height) / 2.0
+      + (VIRTUAL_SCREEN_HEIGHT - VIRTUAL_GAME_VIEWPORT_HEIGHT);
 
     let map_bounds_offset_left = (map_top_left.x() - x_offset).max(0.0);
     let map_bounds_offset_right = (map_bottom_right.x() - width - x_offset).min(0.0);

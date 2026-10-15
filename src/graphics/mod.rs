@@ -1034,7 +1034,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
         });
       };
 
-      let draw_menu_text = draw_menu_text_g(game_textures, &self.materials);
       let game_menus = GAME_MENUS;
 
       draw_dynamic_menu(
@@ -1064,63 +1063,6 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       );
 
       let ability_system = ctx.get::<AbilitySystem>().unwrap();
-
-      let rechargeable_mana_percent_filled = ability_system.mana_tanks.rechargeable_mana_level
-        / ability_system
-          .mana_tanks
-          .capacity
-          .max_rechargeable_mana_level();
-
-      let max_rechargeable_mana = ability_system
-        .mana_tanks
-        .capacity
-        .max_rechargeable_mana_level()
-        * 10.0;
-
-      draw_arc(
-        player_screen_pos.x(),
-        player_screen_pos.y(),
-        128,
-        70.0,
-        0.0,
-        10.0,
-        max_rechargeable_mana,
-        COLOR_4,
-      );
-      draw_arc(
-        player_screen_pos.x(),
-        player_screen_pos.y(),
-        128,
-        70.0,
-        0.0,
-        10.0,
-        rechargeable_mana_percent_filled * max_rechargeable_mana,
-        COLOR_2,
-      );
-
-      let unrechargeable_mana_percent_filled =
-        ability_system.mana_tanks.non_rechargeable_mana_level
-          / ability_system
-            .mana_tanks
-            .capacity
-            .max_non_rechargeable_mana_level();
-
-      let max_unrechargeable_mana = ability_system
-        .mana_tanks
-        .capacity
-        .max_non_rechargeable_mana_level()
-        * 10.0;
-
-      draw_arc(
-        player_screen_pos.x(),
-        player_screen_pos.y(),
-        128,
-        70.0,
-        -unrechargeable_mana_percent_filled * max_unrechargeable_mana,
-        10.0,
-        unrechargeable_mana_percent_filled * max_unrechargeable_mana,
-        COLOR_3,
-      );
 
       draw_bar(
         ability_system
