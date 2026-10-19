@@ -1,97 +1,96 @@
 use std::{
   any::Any,
+  marker::PhantomData,
   rc::Rc,
   thread::sleep,
   time::{Duration, Instant},
 };
 
+use frunk::{
+  HCons,
+  hlist::*,
+};
 use macroquad::window::next_frame;
 
-pub trait System: Any {
+pub trait System<ProcessSystems: HList + Sculptor<Self::Deps, i32>>: Any {
   type Input: Clone + 'static;
+  type Deps: HList;
 
-  fn start(_: &ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
+  fn start(_: &ProcessContext<Self::Input, Self::Deps>) -> Rc<Self>
   where
     Self: Sized;
 
-  fn update(self: Rc<Self>, _: &ProcessContext<Self::Input>)
-  -> Rc<dyn System<Input = Self::Input>>;
+  fn update(
+    self: Rc<Self>,
+    _: &ProcessContext<Self::Input, ProcessSystems>,
+  ) -> Rc<dyn System<ProcessSystems, Input = Self::Input, Deps = Self::Deps>>;
 
   fn fixed_update(
     self: Rc<Self>,
-    _: &ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>>;
+    _: &ProcessContext<Self::Input, ProcessSystems>,
+  ) -> Rc<dyn System<ProcessSystems, Input = Self::Input, Deps = Self::Deps>>;
 }
 
 #[derive(Clone)]
-pub struct ProcessContextOptions<Input: Clone + 'static> {
+pub struct ProcessContextOptions {
   /// Interval to target for fixed_update calls, in seconds
   pub fixed_time_interval: f32,
   pub target_fps: i32,
-  /// Callback to determine whether or not to freeze the fixed update loop of the process based
-  /// on current process state
-  pub should_freeze_fixed: Option<fn(&ProcessContext<Input>) -> bool>,
 }
 
-impl<Input: Clone + 'static> Default for ProcessContextOptions<Input> {
+impl Default for ProcessContextOptions {
   fn default() -> Self {
     Self {
       fixed_time_interval: 1.0 / 60.0,
       target_fps: 60,
-      should_freeze_fixed: None,
     }
   }
 }
 
-#[derive(Clone)]
-pub struct ProcessContext<Input: Clone + 'static> {
-  pub systems: Vec<Rc<dyn System<Input = Input>>>,
+pub struct ProcessContext<Input: Clone + 'static, Systems: HList> {
+  pub systems: Rc<Systems>,
   pub input: Input,
-  options: ProcessContextOptions<Input>,
+  options: ProcessContextOptions,
 }
 
-impl<Input: Clone + 'static> ProcessContext<Input> {
-  pub fn get<Target>(&self) -> Option<Rc<Target>>
+impl<Input: Clone + 'static, Systems: Clone + HList + 'static> ProcessContext<Input, Systems> {
+  pub fn get<'a, Deps: HList, Target: System<Systems, Input = Input, Deps = Deps>>(
+    &'a self,
+  ) -> Rc<Target>
   where
-    Target: System<Input = Input>,
+    &'a Systems: Plucker<Rc<Target>, i32>,
+    Systems: Sculptor<Deps, i32>,
   {
-    self
-      .systems
-      .iter()
-      .find(|&system| {
-        (Rc::clone(system) as Rc<dyn Any>)
-          .downcast::<Target>()
-          .is_ok()
-      })
-      .and_then(|system| (Rc::clone(system) as Rc<dyn Any>).downcast::<Target>().ok())
+    self.systems.as_ref().pluck().0
   }
 
-  pub fn downcast<Target: Clone + 'static>(&self) -> Option<&ProcessContext<Target>> {
-    (self as &dyn Any).downcast_ref::<ProcessContext<Target>>()
+  pub fn downcast<Target: Clone + 'static>(&self) -> Option<&ProcessContext<Target, Systems>> {
+    (self as &dyn Any).downcast_ref::<ProcessContext<Target, Systems>>()
   }
 
-  fn with(&self, target_index: usize, target_system: &Rc<dyn System<Input = Input>>) -> Self {
-    Self {
-      systems: self
-        .systems
-        .iter()
-        .enumerate()
-        .map(|(index, system)| {
-          Rc::clone(if index == target_index {
-            target_system
-          } else {
-            system
-          })
-        })
-        .collect(),
+  fn with<'a, Deps: HList, NewSystem: System<Systems, Input = Input, Deps = Deps>>(
+    &'a self,
+    target_system: Rc<NewSystem>,
+  ) -> ProcessContext<Input, HCons<Rc<NewSystem>, Systems>>
+  where
+    Systems: Sculptor<Deps, i32>,
+  {
+    ProcessContext {
+      systems: h_cons(target_system, self.systems.as_ref().clone()).into(),
       input: self.input.clone(),
       options: self.options.clone(),
     }
   }
 
-  pub async fn run<Output, Terminator>(self, terminator: Terminator) -> Output
+  pub async fn run<'a, Output, Terminator, ShouldFreeze>(
+    self,
+    terminator: Terminator,
+    should_freeze_fixed: Option<ShouldFreeze>,
+  ) -> Output
   where
-    Terminator: Fn(&ProcessContext<Input>) -> Option<Output>,
+    Terminator: Fn(&ProcessContext<Input, Systems>) -> Option<Output>,
+    ShouldFreeze: Fn(&ProcessContext<Input, Systems>) -> bool,
+    &'a Systems: HFoldRightable<fn(&ProcessContext<Input, Systems>, ) -> &ProcessContext<Input, Systems>, Output=&ProcessContext<Input, Systems>, ProcessContext<Input, Systems>>,
   {
     let mut game_state = self;
     let mut acc_time = 0.0;
@@ -106,6 +105,8 @@ impl<Input: Clone + 'static> ProcessContext<Input> {
 
       game_state = game_state
         .systems
+        .as_ref()
+        .foldr();
         .iter()
         .enumerate()
         .fold(game_state.clone(), |temp_state, (index, system)| {
