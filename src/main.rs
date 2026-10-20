@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use balance::BALANCING;
 use macroquad::prelude::*;
-use system::ProcessContextOptions;
+use system::{ProcessContext, ProcessContextOptions, new_process};
 
 use crate::ability::AbilitySystem;
 use crate::camera::CameraSystem;
@@ -15,7 +15,7 @@ pub use crate::load_sprites::*;
 use crate::menu::{MenuSystem, QuitDecision};
 use crate::physics::PhysicsSystem;
 use crate::save::{SaveData, SaveSystem, load_save};
-use crate::system::{Process, System};
+use crate::system::System;
 
 mod ability;
 mod balance;
@@ -89,14 +89,17 @@ async fn main() {
   loop {
     state = match state {
       State::MainMenu => {
-        let save_data = Process::new(&Start {
-          textures: Rc::clone(&textures),
-        })
+        let save_data = new_process(
+          &Start {
+            textures: Rc::clone(&textures),
+          },
+          None,
+        )
         .add_system(ControlsSystem::start)
-        .add_system(SaveSystem::start)
-        .add_system(MenuSystem::start)
-        .add_system(GraphicsSystem::start)
-        .start(None)
+        // .add_system(SaveSystem::start)
+        // .add_system(MenuSystem::start)
+        // .add_system(GraphicsSystem::start)
+        // .start(None)
         .run(|ctx| {
           ctx
             .get::<MenuSystem<_>>()
@@ -114,27 +117,27 @@ async fn main() {
           textures: Rc::clone(&textures),
         };
 
-        let quit_decision = Process::new(&game_input)
-          .add_system(SaveSystem::start)
-          .add_system(CombatSystem::start)
-          .add_system(MapSystem::start)
-          .add_system(CameraSystem::start)
-          .add_system(AbilitySystem::start)
-          .add_system(PhysicsSystem::start)
-          .add_system(ControlsSystem::start)
-          .add_system(MenuSystem::start)
-          .add_system(EnemySystem::start)
-          .add_system(GraphicsSystem::start)
-          .start(Some(ProcessContextOptions {
-            should_freeze_fixed: Some(|ctx| {
-              !ctx.get::<MenuSystem<_>>().unwrap().active_menus.is_empty()
-                || (BALANCING.graphics_config.hitstop_enabled
-                  && ctx.get::<PhysicsSystem>().unwrap().hitstop_frames_left > 0)
-            }),
-            ..Default::default()
-          }))
-          .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())
-          .await;
+        let quit_decision = new_process(&game_input, None)
+          // .add_system(SaveSystem::start)
+          // .add_system(CombatSystem::start)
+          // .add_system(MapSystem::start)
+          // .add_system(CameraSystem::start)
+          // .add_system(AbilitySystem::start)
+          // .add_system(PhysicsSystem::start)
+          .add_system(ControlsSystem::<Start>::start);
+        // .add_system(MenuSystem::start)
+        // .add_system(EnemySystem::start)
+        // .add_system(GraphicsSystem::start)
+        // .start(Some(ProcessContextOptions {
+        //   should_freeze_fixed: Some(|ctx| {
+        //     !ctx.get::<MenuSystem<_>>().unwrap().active_menus.is_empty()
+        //       || (BALANCING.graphics_config.hitstop_enabled
+        //         && ctx.get::<PhysicsSystem>().unwrap().hitstop_frames_left > 0)
+        //   }),
+        //   ..Default::default()
+        // }))
+        // .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())
+        // .await;
         match quit_decision {
           QuitDecision::LoadSave(save_to_load) => State::Game(
             load_save(&menu::SaveToLoad::SaveData(save_to_load.clone()))

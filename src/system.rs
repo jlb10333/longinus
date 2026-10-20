@@ -6,29 +6,28 @@ use std::{
   time::{Duration, Instant},
 };
 
-use frunk::{
-  HCons,
-  hlist::*,
-};
+use frunk::{HCons, HList, hlist, hlist::*};
 use macroquad::window::next_frame;
 
-pub trait System<ProcessSystems: HList + Sculptor<Self::Deps, i32>>: Any {
+pub trait System: Any {
   type Input: Clone + 'static;
   type Deps: HList;
 
-  fn start(_: &ProcessContext<Self::Input, Self::Deps>) -> Rc<Self>
+  fn start<ProcessSystems: Clone + HList + Sculptor<Self::Deps, HNil> + 'static>(
+    _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
   where
     Self: Sized;
 
-  fn update(
+  fn update<ProcessSystems: Clone + HList + Sculptor<Self::Deps, HNil> + 'static>(
     self: Rc<Self>,
-    _: &ProcessContext<Self::Input, ProcessSystems>,
-  ) -> Rc<dyn System<ProcessSystems, Input = Self::Input, Deps = Self::Deps>>;
+    _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>;
 
-  fn fixed_update(
+  fn fixed_update<ProcessSystems: Clone + HList + Sculptor<Self::Deps, HNil> + 'static>(
     self: Rc<Self>,
-    _: &ProcessContext<Self::Input, ProcessSystems>,
-  ) -> Rc<dyn System<ProcessSystems, Input = Self::Input, Deps = Self::Deps>>;
+    _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>;
 }
 
 #[derive(Clone)]
@@ -47,36 +46,86 @@ impl Default for ProcessContextOptions {
   }
 }
 
+trait RunSystemHList<Input: Clone + 'static, Systems: HList>: Sized {
+  fn update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self;
+
+  fn fixed_update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self;
+}
+
+impl<Input: Clone + 'static, Systems: HList> RunSystemHList<Input, Systems> for HCons<(), HNil> {
+  fn update(self, _: Rc<ProcessContext<Input, Systems>>) -> Self {
+    self
+  }
+
+  fn fixed_update(self, _: Rc<ProcessContext<Input, Systems>>) -> Self {
+    self
+  }
+}
+
+impl<
+  Input: Clone + 'static,
+  Deps: HList,
+  Systems: Clone + HList + Sculptor<Deps, HNil> + 'static,
+  H: System<Input = Input, Deps = Deps>,
+  T: HList + RunSystemHList<Input, Systems>,
+> RunSystemHList<Input, Systems> for HCons<Rc<H>, T>
+{
+  fn update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self {
+    let (h, t) = self.pop();
+
+    let new_h = h.update(ctx.clone());
+
+    let new_t = t.update(ctx);
+
+    h_cons(new_h, new_t)
+  }
+
+  fn fixed_update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self {
+    let (h, t) = self.pop();
+
+    let new_h = h.fixed_update(ctx.clone());
+
+    let new_t = t.fixed_update(ctx);
+
+    h_cons(new_h, new_t)
+  }
+}
+
 pub struct ProcessContext<Input: Clone + 'static, Systems: HList> {
-  pub systems: Rc<Systems>,
+  pub systems: Systems,
   pub input: Input,
   options: ProcessContextOptions,
 }
 
-impl<Input: Clone + 'static, Systems: Clone + HList + 'static> ProcessContext<Input, Systems> {
-  pub fn get<'a, Deps: HList, Target: System<Systems, Input = Input, Deps = Deps>>(
-    &'a self,
-  ) -> Rc<Target>
-  where
-    &'a Systems: Plucker<Rc<Target>, i32>,
-    Systems: Sculptor<Deps, i32>,
-  {
-    self.systems.as_ref().pluck().0
+impl<Input: Clone + 'static, Systems: HList + Clone> Clone for ProcessContext<Input, Systems> {
+  fn clone(&self) -> Self {
+    Self {
+      systems: self.systems.clone(),
+      input: self.input.clone(),
+      options: self.options.clone(),
+    }
   }
+}
 
+impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Systems> {
   pub fn downcast<Target: Clone + 'static>(&self) -> Option<&ProcessContext<Target, Systems>> {
     (self as &dyn Any).downcast_ref::<ProcessContext<Target, Systems>>()
   }
 
-  fn with<'a, Deps: HList, NewSystem: System<Systems, Input = Input, Deps = Deps>>(
-    &'a self,
-    target_system: Rc<NewSystem>,
-  ) -> ProcessContext<Input, HCons<Rc<NewSystem>, Systems>>
+  pub fn get_deps<'a, Deps: HList>(self: Rc<Self>) -> Deps
   where
-    Systems: Sculptor<Deps, i32>,
+    Systems: Sculptor<Deps, HNil> + Clone,
   {
-    ProcessContext {
-      systems: h_cons(target_system, self.systems.as_ref().clone()).into(),
+    self.systems.clone().sculpt().0
+  }
+}
+
+impl<Input: Clone + 'static, Systems: HList + RunSystemHList<Input, Systems> + Clone + 'static>
+  ProcessContext<Input, Systems>
+{
+  fn with_systems(&self, new_systems: Systems) -> Self {
+    Self {
+      systems: new_systems,
       input: self.input.clone(),
       options: self.options.clone(),
     }
@@ -90,10 +139,10 @@ impl<Input: Clone + 'static, Systems: Clone + HList + 'static> ProcessContext<In
   where
     Terminator: Fn(&ProcessContext<Input, Systems>) -> Option<Output>,
     ShouldFreeze: Fn(&ProcessContext<Input, Systems>) -> bool,
-    &'a Systems: HFoldRightable<fn(&ProcessContext<Input, Systems>, ) -> &ProcessContext<Input, Systems>, Output=&ProcessContext<Input, Systems>, ProcessContext<Input, Systems>>,
   {
-    let mut game_state = self;
+    let mut game_state = Rc::new(self);
     let mut acc_time = 0.0;
+
     loop {
       let result = terminator(&game_state);
 
@@ -103,21 +152,12 @@ impl<Input: Clone + 'static, Systems: Clone + HList + 'static> ProcessContext<In
 
       let now = Instant::now();
 
-      game_state = game_state
-        .systems
-        .as_ref()
-        .foldr();
-        .iter()
-        .enumerate()
-        .fold(game_state.clone(), |temp_state, (index, system)| {
-          temp_state.with(index, &system.clone().update(&temp_state))
-        });
+      let new_systems = game_state.systems.clone().update(game_state.clone());
+      game_state = game_state.with_systems(new_systems.into()).into();
 
       next_frame().await;
 
-      let skipping_fixed = game_state
-        .options
-        .should_freeze_fixed
+      let skipping_fixed = should_freeze_fixed
         .as_ref()
         .map(|should_freeze_fixed| should_freeze_fixed(&game_state))
         .unwrap_or(false);
@@ -129,14 +169,8 @@ impl<Input: Clone + 'static, Systems: Clone + HList + 'static> ProcessContext<In
         acc_time -=
           game_state.options.fixed_time_interval * 1_000_000.0 * fixed_update_count as f32;
 
-        game_state = (0..fixed_update_count).fold(game_state.clone(), |temp_state, _| {
-          temp_state.systems.iter().enumerate().fold(
-            temp_state.clone(),
-            |temp_state, (index, system)| {
-              temp_state.with(index, &system.clone().fixed_update(&temp_state))
-            },
-          )
-        });
+        let new_systems = game_state.systems.clone().fixed_update(game_state.clone());
+        game_state = game_state.with_systems(new_systems.into()).into();
       }
 
       let frame_time = now.elapsed().as_millis() as f32;
@@ -154,52 +188,64 @@ impl<Input: Clone + 'static, Systems: Clone + HList + 'static> ProcessContext<In
       }
     }
   }
-}
 
-type ContextInitializer<Input> = fn(&ProcessContext<Input>) -> Rc<dyn System<Input = Input>>;
-pub struct Process<Input: Clone + 'static> {
-  input: Input,
-  ctx_initializers: Vec<ContextInitializer<Input>>,
-}
+  pub fn add_system<Deps: HList, NewSystem: System<Input = Input, Deps = Deps>>(
+    self: Rc<Self>,
+    new_system_initializer: fn(Rc<Self>) -> Rc<NewSystem>,
+  ) -> Rc<ProcessContext<Input, HCons<NewSystem, Systems>>>
+  where
+    Systems: Sculptor<Deps, HNil>,
+  {
+    let new_system = new_system_initializer(self.clone());
 
-impl<Input: Clone + 'static> Process<Input> {
-  pub fn new(input: &Input) -> Self {
-    Process {
-      input: input.clone(),
-      ctx_initializers: Vec::new(),
-    }
-  }
-
-  pub fn add_system(&self, system_initializer: ContextInitializer<Input>) -> Self {
-    let mut new_vec = self.ctx_initializers.clone();
-    new_vec.push(system_initializer);
-
-    Process {
+    ProcessContext::<Input, HCons<NewSystem, Systems>> {
       input: self.input.clone(),
-      ctx_initializers: new_vec,
+      systems: h_cons(new_system, self.systems.clone()),
+      options: self.options.clone(),
     }
-  }
-
-  pub fn start(&self, options: Option<ProcessContextOptions<Input>>) -> ProcessContext<Input> {
-    self.ctx_initializers.iter().fold(
-      ProcessContext {
-        systems: vec![],
-        input: self.input.clone(),
-        options: options.unwrap_or_default(),
-      },
-      |ctx: ProcessContext<Input>, initializer| {
-        let new_vec = ctx
-          .systems
-          .iter()
-          .map(Rc::clone)
-          .chain(vec![initializer(&ctx)])
-          .collect();
-        ProcessContext {
-          systems: new_vec,
-          input: ctx.input,
-          options: ctx.options,
-        }
-      },
-    )
+    .into()
   }
 }
+
+pub fn new_process<Input: Clone + 'static>(
+  input: &Input,
+  options: Option<ProcessContextOptions>,
+) -> Rc<ProcessContext<Input, HCons<(), HNil>>> {
+  ProcessContext::<Input, HCons<(), HNil>> {
+    input: input.clone(),
+    systems: h_cons((), HNil),
+    options: options.unwrap_or_default(),
+  }
+  .into()
+}
+
+// #[derive(Clone)]
+// pub struct EmptySystem<Input>(PhantomData<Input>);
+
+// impl<Input: Clone + 'static> System for EmptySystem<Input> {
+//   type Deps = HNil;
+//   type Input = Input;
+
+//   fn start<ProcessSystems: Clone + HList + Sculptor<Self::Deps, i32> + 'static>(
+//     _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+//   ) -> Rc<Self>
+//   where
+//     Self: Sized,
+//   {
+//     EmptySystem(PhantomData).into()
+//   }
+
+//   fn update<ProcessSystems: Clone + HList + Sculptor<Self::Deps, i32> + 'static>(
+//     self: Rc<Self>,
+//     _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+//   ) -> Rc<Self> {
+//     self
+//   }
+
+//   fn fixed_update<ProcessSystems: Clone + HList + Sculptor<Self::Deps, i32> + 'static>(
+//     self: Rc<Self>,
+//     _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+//   ) -> Rc<Self> {
+//     self
+//   }
+// }
