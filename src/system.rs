@@ -11,23 +11,36 @@ use macroquad::window::next_frame;
 
 pub trait System: Any {
   type Input: Clone + 'static;
-  type Deps: HList;
+  type Deps: HList = HNil;
+  type LDeps: HList = HNil;
 
-  fn start<ProcessSystems: Clone + HList + Sculptor<Self::Deps, HNil> + 'static>(
-    _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+  fn start<ProcessSystems: Clone + HList + Sculptor<Self::Deps, Indices> + 'static, Indices>(
+    ctx: Rc<ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self>
   where
     Self: Sized;
 
-  fn update<ProcessSystems: Clone + HList + Sculptor<Self::Deps, HNil> + 'static>(
+  fn update<
+    ProcessSystems: Clone + HList + Sculptor<Self::Deps, Indices> + Sculptor<Self::LDeps, LIndices> + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
-  ) -> Rc<Self>;
+    _ctx: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    self
+  }
 
-  fn fixed_update<ProcessSystems: Clone + HList + Sculptor<Self::Deps, HNil> + 'static>(
+  fn fixed_update<
+    ProcessSystems: Clone + HList + Sculptor<Self::Deps, Indices> + Sculptor<Self::LDeps, LIndices> + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
-  ) -> Rc<Self>;
+    _ctx: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    self
+  }
 }
 
 #[derive(Clone)]
@@ -52,7 +65,7 @@ trait RunSystemHList<Input: Clone + 'static, Systems: HList>: Sized {
   fn fixed_update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self;
 }
 
-impl<Input: Clone + 'static, Systems: HList> RunSystemHList<Input, Systems> for HCons<(), HNil> {
+impl<Input: Clone + 'static, Systems: HList> RunSystemHList<Input, Systems> for HNil {
   fn update(self, _: Rc<ProcessContext<Input, Systems>>) -> Self {
     self
   }
@@ -65,8 +78,9 @@ impl<Input: Clone + 'static, Systems: HList> RunSystemHList<Input, Systems> for 
 impl<
   Input: Clone + 'static,
   Deps: HList,
-  Systems: Clone + HList + Sculptor<Deps, HNil> + 'static,
-  H: System<Input = Input, Deps = Deps>,
+  LDeps: HList,
+  Systems: Clone + HList + Sculptor<Deps, HNil> + Sculptor<LDeps, HNil> + 'static,
+  H: System<Input = Input, Deps = Deps, LDeps = LDeps>,
   T: HList + RunSystemHList<Input, Systems>,
 > RunSystemHList<Input, Systems> for HCons<Rc<H>, T>
 {
@@ -112,11 +126,35 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
     (self as &dyn Any).downcast_ref::<ProcessContext<Target, Systems>>()
   }
 
-  pub fn get_deps<'a, Deps: HList>(self: Rc<Self>) -> Deps
+  pub fn get_deps<'a, Deps: HList, Index>(self: Rc<Self>) -> Deps
+  where
+    Systems: Sculptor<Deps, Index> + Clone,
+  {
+    self.systems.clone().sculpt().0
+  }
+
+  pub fn get<'a, SingleDep, Index>(self: Rc<Self>) -> Rc<SingleDep>
+  where
+    Systems: Plucker<Rc<SingleDep>, Index> + Clone,
+  {
+    self.systems.clone().pluck().0
+  }
+
+  pub fn add_system<Deps: HList, NewSystem: System<Input = Input, Deps = Deps>>(
+    self: Rc<Self>,
+    new_system_initializer: fn(Rc<Self>) -> Rc<NewSystem>,
+  ) -> Rc<ProcessContext<Input, HCons<Rc<NewSystem>, Systems>>>
   where
     Systems: Sculptor<Deps, HNil> + Clone,
   {
-    self.systems.clone().sculpt().0
+    let new_system = new_system_initializer(self.clone());
+
+    ProcessContext::<Input, HCons<Rc<NewSystem>, Systems>> {
+      input: self.input.clone(),
+      systems: h_cons(new_system, self.systems.clone()),
+      options: self.options.clone(),
+    }
+    .into()
   }
 }
 
@@ -132,19 +170,19 @@ impl<Input: Clone + 'static, Systems: HList + RunSystemHList<Input, Systems> + C
   }
 
   pub async fn run<'a, Output, Terminator, ShouldFreeze>(
-    self,
+    self: Rc<Self>,
     terminator: Terminator,
     should_freeze_fixed: Option<ShouldFreeze>,
   ) -> Output
   where
-    Terminator: Fn(&ProcessContext<Input, Systems>) -> Option<Output>,
-    ShouldFreeze: Fn(&ProcessContext<Input, Systems>) -> bool,
+    Terminator: Fn(Rc<ProcessContext<Input, Systems>>) -> Option<Output>,
+    ShouldFreeze: Fn(Rc<ProcessContext<Input, Systems>>) -> bool,
   {
-    let mut game_state = Rc::new(self);
+    let mut game_state = self.clone();
     let mut acc_time = 0.0;
 
     loop {
-      let result = terminator(&game_state);
+      let result = terminator(game_state.clone());
 
       if let Some(output) = result {
         return output;
@@ -159,7 +197,7 @@ impl<Input: Clone + 'static, Systems: HList + RunSystemHList<Input, Systems> + C
 
       let skipping_fixed = should_freeze_fixed
         .as_ref()
-        .map(|should_freeze_fixed| should_freeze_fixed(&game_state))
+        .map(|should_freeze_fixed| should_freeze_fixed(game_state.clone()))
         .unwrap_or(false);
 
       if !skipping_fixed {
@@ -188,64 +226,33 @@ impl<Input: Clone + 'static, Systems: HList + RunSystemHList<Input, Systems> + C
       }
     }
   }
-
-  pub fn add_system<Deps: HList, NewSystem: System<Input = Input, Deps = Deps>>(
-    self: Rc<Self>,
-    new_system_initializer: fn(Rc<Self>) -> Rc<NewSystem>,
-  ) -> Rc<ProcessContext<Input, HCons<NewSystem, Systems>>>
-  where
-    Systems: Sculptor<Deps, HNil>,
-  {
-    let new_system = new_system_initializer(self.clone());
-
-    ProcessContext::<Input, HCons<NewSystem, Systems>> {
-      input: self.input.clone(),
-      systems: h_cons(new_system, self.systems.clone()),
-      options: self.options.clone(),
-    }
-    .into()
-  }
 }
 
 pub fn new_process<Input: Clone + 'static>(
   input: &Input,
   options: Option<ProcessContextOptions>,
-) -> Rc<ProcessContext<Input, HCons<(), HNil>>> {
-  ProcessContext::<Input, HCons<(), HNil>> {
+) -> Rc<ProcessContext<Input, HNil>> {
+  ProcessContext::<Input, HNil> {
     input: input.clone(),
-    systems: h_cons((), HNil),
+    systems: HNil,
     options: options.unwrap_or_default(),
   }
   .into()
 }
 
-// #[derive(Clone)]
-// pub struct EmptySystem<Input>(PhantomData<Input>);
+#[macro_export]
+macro_rules! SystemDeps {
+    ($($type:ty),+) => {
+        frunk::HList!($(std::rc::Rc<$type>),+)
+    };
+}
 
-// impl<Input: Clone + 'static> System for EmptySystem<Input> {
-//   type Deps = HNil;
-//   type Input = Input;
-
-//   fn start<ProcessSystems: Clone + HList + Sculptor<Self::Deps, i32> + 'static>(
-//     _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
-//   ) -> Rc<Self>
-//   where
-//     Self: Sized,
-//   {
-//     EmptySystem(PhantomData).into()
-//   }
-
-//   fn update<ProcessSystems: Clone + HList + Sculptor<Self::Deps, i32> + 'static>(
-//     self: Rc<Self>,
-//     _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
-//   ) -> Rc<Self> {
-//     self
-//   }
-
-//   fn fixed_update<ProcessSystems: Clone + HList + Sculptor<Self::Deps, i32> + 'static>(
-//     self: Rc<Self>,
-//     _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
-//   ) -> Rc<Self> {
-//     self
-//   }
-// }
+#[macro_export]
+macro_rules! system_deps {
+  ($x:ident) => {
+    $x
+  };
+  ($x:ident, $($rest:ident),+) => {
+    ($x, system_deps!($($rest),+))
+  };
+}

@@ -4,7 +4,7 @@ use consts::*;
 use itertools::Itertools;
 use macroquad::prelude::*;
 use menu::{
-  Tiles, draw_menu, draw_menu_text_g,
+  Tiles, draw_menu,
   dynamic::{DynamicMenuItem, draw_dynamic_menu},
   generated::GAME_MENUS,
 };
@@ -12,7 +12,7 @@ use rapier2d::prelude::*;
 use utils::{angle_from_vec, draw_collider, draw_label};
 
 use crate::{
-  Start,
+  GameInput, Start, SystemDeps,
   ability::AbilitySystem,
   balance::{BALANCING, ColorPaletteConfig},
   camera::CameraSystem,
@@ -37,6 +37,7 @@ use crate::{
   shaders::{COLOR_MAP_FRAGMENT_SHADER, DISSOLVE_FRAGMENT_SHADER, IDENTITY_VERTEX_SHADER},
   sprite::{self, BarCellStatus, SpriteToDraw, get_sprites_to_draw},
   system::System,
+  system_deps,
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 
@@ -68,13 +69,8 @@ const MINI_MAP_TILE_HEIGHT: f32 = 2.0;
 const TILEMAP_TILE_WIDTH: f32 = 8.0;
 const TILEMAP_TILE_HEIGHT: f32 = 8.0;
 
-impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
-  type Input = Input;
-
-  fn start(_: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
-  where
-    Self: Sized,
-  {
+impl<Input> GraphicsSystem<Input> {
+  fn start() -> Rc<Self> {
     let render_target = render_target(VIRTUAL_SCREEN_WIDTH as u32, VIRTUAL_SCREEN_HEIGHT as u32);
     render_target.texture.set_filter(FilterMode::Nearest);
 
@@ -94,11 +90,41 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
       _phantom_data: PhantomData,
     })
   }
+}
 
-  fn update(
+impl System for GraphicsSystem<Start> {
+  type Input = Start;
+  type LDeps = SystemDeps!(MenuSystem<Start>, SaveSystem<Start>);
+
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    _ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
+  where
+    Self: Sized,
+  {
+    Self::start()
+  }
+
+  fn update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let system_deps!(menu_system, save_system) = ctx
+      .clone()
+      .get_deps::<Self::LDeps, LIndices>()
+      .into_tuple2();
+
     // 426×320
 
     set_camera(self.camera.as_ref());
@@ -108,530 +134,477 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
 
     draw_fps();
 
-    if let Some(ctx) = ctx.downcast::<_>() {
-      let camera_system = ctx.get::<CameraSystem>().unwrap();
-      let combat_system = ctx.get::<CombatSystem>().unwrap();
-      let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-      let map_system = ctx.get::<MapSystem>().unwrap();
-      let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
-      let ability_system = ctx.get::<AbilitySystem>().unwrap();
-
-      let tiles_texture = &ctx.input.textures.tileset_textures.tiles_texture;
-
-      let player_translation =
-        physics_system.rigid_body_set[physics_system.player_handle].translation();
-      let player_screen_translation = PhysicsVector::from_vec(
-        *physics_system.rigid_body_set[physics_system.player_handle].translation(),
+    menu_system.active_main_menus.iter().rev().for_each(|menu| {
+      draw_main_menu(
+        menu,
+        &ctx.input.textures.ui_textures.text_font_texture,
+        &save_system.available_save_data,
+        self.materials.as_ref(),
       )
-      .into_pos(camera_system.translation);
+    });
+    menu_system.active_menus.iter().rev().for_each(|menu| {
+      draw_menu(
+        menu,
+        &save_system.available_save_data,
+        &ctx.input.textures,
+        &self.materials,
+      )
+    });
 
-      // Draw tiles bg
-      let tile_bg_layer = map_system.raw_map.tile_bg_layer();
-      draw_tile_layer(tile_bg_layer, tiles_texture, &camera_system);
+    draw_render_target(&self.materials, &self.camera);
+    self
+  }
+}
 
-      let sorted_entities = physics_system
-        .entities
-        .iter()
-        .sorted_by(
-          |(handle_a, _), (handle_b, _)| match (*handle_a, *handle_b) {
-            (EntityHandle::Collider(_), EntityHandle::RigidBody(_)) => Ordering::Less,
-            (EntityHandle::RigidBody(_), EntityHandle::Collider(_)) => Ordering::Greater,
-            (EntityHandle::Collider(handle_a), EntityHandle::Collider(handle_b)) => {
-              if handle_a.0 < handle_b.0 {
-                Ordering::Less
-              } else {
-                Ordering::Greater
-              }
+impl System for GraphicsSystem<GameInput> {
+  type Input = GameInput;
+  type LDeps = SystemDeps!(
+    CameraSystem,
+    CombatSystem,
+    PhysicsSystem,
+    MapSystem,
+    ControlsSystem<GameInput>,
+    AbilitySystem,
+    MenuSystem<GameInput>,
+    SaveSystem<GameInput>
+  );
+
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    _ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
+  where
+    Self: Sized,
+  {
+    Self::start()
+  }
+
+  fn update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
+    self: Rc<Self>,
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    // 426×320
+
+    set_camera(self.camera.as_ref());
+
+    /* Background */
+    clear_background(COLOR_1);
+
+    draw_fps();
+
+    let system_deps!(
+      camera_system,
+      combat_system,
+      physics_system,
+      map_system,
+      controls_system,
+      ability_system,
+      menu_system,
+      save_system
+    ) = ctx.get_deps::<Self::LDeps, LIndices>().into_tuple2();
+
+    let tiles_texture = &ctx.input.textures.tileset_textures.tiles_texture;
+
+    let player_translation =
+      physics_system.rigid_body_set[physics_system.player_handle].translation();
+    let player_screen_translation = PhysicsVector::from_vec(
+      *physics_system.rigid_body_set[physics_system.player_handle].translation(),
+    )
+    .into_pos(camera_system.translation);
+
+    // Draw tiles bg
+    let tile_bg_layer = map_system.raw_map.tile_bg_layer();
+    draw_tile_layer(tile_bg_layer, tiles_texture, &camera_system);
+
+    let sorted_entities = physics_system
+      .entities
+      .iter()
+      .sorted_by(
+        |(handle_a, _), (handle_b, _)| match (*handle_a, *handle_b) {
+          (EntityHandle::Collider(_), EntityHandle::RigidBody(_)) => Ordering::Less,
+          (EntityHandle::RigidBody(_), EntityHandle::Collider(_)) => Ordering::Greater,
+          (EntityHandle::Collider(handle_a), EntityHandle::Collider(handle_b)) => {
+            if handle_a.0 < handle_b.0 {
+              Ordering::Less
+            } else {
+              Ordering::Greater
             }
-            (EntityHandle::RigidBody(handle_a), EntityHandle::RigidBody(handle_b)) => {
-              if handle_a.0 < handle_b.0 {
-                Ordering::Less
-              } else {
-                Ordering::Greater
-              }
-            }
-          },
-        )
-        .collect::<Vec<_>>();
-
-      let game_textures = &ctx.input.textures;
-
-      let offscreen_enemies = sorted_entities
-        .iter()
-        .flat_map(|(handle, entity)| {
-          let colliders = handle
-            .colliders(&physics_system.rigid_body_set)
-            .iter()
-            .map(|collider_handle| physics_system.collider_set[**collider_handle].clone())
-            .collect_vec();
-
-          if entity.components.get::<Enemy>().is_none() {
-            return vec![];
           }
+          (EntityHandle::RigidBody(handle_a), EntityHandle::RigidBody(handle_b)) => {
+            if handle_a.0 < handle_b.0 {
+              Ordering::Less
+            } else {
+              Ordering::Greater
+            }
+          }
+        },
+      )
+      .collect::<Vec<_>>();
 
-          colliders
-            .into_iter()
-            .flat_map(|collider| {
-              let screen_translation = PhysicsVector::from_vec(*collider.translation())
-                .into_pos(camera_system.translation);
-              let vector_from_center =
-                screen_translation.into_vec() - player_screen_translation.into_vec();
+    let game_textures = &ctx.input.textures;
 
-              let rotation = angle_from_vec(vector_from_center) - (PI / 2.0);
+    let offscreen_enemies = sorted_entities
+      .iter()
+      .flat_map(|(handle, entity)| {
+        let colliders = handle
+          .colliders(&physics_system.rigid_body_set)
+          .iter()
+          .map(|collider_handle| physics_system.collider_set[**collider_handle].clone())
+          .collect_vec();
 
-              let distance_scale_ratio = vector_from_center.magnitude()
-                / (BALANCING
-                  .graphics_config
-                  .enemy_offscreen_indicator_max_enemy_distance
-                  * VIRTUAL_PIXEL_FACTOR);
+        if entity.components.get::<Enemy>().is_none() {
+          return vec![];
+        }
 
-              if distance_scale_ratio > 1.0 {
-                return vec![];
-              }
+        colliders
+          .into_iter()
+          .flat_map(|collider| {
+            let screen_translation =
+              PhysicsVector::from_vec(*collider.translation()).into_pos(camera_system.translation);
+            let vector_from_center =
+              screen_translation.into_vec() - player_screen_translation.into_vec();
 
-              let scale = BALANCING
+            let rotation = angle_from_vec(vector_from_center) - (PI / 2.0);
+
+            let distance_scale_ratio = vector_from_center.magnitude()
+              / (BALANCING
                 .graphics_config
-                .enemy_offscreen_indicator_min_distance
-                + (distance_scale_ratio
-                  * ((BALANCING
+                .enemy_offscreen_indicator_max_enemy_distance
+                * VIRTUAL_PIXEL_FACTOR);
+
+            if distance_scale_ratio > 1.0 {
+              return vec![];
+            }
+
+            let scale = BALANCING
+              .graphics_config
+              .enemy_offscreen_indicator_min_distance
+              + (distance_scale_ratio
+                * ((BALANCING
+                  .graphics_config
+                  .enemy_offscreen_indicator_max_distance
+                  - BALANCING
                     .graphics_config
-                    .enemy_offscreen_indicator_max_distance
-                    - BALANCING
-                      .graphics_config
-                      .enemy_offscreen_indicator_min_distance)
-                    * VIRTUAL_PIXEL_FACTOR));
+                    .enemy_offscreen_indicator_min_distance)
+                  * VIRTUAL_PIXEL_FACTOR));
 
-              let indicator_translation =
-                player_screen_translation.into_vec() + vector_from_center.normalize().scale(scale);
+            let indicator_translation =
+              player_screen_translation.into_vec() + vector_from_center.normalize().scale(scale);
 
-              sprite::enemy_offscreen(game_textures)
-                .iter()
-                .map(|sprite| {
-                  (
-                    sprite.clone(),
-                    ScreenVector::from_vec(indicator_translation),
-                    rotation,
-                  )
-                })
-                .collect_vec()
-            })
-            .collect_vec()
-        })
-        .collect_vec();
+            sprite::enemy_offscreen(game_textures)
+              .iter()
+              .map(|sprite| {
+                (
+                  sprite.clone(),
+                  ScreenVector::from_vec(indicator_translation),
+                  rotation,
+                )
+              })
+              .collect_vec()
+          })
+          .collect_vec()
+      })
+      .collect_vec();
 
-      let gravity_particles = physics_system
-        .particles
-        .iter()
-        .flat_map(|(particle_handle, _)| {
-          physics_system.rigid_body_set[*particle_handle]
-            .colliders()
-            .iter()
-            .flat_map(|&collider_handle| {
-              let collider = &physics_system.collider_set[collider_handle];
+    let gravity_particles = physics_system
+      .particles
+      .iter()
+      .flat_map(|(particle_handle, _)| {
+        physics_system.rigid_body_set[*particle_handle]
+          .colliders()
+          .iter()
+          .flat_map(|&collider_handle| {
+            let collider = &physics_system.collider_set[collider_handle];
 
-              let collider_translation = collider.translation();
+            let collider_translation = collider.translation();
 
-              sprite::gravity_particle(game_textures)
-                .into_iter()
-                .map(|sprite| (sprite, PhysicsVector::from_vec(*collider_translation), 0.0))
-            })
-        })
-        .collect_vec();
+            sprite::gravity_particle(game_textures)
+              .into_iter()
+              .map(|sprite| (sprite, PhysicsVector::from_vec(*collider_translation), 0.0))
+          })
+      })
+      .collect_vec();
 
-      let entities_with_sprites: Vec<(Rc<Entity>, Vec<SpriteToDraw>)> = sorted_entities
-        .iter()
-        .filter_map(|(handle, entity)| {
-          if let Some(damageable) = entity.components.get::<Damageable>()
-            && (damageable.damaged
-              || damageable.current_hitstun % 10.0 == 1.0
-              || damageable.current_hitstun % 10.0 == 2.0)
-            && (entity.components.get::<Destroyed>().is_none()
-              || (entity.components.get::<Destroyed>().is_some()
-                && entity.components.get::<OnDestroyEffect>().is_none()))
-          {
-            return None;
-          }
+    let entities_with_sprites: Vec<(Rc<Entity>, Vec<SpriteToDraw>)> = sorted_entities
+      .iter()
+      .filter_map(|(handle, entity)| {
+        if let Some(damageable) = entity.components.get::<Damageable>()
+          && (damageable.damaged
+            || damageable.current_hitstun % 10.0 == 1.0
+            || damageable.current_hitstun % 10.0 == 2.0)
+          && (entity.components.get::<Destroyed>().is_none()
+            || (entity.components.get::<Destroyed>().is_some()
+              && entity.components.get::<OnDestroyEffect>().is_none()))
+        {
+          return None;
+        }
 
-          let sprites_override = if entity.components.get::<TouchSensor>().is_some()
-            && let Some(activator) = entity.components.get::<Activator>()
-          {
-            Some(
-              handle
-                .colliders(&physics_system.rigid_body_set)
-                .iter()
-                .flat_map(|&&collider_handle| {
-                  let collider = &physics_system.collider_set[collider_handle];
-                  let dimensions = &PhysicsVector::from_vec(
-                    collider.shape().as_cuboid().unwrap().half_extents * 2.0,
-                  );
+        let sprites_override = if entity.components.get::<TouchSensor>().is_some()
+          && let Some(activator) = entity.components.get::<Activator>()
+        {
+          Some(
+            handle
+              .colliders(&physics_system.rigid_body_set)
+              .iter()
+              .flat_map(|&&collider_handle| {
+                let collider = &physics_system.collider_set[collider_handle];
+                let dimensions = &PhysicsVector::from_vec(
+                  collider.shape().as_cuboid().unwrap().half_extents * 2.0,
+                );
 
-                  if activator.activation >= 0.5 {
-                    sprite::touch_sensor_activated(dimensions, game_textures)
-                  } else {
-                    sprite::touch_sensor_deactivated(dimensions, game_textures)
-                  }
-                })
-                .collect::<Vec<_>>(),
-            )
-          } else if let Some(enemy) = entity.components.get::<Enemy>() {
-            match enemy.as_ref() {
-              Enemy::Goblin(_goblin) => Some(sprite::goblin(
-                (physics_system.frame_count / 15) as i32,
+                if activator.activation >= 0.5 {
+                  sprite::touch_sensor_activated(dimensions, game_textures)
+                } else {
+                  sprite::touch_sensor_deactivated(dimensions, game_textures)
+                }
+              })
+              .collect::<Vec<_>>(),
+          )
+        } else if let Some(enemy) = entity.components.get::<Enemy>() {
+          match enemy.as_ref() {
+            Enemy::Goblin(_goblin) => Some(sprite::goblin(
+              (physics_system.frame_count / 15) as i32,
+              game_textures,
+            )),
+            Enemy::Imp(imp) => match imp.state {
+              EnemyImpState::Moving(frames_left, _) => {
+                if frames_left
+                  > BALANCING.enemies.imp.sprite_to_ball_frame_count
+                    + BALANCING.enemies.imp.sprite_ball_frame_count
+                {
+                  Some(sprite::imp(
+                    (physics_system.frame_count / 15) as i32 % 2,
+                    game_textures,
+                  ))
+                } else if frames_left > BALANCING.enemies.imp.sprite_ball_frame_count {
+                  Some(sprite::imp(
+                    ((frames_left - BALANCING.enemies.imp.sprite_ball_frame_count)
+                      / BALANCING.enemies.imp.sprite_to_ball_frame_count)
+                      % 2
+                      + 2,
+                    game_textures,
+                  ))
+                } else {
+                  Some(sprite::imp(4, game_textures))
+                }
+              }
+              EnemyImpState::ShootingCooldown(frames_left) => {
+                if BALANCING.enemies.imp.shooting_cooldown_initial_frames - frames_left < 7 {
+                  Some(sprite::imp(5, game_textures))
+                } else {
+                  Some(sprite::imp(
+                    (physics_system.frame_count / 15) as i32 % 2,
+                    game_textures,
+                  ))
+                }
+              }
+              _ => Some(sprite::imp(
+                (physics_system.frame_count / 15) as i32 % 2,
                 game_textures,
               )),
-              Enemy::Imp(imp) => match imp.state {
-                EnemyImpState::Moving(frames_left, _) => {
-                  if frames_left
-                    > BALANCING.enemies.imp.sprite_to_ball_frame_count
-                      + BALANCING.enemies.imp.sprite_ball_frame_count
-                  {
-                    Some(sprite::imp(
-                      (physics_system.frame_count / 15) as i32 % 2,
-                      game_textures,
-                    ))
-                  } else if frames_left > BALANCING.enemies.imp.sprite_ball_frame_count {
-                    Some(sprite::imp(
-                      ((frames_left - BALANCING.enemies.imp.sprite_ball_frame_count)
-                        / BALANCING.enemies.imp.sprite_to_ball_frame_count)
-                        % 2
-                        + 2,
-                      game_textures,
-                    ))
-                  } else {
-                    Some(sprite::imp(4, game_textures))
-                  }
-                }
-                EnemyImpState::ShootingCooldown(frames_left) => {
-                  if BALANCING.enemies.imp.shooting_cooldown_initial_frames - frames_left < 7 {
-                    Some(sprite::imp(5, game_textures))
-                  } else {
-                    Some(sprite::imp(
-                      (physics_system.frame_count / 15) as i32 % 2,
-                      game_textures,
-                    ))
-                  }
-                }
-                _ => Some(sprite::imp(
-                  (physics_system.frame_count / 15) as i32 % 2,
+            },
+            Enemy::Aranea(aranea) => {
+              if let EnemyAraneaState::Idle = aranea.state {
+                Some(sprite::aranea(0, game_textures))
+              } else if let EnemyAraneaState::Detaching(frames_left, _, _) = aranea.state {
+                Some(sprite::aranea(
+                  ((1 + BALANCING.enemies.aranea.detaching_initial_frames - frames_left) as f32
+                    / (BALANCING.enemies.aranea.detaching_initial_frames as f32 / 5.0))
+                    as i32,
                   game_textures,
-                )),
-              },
-              Enemy::Aranea(aranea) => {
-                if let EnemyAraneaState::Idle = aranea.state {
-                  Some(sprite::aranea(0, game_textures))
-                } else if let EnemyAraneaState::Detaching(frames_left, _, _) = aranea.state {
-                  Some(sprite::aranea(
-                    ((1 + BALANCING.enemies.aranea.detaching_initial_frames - frames_left) as f32
-                      / (BALANCING.enemies.aranea.detaching_initial_frames as f32 / 5.0))
-                      as i32,
-                    game_textures,
-                  ))
-                } else if let EnemyAraneaState::Cooldown(frames_left) = aranea.state
-                  && (BALANCING.enemies.aranea.cooldown_initial_frames - frames_left) < 8
-                {
-                  Some(sprite::aranea(6, game_textures))
-                } else {
-                  Some(sprite::aranea(
-                    4 + ((physics_system.frame_count / 20) % 2) as i32,
-                    game_textures,
-                  ))
-                }
+                ))
+              } else if let EnemyAraneaState::Cooldown(frames_left) = aranea.state
+                && (BALANCING.enemies.aranea.cooldown_initial_frames - frames_left) < 8
+              {
+                Some(sprite::aranea(6, game_textures))
+              } else {
+                Some(sprite::aranea(
+                  4 + ((physics_system.frame_count / 20) % 2) as i32,
+                  game_textures,
+                ))
               }
-              Enemy::AraneaQueen(aranea_queen) => {
-                let launch_substate_dispatch = |launch_substate: &aranea_queen::LaunchSubstate| {
-                  if let aranea_queen::LaunchSubstate::Starting(_, FramesLeft(frames_left)) =
-                    launch_substate
-                  {
-                    if *frames_left < 5 {
-                      Some(sprite::aranea_queen(4, game_textures))
-                    } else {
-                      Some(sprite::aranea_queen(
-                        2 + ((BALANCING.enemies.aranea_queen.launch_starting_frames - frames_left)
-                          as f32
-                          / (BALANCING.enemies.aranea_queen.launch_starting_frames as f32 / 2.0))
-                          as i32,
-                        game_textures,
-                      ))
-                    }
+            }
+            Enemy::AraneaQueen(aranea_queen) => {
+              let launch_substate_dispatch = |launch_substate: &aranea_queen::LaunchSubstate| {
+                if let aranea_queen::LaunchSubstate::Starting(_, FramesLeft(frames_left)) =
+                  launch_substate
+                {
+                  if *frames_left < 5 {
+                    Some(sprite::aranea_queen(4, game_textures))
                   } else {
-                    None
+                    Some(sprite::aranea_queen(
+                      2 + ((BALANCING.enemies.aranea_queen.launch_starting_frames - frames_left)
+                        as f32
+                        / (BALANCING.enemies.aranea_queen.launch_starting_frames as f32 / 2.0))
+                        as i32,
+                      game_textures,
+                    ))
+                  }
+                } else {
+                  None
+                }
+              };
+
+              let launch_to_egg_substate_dispatch =
+                |launch_to_egg_substate: &aranea_queen::LaunchToEggSubstate| {
+                  match launch_to_egg_substate {
+                    aranea_queen::LaunchToEggSubstate::Launch(launch_substate) => {
+                      launch_substate_dispatch(launch_substate)
+                    }
+                    aranea_queen::LaunchToEggSubstate::Spraying(FramesLeft(frames_left)) => {
+                      if frames_left % BALANCING.enemies.aranea_queen.spray_interval < 3 {
+                        Some(sprite::aranea_queen(2, game_textures))
+                      } else {
+                        None
+                      }
+                    }
                   }
                 };
 
-                let launch_to_egg_substate_dispatch =
-                  |launch_to_egg_substate: &aranea_queen::LaunchToEggSubstate| {
-                    match launch_to_egg_substate {
-                      aranea_queen::LaunchToEggSubstate::Launch(launch_substate) => {
-                        launch_substate_dispatch(launch_substate)
-                      }
-                      aranea_queen::LaunchToEggSubstate::Spraying(FramesLeft(frames_left)) => {
-                        if frames_left % BALANCING.enemies.aranea_queen.spray_interval < 3 {
-                          Some(sprite::aranea_queen(2, game_textures))
-                        } else {
-                          None
-                        }
-                      }
-                    }
-                  };
-
-                let special_sprite = match &aranea_queen.state {
-                  aranea_queen::State::FirstLaunch(launch_to_egg_substate) => {
+              let special_sprite = match &aranea_queen.state {
+                aranea_queen::State::FirstLaunch(launch_to_egg_substate) => {
+                  launch_to_egg_substate_dispatch(launch_to_egg_substate)
+                }
+                aranea_queen::State::Phase1(phase_1_substate) => match phase_1_substate {
+                  aranea_queen::Phase1Substate::LaunchToEgg(launch_to_egg_substate) => {
                     launch_to_egg_substate_dispatch(launch_to_egg_substate)
                   }
-                  aranea_queen::State::Phase1(phase_1_substate) => match phase_1_substate {
-                    aranea_queen::Phase1Substate::LaunchToEgg(launch_to_egg_substate) => {
-                      launch_to_egg_substate_dispatch(launch_to_egg_substate)
-                    }
-                    aranea_queen::Phase1Substate::LaunchToPlayer(launch_substate) => {
-                      launch_substate_dispatch(launch_substate)
-                    }
-                    _ => None,
-                  },
-                  aranea_queen::State::Phase2(phase_2_subsate) => match phase_2_subsate {
-                    aranea_queen::Phase2Substate::BounceOffWalls(_, launch_substate) => {
-                      launch_substate_dispatch(launch_substate)
-                    }
-                    aranea_queen::Phase2Substate::LaunchToEgg(launch_to_egg_substate) => {
-                      launch_to_egg_substate_dispatch(launch_to_egg_substate)
-                    }
-                    aranea_queen::Phase2Substate::LaunchToPlayer(launch_substate) => {
-                      launch_substate_dispatch(launch_substate)
-                    }
-                    _ => None,
-                  },
+                  aranea_queen::Phase1Substate::LaunchToPlayer(launch_substate) => {
+                    launch_substate_dispatch(launch_substate)
+                  }
                   _ => None,
-                };
-
-                special_sprite.or(Some(sprite::aranea_queen(
-                  (physics_system.frame_count / 20) as i32 % 2,
-                  game_textures,
-                )))
-              }
-              Enemy::Sniper(sniper) => {
-                if let EnemySniperState::Cooldown(frames_left) = sniper.state {
-                  Some(sprite::sniper(
-                    (BALANCING.enemies.sniper.cooldown_initial_frames - frames_left)
-                      / (BALANCING.enemies.sniper.cooldown_initial_frames / 4),
-                    game_textures,
-                  ))
-                } else if let EnemySniperState::Shooting = sniper.state {
-                  Some(sprite::sniper(5, game_textures))
-                } else {
-                  Some(sprite::sniper(0, game_textures))
-                }
-              }
-              Enemy::Defender(defender) => {
-                if let EnemyDefenderState::Idle = defender.state {
-                  Some(sprite::defender(0, game_textures))
-                } else if let EnemyDefenderState::WakingUp(frames_left) = defender.state {
-                  Some(sprite::defender(
-                    1 + ((BALANCING.enemies.defender.waking_up_frames - frames_left)
-                      / (BALANCING.enemies.defender.waking_up_frames / 4)),
-                    game_textures,
-                  ))
-                } else {
-                  Some(sprite::defender(
-                    5 + ((physics_system.frame_count / 20) % 6) as i32,
-                    game_textures,
-                  ))
-                }
-              }
-              Enemy::DefenderPrime(defender_prime) => Some(
-                if let defender_prime::State::Active(
-                  _,
-                  defender_prime::SeekerSpawnState::Ready(positions, FramesLeft(frames_left)),
-                ) = &defender_prime.state
-                {
-                  let distance = ((1.0
-                    - (*frames_left as f32
-                      / BALANCING.enemies.defender_prime.seeker_spawn_ready_frames as f32))
-                    * 3.0)
-                    .floor()
-                    * 0.3
-                    + 1.6;
-                  let enemy_translation =
-                    *physics_system.rigid_body_set[*handle.as_rb_handle().unwrap()].translation();
-                  defender_prime::child_spawn_locations(enemy_translation, 0.0, positions, distance)
-                    .iter()
-                    .flat_map(|(translation, rotation)| {
-                      let relative_physics_translation = translation - enemy_translation;
-                      let relative_screen_translation =
-                        PhysicsVector::from_vec(relative_physics_translation).convert();
-
-                      sprite::seeker(game_textures)
-                        .into_iter()
-                        .map(move |sprite_to_draw| SpriteToDraw {
-                          offset: Some(Vec2 {
-                            x: relative_screen_translation.x() / VIRTUAL_PIXEL_FACTOR,
-                            y: relative_screen_translation.y() / VIRTUAL_PIXEL_FACTOR,
-                          }),
-                          rotation: Some(*rotation),
-                          ..sprite_to_draw.clone()
-                        })
-                    })
-                    .collect_vec()
-                } else {
-                  vec![]
                 },
-              ),
-              _ => None,
-            }
-          } else {
-            None
-          };
+                aranea_queen::State::Phase2(phase_2_subsate) => match phase_2_subsate {
+                  aranea_queen::Phase2Substate::BounceOffWalls(_, launch_substate) => {
+                    launch_substate_dispatch(launch_substate)
+                  }
+                  aranea_queen::Phase2Substate::LaunchToEgg(launch_to_egg_substate) => {
+                    launch_to_egg_substate_dispatch(launch_to_egg_substate)
+                  }
+                  aranea_queen::Phase2Substate::LaunchToPlayer(launch_substate) => {
+                    launch_substate_dispatch(launch_substate)
+                  }
+                  _ => None,
+                },
+                _ => None,
+              };
 
-          let sprites_to_draw = sprites_override
-            .into_iter()
-            .flatten()
-            .chain(
-              {
-                entity.components.get::<SimpleSprite>().map(|sprite| {
-                  get_sprites_to_draw(
-                    &sprite.kind,
-                    physics_system.frame_count,
-                    ctx.input.textures.as_ref(),
-                  )
-                })
-              }
-              .into_iter()
-              .flatten(),
-            )
-            .collect_vec();
-
-          Some((Rc::clone(*entity), sprites_to_draw))
-        })
-        .collect::<Vec<_>>();
-
-      let new_effects = entities_with_sprites
-        .iter()
-        .flat_map(|(entity, sprites_to_draw)| {
-          if entity.components.get::<Destroyed>().is_some()
-            && let Some(destroy_effect) = entity.components.get::<OnDestroyEffect>()
-          {
-            let (physics_translation, rotation) = match entity.handle {
-              EntityHandle::Collider(collider_handle) => {
-                let collider = &physics_system.collider_set[collider_handle];
-                (collider.translation(), collider.rotation().angle())
-              }
-              EntityHandle::RigidBody(rigid_body_handle) => {
-                let rigid_body = &physics_system.rigid_body_set[rigid_body_handle];
-                (rigid_body.translation(), rigid_body.rotation().angle())
-              }
-            };
-
-            let easing = easing::linear()
-              .scale(destroy_effect.duration as f32)
-              .offset(physics_system.frame_count as f32);
-
-            Some(Effect {
-              easing,
-              kind: destroy_effect.effect_kind,
-              sprites_to_draw: Rc::new(sprites_to_draw.clone()),
-              translation: PhysicsVector::from_vec(*physics_translation),
-              rotation,
-            })
-          } else {
-            None
-          }
-        })
-        .collect_vec();
-
-      let effects = self
-        .effects
-        .iter()
-        .cloned()
-        .chain(new_effects)
-        .filter(|effect| effect.easing.at(physics_system.frame_count as f32) <= 1.0)
-        .collect::<Vec<_>>();
-
-      let effect_sprites = effects.iter().map(|effect| {
-        let material = match &effect.kind {
-          EffectKind::NoiseDissolve => {
-            let dissolve = self.materials.dissolve.clone();
-            dissolve.set_uniform(
-              "Progress",
-              effect.easing.at(physics_system.frame_count as f32),
-            );
-            dissolve.set_texture(
-              "NoiseTexture",
-              ctx
-                .input
-                .textures
-                .effect_textures
-                .noise_texture
-                .weak_clone(),
-            );
-            dissolve
-          }
-        };
-
-        effect
-          .sprites_to_draw
-          .iter()
-          .map(|sprite_to_draw| {
-            let material = material.clone();
-            (
-              sprite_to_draw.with_material(Some(material)),
-              effect.translation,
-              effect.rotation,
-            )
-          })
-          .collect::<Vec<_>>()
-      });
-
-      let mount_point_selection_sprite = {
-        if !ability_system.acquired_chain {
-          vec![]
-        } else {
-          let closest_mount_point =
-            physics_system
-              .mount_points_in_range
-              .iter()
-              .fold(None, |acc, mount_point| {
-                let closest_point = if let Some(closest_point) = acc {
-                  closest_point
-                } else {
-                  return Some(mount_point);
-                };
-
-                if (physics_system.rigid_body_set[*closest_point].translation()
-                  - player_translation)
-                  .magnitude()
-                  > (physics_system.rigid_body_set[*mount_point].translation() - player_translation)
-                    .magnitude()
-                {
-                  Some(mount_point)
-                } else {
-                  Some(closest_point)
-                }
-              });
-
-          closest_mount_point
-            .map(|mount_point| {
-              let rigid_body = &physics_system.rigid_body_set[*mount_point];
-              let sprites_to_draw = sprite::chain_mount_point_selection(
+              special_sprite.or(Some(sprite::aranea_queen(
                 (physics_system.frame_count / 20) as i32 % 2,
                 game_textures,
-              );
+              )))
+            }
+            Enemy::Sniper(sniper) => {
+              if let EnemySniperState::Cooldown(frames_left) = sniper.state {
+                Some(sprite::sniper(
+                  (BALANCING.enemies.sniper.cooldown_initial_frames - frames_left)
+                    / (BALANCING.enemies.sniper.cooldown_initial_frames / 4),
+                  game_textures,
+                ))
+              } else if let EnemySniperState::Shooting = sniper.state {
+                Some(sprite::sniper(5, game_textures))
+              } else {
+                Some(sprite::sniper(0, game_textures))
+              }
+            }
+            Enemy::Defender(defender) => {
+              if let EnemyDefenderState::Idle = defender.state {
+                Some(sprite::defender(0, game_textures))
+              } else if let EnemyDefenderState::WakingUp(frames_left) = defender.state {
+                Some(sprite::defender(
+                  1 + ((BALANCING.enemies.defender.waking_up_frames - frames_left)
+                    / (BALANCING.enemies.defender.waking_up_frames / 4)),
+                  game_textures,
+                ))
+              } else {
+                Some(sprite::defender(
+                  5 + ((physics_system.frame_count / 20) % 6) as i32,
+                  game_textures,
+                ))
+              }
+            }
+            Enemy::DefenderPrime(defender_prime) => Some(
+              if let defender_prime::State::Active(
+                _,
+                defender_prime::SeekerSpawnState::Ready(positions, FramesLeft(frames_left)),
+              ) = &defender_prime.state
+              {
+                let distance = ((1.0
+                  - (*frames_left as f32
+                    / BALANCING.enemies.defender_prime.seeker_spawn_ready_frames as f32))
+                  * 3.0)
+                  .floor()
+                  * 0.3
+                  + 1.6;
+                let enemy_translation =
+                  *physics_system.rigid_body_set[*handle.as_rb_handle().unwrap()].translation();
+                defender_prime::child_spawn_locations(enemy_translation, 0.0, positions, distance)
+                  .iter()
+                  .flat_map(|(translation, rotation)| {
+                    let relative_physics_translation = translation - enemy_translation;
+                    let relative_screen_translation =
+                      PhysicsVector::from_vec(relative_physics_translation).convert();
 
-              sprites_to_draw
-                .into_iter()
-                .map(|sprite| {
-                  (
-                    sprite,
-                    PhysicsVector::from_vec(*rigid_body.translation()),
-                    rigid_body.rotation().angle(),
-                  )
-                })
-                .collect_vec()
-            })
-            .unwrap_or(vec![])
-        }
-      };
+                    sprite::seeker(game_textures)
+                      .into_iter()
+                      .map(move |sprite_to_draw| SpriteToDraw {
+                        offset: Some(Vec2 {
+                          x: relative_screen_translation.x() / VIRTUAL_PIXEL_FACTOR,
+                          y: relative_screen_translation.y() / VIRTUAL_PIXEL_FACTOR,
+                        }),
+                        rotation: Some(*rotation),
+                        ..sprite_to_draw.clone()
+                      })
+                  })
+                  .collect_vec()
+              } else {
+                vec![]
+              },
+            ),
+            _ => None,
+          }
+        } else {
+          None
+        };
 
-      let sprites_to_draw = entities_with_sprites
-        .into_iter()
-        .map(|(entity, sprites)| {
+        let sprites_to_draw = sprites_override
+          .into_iter()
+          .flatten()
+          .chain(
+            {
+              entity.components.get::<SimpleSprite>().map(|sprite| {
+                get_sprites_to_draw(
+                  &sprite.kind,
+                  physics_system.frame_count,
+                  ctx.input.textures.as_ref(),
+                )
+              })
+            }
+            .into_iter()
+            .flatten(),
+          )
+          .collect_vec();
+
+        Some((Rc::clone(*entity), sprites_to_draw))
+      })
+      .collect::<Vec<_>>();
+
+    let new_effects = entities_with_sprites
+      .iter()
+      .flat_map(|(entity, sprites_to_draw)| {
+        if entity.components.get::<Destroyed>().is_some()
+          && let Some(destroy_effect) = entity.components.get::<OnDestroyEffect>()
+        {
           let (physics_translation, rotation) = match entity.handle {
             EntityHandle::Collider(collider_handle) => {
               let collider = &physics_system.collider_set[collider_handle];
@@ -643,525 +616,606 @@ impl<Input: Clone + Default + 'static> System for GraphicsSystem<Input> {
             }
           };
 
-          sprites
-            .into_iter()
-            .map(|sprite| {
-              (
-                sprite,
-                PhysicsVector::from_vec(*physics_translation),
-                rotation,
-              )
-            })
-            .collect_vec()
-        })
-        .chain(effect_sprites)
-        .flatten()
-        .chain(mount_point_selection_sprite)
-        .chain(gravity_particles)
-        .map(|(sprite, physics_translation, rotation)| {
-          (
-            sprite,
-            physics_translation.into_pos(camera_system.translation),
+          let easing = easing::linear()
+            .scale(destroy_effect.duration as f32)
+            .offset(physics_system.frame_count as f32);
+
+          Some(Effect {
+            easing,
+            kind: destroy_effect.effect_kind,
+            sprites_to_draw: Rc::new(sprites_to_draw.clone()),
+            translation: PhysicsVector::from_vec(*physics_translation),
             rotation,
+          })
+        } else {
+          None
+        }
+      })
+      .collect_vec();
+
+    let effects = self
+      .effects
+      .iter()
+      .cloned()
+      .chain(new_effects)
+      .filter(|effect| effect.easing.at(physics_system.frame_count as f32) <= 1.0)
+      .collect::<Vec<_>>();
+
+    let effect_sprites = effects.iter().map(|effect| {
+      let material = match &effect.kind {
+        EffectKind::NoiseDissolve => {
+          let dissolve = self.materials.dissolve.clone();
+          dissolve.set_uniform(
+            "Progress",
+            effect.easing.at(physics_system.frame_count as f32),
+          );
+          dissolve.set_texture(
+            "NoiseTexture",
+            ctx
+              .input
+              .textures
+              .effect_textures
+              .noise_texture
+              .weak_clone(),
+          );
+          dissolve
+        }
+      };
+
+      effect
+        .sprites_to_draw
+        .iter()
+        .map(|sprite_to_draw| {
+          let material = material.clone();
+          (
+            sprite_to_draw.with_material(Some(material)),
+            effect.translation,
+            effect.rotation,
           )
         })
-        .chain(offscreen_enemies)
-        .sorted_by(|(sprite_a, _, _), (sprite_b, _, _)| {
-          let z_position_a = sprite_a.z_position;
-          let z_position_b = sprite_b.z_position;
+        .collect::<Vec<_>>()
+    });
 
-          match (z_position_a, z_position_b) {
-            (Some(_), None) => Ordering::Greater,
-            (None, Some(_)) => Ordering::Less,
-            (Some(z_a), Some(z_b)) => {
-              if z_a < z_b {
-                Ordering::Less
-              } else {
-                Ordering::Greater
-              }
-            }
-            _ => Ordering::Equal,
-          }
-        })
-        .collect_vec();
-
-      let (below_tiles, above_tiles): (Vec<_>, Vec<_>) =
-        partition(sprites_to_draw, |(sprite_to_draw, _, _)| {
-          sprite_to_draw
-            .z_position
-            .map(|z_position| z_position < 0.0)
-            .unwrap_or(false)
-        });
-
-      below_tiles
-        .into_iter()
-        .for_each(|(sprite, screen_translation, rotation)| {
-          draw_sprites(
-            &[sprite],
-            screen_translation,
-            convert_rotation(rotation),
-            false,
-          );
-        });
-
-      let tile_layer = map_system.raw_map.tile_layer();
-      draw_tile_layer(tile_layer, tiles_texture, &camera_system);
-
-      above_tiles
-        .into_iter()
-        .for_each(|(sprite, screen_translation, rotation)| {
-          draw_sprites(
-            &[sprite],
-            screen_translation,
-            convert_rotation(rotation),
-            false,
-          );
-        });
-
-      /* Debug */
-      if BALANCING.debug.show_colliders {
-        sorted_entities.iter().for_each(|(handle, entity)| {
-          if let Some(damageable) = entity.components.get::<Damageable>()
-            && damageable.damaged
-          {
-            return;
-          }
-
-          if let Some(gravity_source) = entity.components.get::<GravitySource>()
-            && let EntityHandle::Collider(handle) = entity.handle
-            && let Some(ball) = physics_system.collider_set[handle].shape().as_ball()
-          {
-            let activation = if let Some(target_activator_id) = gravity_source.activator_id
-              && let Some((_, other_entity)) =
-                physics_system.entities.iter().find(|(_, other_entity)| {
-                  if let Some(id) = other_entity.components.get::<Id>()
-                    && id.id == target_activator_id
-                  {
-                    true
-                  } else {
-                    false
-                  }
-                })
-              && let Some(activator) = other_entity.components.get::<Activator>()
-            {
-              activator.activation
-            } else {
-              1.0
-            };
-
-            let gravity_strength = gravity_source.strength * activation;
-
-            if gravity_strength == 0.0 {
-              return;
-            }
-
-            let ball_radius_screen = *PhysicsScalar(ball.radius).convert();
-
-            let period = (gravity_strength * ball_radius_screen * 30.0).abs();
-
-            let ball_1_completion_ratio = (physics_system.frame_count as f32 % period) / period;
-
-            let ball_1_completion_ratio = if gravity_strength > 0.0 {
-              1.0 - ball_1_completion_ratio
-            } else {
-              ball_1_completion_ratio
-            };
-
-            let ball_1_radius = ball_1_completion_ratio * ball_radius_screen;
-
-            let ball_2_completion_ratio =
-              ((physics_system.frame_count as f32 + (period / 2.0)) % period) / period;
-
-            let ball_2_completion_ratio = if gravity_strength > 0.0 {
-              1.0 - ball_2_completion_ratio
-            } else {
-              ball_2_completion_ratio
-            };
-
-            let ball_2_radius = ball_2_completion_ratio * ball_radius_screen;
-
-            let translation =
-              PhysicsVector::from_vec(*physics_system.collider_set[handle].translation())
-                .into_pos(camera_system.translation);
-
-            let alpha_ease = ease_out_cubic() * 0.15;
-
-            draw_circle(
-              translation.x(),
-              translation.y(),
-              ball_1_radius,
-              COLOR_3.with_alpha(alpha_ease.at(1.0 - ball_1_completion_ratio)),
-            );
-            draw_circle(
-              translation.x(),
-              translation.y(),
-              ball_2_radius,
-              COLOR_3.with_alpha(alpha_ease.at(1.0 - ball_2_completion_ratio)),
-            );
-            draw_circle(
-              translation.x(),
-              translation.y(),
-              ball_radius_screen,
-              COLOR_2.with_alpha(0.2),
-            );
-
-            return;
-          }
-
-          let color = if let Some(enemy) = entity.components.get::<Enemy>()
-            && let Enemy::Sniper(sniper) = enemy.as_ref()
-            && let EnemySniperState::Cooldown(frames_left) = sniper.state
-          {
-            let color_diff = COLOR_2.to_vec() - COLOR_4.to_vec();
-            let color_ease = easing::ease_out_cubic() * color_diff;
-
-            let current_color = COLOR_4.to_vec()
-              + color_ease
-                .at(frames_left as f32 / BALANCING.enemies.sniper.cooldown_initial_frames as f32);
-
-            Some(Color::from_vec(current_color))
-          } else if entity.components.get::<Damager>().is_some() {
-            Some(COLOR_3)
-          } else {
-            None
-          };
-
-          handle
-            .colliders(&physics_system.rigid_body_set)
+    let mount_point_selection_sprite = {
+      if !ability_system.acquired_chain {
+        vec![]
+      } else {
+        let closest_mount_point =
+          physics_system
+            .mount_points_in_range
             .iter()
-            .for_each(|&&collider_handle| {
-              let collider = &physics_system.collider_set[collider_handle];
-              draw_collider(collider, camera_system.translation, None, color, None);
+            .fold(None, |acc, mount_point| {
+              let closest_point = if let Some(closest_point) = acc {
+                closest_point
+              } else {
+                return Some(mount_point);
+              };
+
+              if (physics_system.rigid_body_set[*closest_point].translation() - player_translation)
+                .magnitude()
+                > (physics_system.rigid_body_set[*mount_point].translation() - player_translation)
+                  .magnitude()
+              {
+                Some(mount_point)
+              } else {
+                Some(closest_point)
+              }
             });
 
-          /* Draw entity labels */
-          if let EntityHandle::RigidBody(rigid_body_handle) = handle {
+        closest_mount_point
+          .map(|mount_point| {
+            let rigid_body = &physics_system.rigid_body_set[*mount_point];
+            let sprites_to_draw = sprite::chain_mount_point_selection(
+              (physics_system.frame_count / 20) as i32 % 2,
+              game_textures,
+            );
+
+            sprites_to_draw
+              .into_iter()
+              .map(|sprite| {
+                (
+                  sprite,
+                  PhysicsVector::from_vec(*rigid_body.translation()),
+                  rigid_body.rotation().angle(),
+                )
+              })
+              .collect_vec()
+          })
+          .unwrap_or(vec![])
+      }
+    };
+
+    let sprites_to_draw = entities_with_sprites
+      .into_iter()
+      .map(|(entity, sprites)| {
+        let (physics_translation, rotation) = match entity.handle {
+          EntityHandle::Collider(collider_handle) => {
+            let collider = &physics_system.collider_set[collider_handle];
+            (collider.translation(), collider.rotation().angle())
+          }
+          EntityHandle::RigidBody(rigid_body_handle) => {
+            let rigid_body = &physics_system.rigid_body_set[rigid_body_handle];
+            (rigid_body.translation(), rigid_body.rotation().angle())
+          }
+        };
+
+        sprites
+          .into_iter()
+          .map(|sprite| {
+            (
+              sprite,
+              PhysicsVector::from_vec(*physics_translation),
+              rotation,
+            )
+          })
+          .collect_vec()
+      })
+      .chain(effect_sprites)
+      .flatten()
+      .chain(mount_point_selection_sprite)
+      .chain(gravity_particles)
+      .map(|(sprite, physics_translation, rotation)| {
+        (
+          sprite,
+          physics_translation.into_pos(camera_system.translation),
+          rotation,
+        )
+      })
+      .chain(offscreen_enemies)
+      .sorted_by(|(sprite_a, _, _), (sprite_b, _, _)| {
+        let z_position_a = sprite_a.z_position;
+        let z_position_b = sprite_b.z_position;
+
+        match (z_position_a, z_position_b) {
+          (Some(_), None) => Ordering::Greater,
+          (None, Some(_)) => Ordering::Less,
+          (Some(z_a), Some(z_b)) => {
+            if z_a < z_b {
+              Ordering::Less
+            } else {
+              Ordering::Greater
+            }
+          }
+          _ => Ordering::Equal,
+        }
+      })
+      .collect_vec();
+
+    let (below_tiles, above_tiles): (Vec<_>, Vec<_>) =
+      partition(sprites_to_draw, |(sprite_to_draw, _, _)| {
+        sprite_to_draw
+          .z_position
+          .map(|z_position| z_position < 0.0)
+          .unwrap_or(false)
+      });
+
+    below_tiles
+      .into_iter()
+      .for_each(|(sprite, screen_translation, rotation)| {
+        draw_sprites(
+          &[sprite],
+          screen_translation,
+          convert_rotation(rotation),
+          false,
+        );
+      });
+
+    let tile_layer = map_system.raw_map.tile_layer();
+    draw_tile_layer(tile_layer, tiles_texture, &camera_system);
+
+    above_tiles
+      .into_iter()
+      .for_each(|(sprite, screen_translation, rotation)| {
+        draw_sprites(
+          &[sprite],
+          screen_translation,
+          convert_rotation(rotation),
+          false,
+        );
+      });
+
+    /* Debug */
+    if BALANCING.debug.show_colliders {
+      sorted_entities.iter().for_each(|(handle, entity)| {
+        if let Some(damageable) = entity.components.get::<Damageable>()
+          && damageable.damaged
+        {
+          return;
+        }
+
+        if let Some(gravity_source) = entity.components.get::<GravitySource>()
+          && let EntityHandle::Collider(handle) = entity.handle
+          && let Some(ball) = physics_system.collider_set[handle].shape().as_ball()
+        {
+          let activation = if let Some(target_activator_id) = gravity_source.activator_id
+            && let Some((_, other_entity)) =
+              physics_system.entities.iter().find(|(_, other_entity)| {
+                if let Some(id) = other_entity.components.get::<Id>()
+                  && id.id == target_activator_id
+                {
+                  true
+                } else {
+                  false
+                }
+              })
+            && let Some(activator) = other_entity.components.get::<Activator>()
+          {
+            activator.activation
+          } else {
+            1.0
+          };
+
+          let gravity_strength = gravity_source.strength * activation;
+
+          if gravity_strength == 0.0 {
+            return;
+          }
+
+          let ball_radius_screen = *PhysicsScalar(ball.radius).convert();
+
+          let period = (gravity_strength * ball_radius_screen * 30.0).abs();
+
+          let ball_1_completion_ratio = (physics_system.frame_count as f32 % period) / period;
+
+          let ball_1_completion_ratio = if gravity_strength > 0.0 {
+            1.0 - ball_1_completion_ratio
+          } else {
+            ball_1_completion_ratio
+          };
+
+          let ball_1_radius = ball_1_completion_ratio * ball_radius_screen;
+
+          let ball_2_completion_ratio =
+            ((physics_system.frame_count as f32 + (period / 2.0)) % period) / period;
+
+          let ball_2_completion_ratio = if gravity_strength > 0.0 {
+            1.0 - ball_2_completion_ratio
+          } else {
+            ball_2_completion_ratio
+          };
+
+          let ball_2_radius = ball_2_completion_ratio * ball_radius_screen;
+
+          let translation =
+            PhysicsVector::from_vec(*physics_system.collider_set[handle].translation())
+              .into_pos(camera_system.translation);
+
+          let alpha_ease = ease_out_cubic() * 0.15;
+
+          draw_circle(
+            translation.x(),
+            translation.y(),
+            ball_1_radius,
+            COLOR_3.with_alpha(alpha_ease.at(1.0 - ball_1_completion_ratio)),
+          );
+          draw_circle(
+            translation.x(),
+            translation.y(),
+            ball_2_radius,
+            COLOR_3.with_alpha(alpha_ease.at(1.0 - ball_2_completion_ratio)),
+          );
+          draw_circle(
+            translation.x(),
+            translation.y(),
+            ball_radius_screen,
+            COLOR_2.with_alpha(0.2),
+          );
+
+          return;
+        }
+
+        let color = if let Some(enemy) = entity.components.get::<Enemy>()
+          && let Enemy::Sniper(sniper) = enemy.as_ref()
+          && let EnemySniperState::Cooldown(frames_left) = sniper.state
+        {
+          let color_diff = COLOR_2.to_vec() - COLOR_4.to_vec();
+          let color_ease = easing::ease_out_cubic() * color_diff;
+
+          let current_color = COLOR_4.to_vec()
+            + color_ease
+              .at(frames_left as f32 / BALANCING.enemies.sniper.cooldown_initial_frames as f32);
+
+          Some(Color::from_vec(current_color))
+        } else if entity.components.get::<Damager>().is_some() {
+          Some(COLOR_3)
+        } else {
+          None
+        };
+
+        handle
+          .colliders(&physics_system.rigid_body_set)
+          .iter()
+          .for_each(|&&collider_handle| {
+            let collider = &physics_system.collider_set[collider_handle];
+            draw_collider(collider, camera_system.translation, None, color, None);
+          });
+
+        /* Draw entity labels */
+        if let EntityHandle::RigidBody(rigid_body_handle) = handle {
+          draw_label(
+            PhysicsVector::from_vec(
+              *physics_system.rigid_body_set[rigid_body_handle].translation(),
+            ),
+            camera_system.translation,
+            entity.label.clone(),
+            Some(BLACK),
+          );
+        }
+
+        handle
+          .colliders(&physics_system.rigid_body_set)
+          .into_iter()
+          .for_each(|&collider_handle| {
             draw_label(
-              PhysicsVector::from_vec(
-                *physics_system.rigid_body_set[*rigid_body_handle].translation(),
-              ),
+              PhysicsVector::from_vec(*physics_system.collider_set[collider_handle].translation()),
               camera_system.translation,
               entity.label.clone(),
               Some(BLACK),
             );
-          }
-
-          handle
-            .colliders(&physics_system.rigid_body_set)
-            .into_iter()
-            .for_each(|&collider_handle| {
-              draw_label(
-                PhysicsVector::from_vec(
-                  *physics_system.collider_set[collider_handle].translation(),
-                ),
-                camera_system.translation,
-                entity.label.clone(),
-                Some(BLACK),
-              );
-            })
-        });
-
-        physics_system
-          .collider_set
-          .iter()
-          .sorted_by(|(handle_a, _), (handle_b, _)| {
-            if handle_a.0 > handle_b.0 {
-              Ordering::Greater
-            } else {
-              Ordering::Less
-            }
           })
-          .filter(|(handle, _)| {
-            !physics_system
-              .entities
-              .contains_key(&EntityHandle::Collider(*handle))
-              && if let Some(parent_handle) = physics_system.collider_set[*handle].parent() {
-                !physics_system
-                  .entities
-                  .contains_key(&EntityHandle::RigidBody(parent_handle))
-              } else {
-                true
-              }
-          })
-          .for_each(|(_, collider)| {
-            draw_collider(collider, camera_system.translation, None, None, None);
-          });
-      }
+      });
 
-      let player_physics_pos = PhysicsVector::from_vec(
-        *physics_system.rigid_body_set[physics_system.player_handle].translation(),
-      );
-
-      /* Draw scuffed map overlay */
-      if controls_system.map {
-        let (_, current_world_map) = map_system
-          .map_registry
-          .iter()
-          .find(|(map_name, _)| **map_name == map_system.current_map_name)
-          .unwrap();
-
-        let player_x =
-          (physics_scalar_to_map(player_physics_pos.data.0[0][0]) + current_world_map.x) / 8.0;
-        let player_y = current_world_map.height
-          + (current_world_map.y - physics_scalar_to_map(player_physics_pos.data.0[0][1])) / 8.0;
-
-        let center_x = VIRTUAL_SCREEN_WIDTH / 2.0;
-        let center_y = screen_height() / 2.0;
-
-        draw_triangle(
-          Vec2 {
-            x: center_x - 2.0,
-            y: center_y - 1.0,
-          },
-          Vec2 {
-            x: center_x + 2.0,
-            y: center_y - 1.0,
-          },
-          Vec2 {
-            x: center_x,
-            y: center_y + 3.0,
-          },
-          RED,
-        );
-
-        map_system.map_registry.iter().for_each(|(_, world_map)| {
-          world_map
-            .tiles
-            .iter()
-            .enumerate()
-            .for_each(|(index, tile)| {
-              if *tile == 0 {
-                return;
-              }
-
-              let tile_x = index as f32 % world_map.width;
-              let tile_y = (index as f32 / world_map.width).floor();
-
-              let map_x = (tile_x + (world_map.x / 8.0) - player_x) * MINI_MAP_TILE_WIDTH;
-              let map_y = (tile_y + (world_map.y / 8.0) - player_y) * MINI_MAP_TILE_HEIGHT;
-
-              let x = map_x + center_x;
-              let y = map_y + center_y;
-
-              draw_rectangle(
-                x,
-                y,
-                MINI_MAP_TILE_WIDTH,
-                MINI_MAP_TILE_HEIGHT,
-                BLACK.with_alpha(0.2),
-              );
-            });
-        });
-      }
-
-      /* Draw reticle */
-      let player_screen_pos = player_physics_pos.into_pos(camera_system.translation);
-
-      let reticle_pos = get_reticle_pos(combat_system.reticle_angle);
-
-      draw_circle(
-        player_screen_pos.x() + reticle_pos.x(),
-        player_screen_pos.y() + reticle_pos.y(),
-        RETICLE_SIZE,
-        COLOR_4,
-      );
-
-      /* DEBUG - Draw slots */
-      if SHOW_SLOTS {
-        let slot_positions = get_slot_positions(combat_system.reticle_angle);
-        slot_positions.iter().for_each(|(_, slot)| {
-          let slot_screen_offset = slot.offset.convert();
-
-          let slot_screen_pos =
-            ScreenVector::from_vec(player_screen_pos.into_vec() + slot_screen_offset.into_vec());
-
-          let slot_next_screen_pos = ScreenVector::from_vec(
-            slot_screen_pos.into_vec() + distance_projection_screen(slot.angle, 9.0).into_vec(),
-          );
-
-          draw_circle(slot_screen_pos.x(), slot_screen_pos.y(), 2.0, COLOR_3);
-          draw_circle(
-            slot_next_screen_pos.x(),
-            slot_next_screen_pos.y(),
-            2.0,
-            COLOR_4,
-          );
-        });
-      }
-
-      /* Draw overlays */
-      let draw_bar = |num_cells: i32,
-                      wrap_after: Option<i32>,
-                      min: f32,
-                      max: f32,
-                      level: f32,
-                      translation: Vec2| {
-        let normalized_level = ((level - min) / max) * num_cells as f32;
-
-        (0..num_cells).for_each(|index| {
-          let x_offset = match wrap_after {
-            Some(wrap_after) => Tiles(index % wrap_after),
-            None => Tiles(index),
-          };
-          let y_offset = match wrap_after {
-            Some(wrap_after) => Tiles(index / wrap_after),
-            None => Tiles(0),
-          };
-
-          let translation = translation
-            + Vec2 {
-              x: x_offset.to_screen() - Tiles(0).to_screen(),
-              y: y_offset.to_screen() - Tiles(0).to_screen(),
-            };
-          let translation = ScreenVector::from_vec(vector![translation.x, translation.y]);
-
-          let status = if normalized_level > index as f32 {
-            if (normalized_level - 0.5) > index as f32 {
-              BarCellStatus::Full
-            } else {
-              BarCellStatus::Half
-            }
+      physics_system
+        .collider_set
+        .iter()
+        .sorted_by(|(handle_a, _), (handle_b, _)| {
+          if handle_a.0 > handle_b.0 {
+            Ordering::Greater
           } else {
-            BarCellStatus::Empty
-          };
-
-          draw_sprites(
-            &sprite::bar_cell(status, game_textures),
-            translation,
-            0.0,
-            false,
-          );
+            Ordering::Less
+          }
+        })
+        .filter(|(handle, _)| {
+          !physics_system
+            .entities
+            .contains_key(&EntityHandle::Collider(*handle))
+            && if let Some(parent_handle) = physics_system.collider_set[*handle].parent() {
+              !physics_system
+                .entities
+                .contains_key(&EntityHandle::RigidBody(parent_handle))
+            } else {
+              true
+            }
+        })
+        .for_each(|(_, collider)| {
+          draw_collider(collider, camera_system.translation, None, None, None);
         });
-      };
+    }
 
-      let game_menus = GAME_MENUS;
+    let player_physics_pos = PhysicsVector::from_vec(
+      *physics_system.rigid_body_set[physics_system.player_handle].translation(),
+    );
 
-      draw_dynamic_menu(
-        &game_menus.game_overlay,
-        vector![0, 0],
-        game_textures,
-        &self.materials,
-      );
-
-      let player = physics_system
-        .entities
-        .get(&EntityHandle::RigidBody(physics_system.player_handle))
+    /* Draw scuffed map overlay */
+    if controls_system.map {
+      let (_, current_world_map) = map_system
+        .map_registry
+        .iter()
+        .find(|(map_name, _)| **map_name == map_system.current_map_name)
         .unwrap();
 
-      let player_damageable = player.components.get::<Damageable>().unwrap();
+      let player_x =
+        (physics_scalar_to_map(player_physics_pos.data.0[0][0]) + current_world_map.x) / 8.0;
+      let player_y = current_world_map.height
+        + (current_world_map.y - physics_scalar_to_map(player_physics_pos.data.0[0][1])) / 8.0;
 
-      draw_bar(
-        player_damageable.max_health as i32 / 15,
-        Some(6),
-        0.0,
-        player_damageable.max_health,
-        player_damageable.health,
-        game_menus
-          .game_overlay
-          .get_anchor("PLAYER_HEALTH")
-          .to_screen_vec2(),
+      let center_x = VIRTUAL_SCREEN_WIDTH / 2.0;
+      let center_y = screen_height() / 2.0;
+
+      draw_triangle(
+        Vec2 {
+          x: center_x - 2.0,
+          y: center_y - 1.0,
+        },
+        Vec2 {
+          x: center_x + 2.0,
+          y: center_y - 1.0,
+        },
+        Vec2 {
+          x: center_x,
+          y: center_y + 3.0,
+        },
+        RED,
       );
 
-      let ability_system = ctx.get::<AbilitySystem>().unwrap();
+      map_system.map_registry.iter().for_each(|(_, world_map)| {
+        world_map
+          .tiles
+          .iter()
+          .enumerate()
+          .for_each(|(index, tile)| {
+            if *tile == 0 {
+              return;
+            }
 
-      draw_bar(
-        ability_system
-          .mana_tanks
-          .capacity
-          .max_rechargeable_mana_level() as i32,
-        None,
-        0.0,
-        ability_system
-          .mana_tanks
-          .capacity
-          .max_rechargeable_mana_level(),
-        ability_system.mana_tanks.rechargeable_mana_level,
-        game_menus
-          .game_overlay
-          .get_anchor("PLAYER_MANA")
-          .to_screen_vec2(),
-      );
+            let tile_x = index as f32 % world_map.width;
+            let tile_y = (index as f32 / world_map.width).floor();
 
-      draw_bar(
-        ability_system
-          .mana_tanks
-          .capacity
-          .max_non_rechargeable_mana_level() as i32,
-        None,
-        0.0,
-        ability_system
-          .mana_tanks
-          .capacity
-          .max_non_rechargeable_mana_level(),
-        ability_system.mana_tanks.non_rechargeable_mana_level,
-        game_menus
-          .game_overlay
-          .get_anchor("PLAYER_BACKUP_MANA")
-          .to_screen_vec2(),
-      );
+            let map_x = (tile_x + (world_map.x / 8.0) - player_x) * MINI_MAP_TILE_WIDTH;
+            let map_y = (tile_y + (world_map.y / 8.0) - player_y) * MINI_MAP_TILE_HEIGHT;
 
-      /* Draw the scuffed menu */
-      let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
-      let save_system = ctx.get::<SaveSystem<_>>().unwrap();
+            let x = map_x + center_x;
+            let y = map_y + center_y;
 
-      menu_system.active_main_menus.iter().rev().for_each(|menu| {
-        draw_main_menu(
-          menu,
-          &ctx.input.textures.ui_textures.text_font_texture,
-          &save_system.available_save_data,
-          self.materials.as_ref(),
-        )
-      });
-      menu_system.active_menus.iter().rev().for_each(|menu| {
-        draw_menu(
-          menu,
-          &save_system.available_save_data,
-          &ctx.input.textures,
-          &self.materials,
-        )
-      });
-
-      draw_render_target(&self.materials, &self.camera);
-      return Rc::new(GraphicsSystem {
-        effects,
-        materials: Rc::clone(&self.materials),
-        camera: Rc::clone(&self.camera),
-        _phantom_data: PhantomData,
+            draw_rectangle(
+              x,
+              y,
+              MINI_MAP_TILE_WIDTH,
+              MINI_MAP_TILE_HEIGHT,
+              BLACK.with_alpha(0.2),
+            );
+          });
       });
     }
 
-    /* Draw the scuffed menu */
-    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
-    let save_system = ctx.get::<SaveSystem<_>>().unwrap();
+    /* Draw reticle */
+    let player_screen_pos = player_physics_pos.into_pos(camera_system.translation);
 
-    if let Some(ctx) = ctx.downcast::<Start>() {
-      menu_system.active_main_menus.iter().rev().for_each(|menu| {
-        draw_main_menu(
-          menu,
-          &ctx.input.textures.ui_textures.text_font_texture,
-          &save_system.available_save_data,
-          self.materials.as_ref(),
-        )
-      });
-      menu_system.active_menus.iter().rev().for_each(|menu| {
-        draw_menu(
-          menu,
-          &save_system.available_save_data,
-          &ctx.input.textures,
-          &self.materials,
-        )
+    let reticle_pos = get_reticle_pos(combat_system.reticle_angle);
+
+    draw_circle(
+      player_screen_pos.x() + reticle_pos.x(),
+      player_screen_pos.y() + reticle_pos.y(),
+      RETICLE_SIZE,
+      COLOR_4,
+    );
+
+    /* DEBUG - Draw slots */
+    if SHOW_SLOTS {
+      let slot_positions = get_slot_positions(combat_system.reticle_angle);
+      slot_positions.iter().for_each(|(_, slot)| {
+        let slot_screen_offset = slot.offset.convert();
+
+        let slot_screen_pos =
+          ScreenVector::from_vec(player_screen_pos.into_vec() + slot_screen_offset.into_vec());
+
+        let slot_next_screen_pos = ScreenVector::from_vec(
+          slot_screen_pos.into_vec() + distance_projection_screen(slot.angle, 9.0).into_vec(),
+        );
+
+        draw_circle(slot_screen_pos.x(), slot_screen_pos.y(), 2.0, COLOR_3);
+        draw_circle(
+          slot_next_screen_pos.x(),
+          slot_next_screen_pos.y(),
+          2.0,
+          COLOR_4,
+        );
       });
     }
+
+    /* Draw overlays */
+    let draw_bar = |num_cells: i32,
+                    wrap_after: Option<i32>,
+                    min: f32,
+                    max: f32,
+                    level: f32,
+                    translation: Vec2| {
+      let normalized_level = ((level - min) / max) * num_cells as f32;
+
+      (0..num_cells).for_each(|index| {
+        let x_offset = match wrap_after {
+          Some(wrap_after) => Tiles(index % wrap_after),
+          None => Tiles(index),
+        };
+        let y_offset = match wrap_after {
+          Some(wrap_after) => Tiles(index / wrap_after),
+          None => Tiles(0),
+        };
+
+        let translation = translation
+          + Vec2 {
+            x: x_offset.to_screen() - Tiles(0).to_screen(),
+            y: y_offset.to_screen() - Tiles(0).to_screen(),
+          };
+        let translation = ScreenVector::from_vec(vector![translation.x, translation.y]);
+
+        let status = if normalized_level > index as f32 {
+          if (normalized_level - 0.5) > index as f32 {
+            BarCellStatus::Full
+          } else {
+            BarCellStatus::Half
+          }
+        } else {
+          BarCellStatus::Empty
+        };
+
+        draw_sprites(
+          &sprite::bar_cell(status, game_textures),
+          translation,
+          0.0,
+          false,
+        );
+      });
+    };
+
+    let game_menus = GAME_MENUS;
+
+    draw_dynamic_menu(
+      &game_menus.game_overlay,
+      vector![0, 0],
+      game_textures,
+      &self.materials,
+    );
+
+    let player = physics_system
+      .entities
+      .get(&EntityHandle::RigidBody(physics_system.player_handle))
+      .unwrap();
+
+    let player_damageable = player.components.get::<Damageable>().unwrap();
+
+    draw_bar(
+      player_damageable.max_health as i32 / 15,
+      Some(6),
+      0.0,
+      player_damageable.max_health,
+      player_damageable.health,
+      game_menus
+        .game_overlay
+        .get_anchor("PLAYER_HEALTH")
+        .to_screen_vec2(),
+    );
+
+    draw_bar(
+      ability_system
+        .mana_tanks
+        .capacity
+        .max_rechargeable_mana_level() as i32,
+      None,
+      0.0,
+      ability_system
+        .mana_tanks
+        .capacity
+        .max_rechargeable_mana_level(),
+      ability_system.mana_tanks.rechargeable_mana_level,
+      game_menus
+        .game_overlay
+        .get_anchor("PLAYER_MANA")
+        .to_screen_vec2(),
+    );
+
+    draw_bar(
+      ability_system
+        .mana_tanks
+        .capacity
+        .max_non_rechargeable_mana_level() as i32,
+      None,
+      0.0,
+      ability_system
+        .mana_tanks
+        .capacity
+        .max_non_rechargeable_mana_level(),
+      ability_system.mana_tanks.non_rechargeable_mana_level,
+      game_menus
+        .game_overlay
+        .get_anchor("PLAYER_BACKUP_MANA")
+        .to_screen_vec2(),
+    );
+
+    menu_system.active_main_menus.iter().rev().for_each(|menu| {
+      draw_main_menu(
+        menu,
+        &ctx.input.textures.ui_textures.text_font_texture,
+        &save_system.available_save_data,
+        self.materials.as_ref(),
+      )
+    });
+    menu_system.active_menus.iter().rev().for_each(|menu| {
+      draw_menu(
+        menu,
+        &save_system.available_save_data,
+        &ctx.input.textures,
+        &self.materials,
+      )
+    });
 
     draw_render_target(&self.materials, &self.camera);
-    self
-  }
-
-  fn fixed_update(
-    self: Rc<Self>,
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    self
+    Rc::new(Self {
+      effects,
+      materials: Rc::clone(&self.materials),
+      camera: Rc::clone(&self.camera),
+      _phantom_data: PhantomData,
+    })
   }
 }
 

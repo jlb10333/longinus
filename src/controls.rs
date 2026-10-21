@@ -1,9 +1,6 @@
 use std::{cell::RefCell, f32::consts::PI, marker::PhantomData, rc::Rc};
 
-use frunk::{
-  HCons, HList, HNil,
-  hlist::{self, Sculptor},
-};
+use frunk::{HNil, hlist::Sculptor};
 use gilrs::{Axis, Button, Gilrs};
 use macroquad::{
   input::{KeyCode, MouseButton, is_key_down, is_mouse_button_down, mouse_position},
@@ -12,7 +9,7 @@ use macroquad::{
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
-  GameInput, Start,
+  GameInput, Start, SystemDeps,
   camera::CameraSystem,
   graphics::{VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
   physics::PhysicsSystem,
@@ -51,13 +48,10 @@ pub struct ControlsSystem<Input> {
 }
 
 impl ControlsSystem<Start> {
-  pub fn handle_input<
-    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<HNil, HNil> + 'static,
-  >(
+  pub fn handle_input(
     gilrs: Rc<RefCell<Gilrs>>,
     control_mode: ControlMode,
     last_frame: Option<Rc<ControlsSystem<Start>>>,
-    ctx: Rc<ProcessContext<Start, ProcessSystems>>,
   ) -> Rc<Self> {
     let kbd_w_pressed = is_key_down(KeyCode::W);
     let kbd_a_pressed = is_key_down(KeyCode::A);
@@ -179,11 +173,15 @@ impl ControlsSystem<Start> {
   }
 }
 
-type GameControlsSystemDeps = HList!(Rc<PhysicsSystem>, Rc<CameraSystem>);
+type GameControlsSystemDeps = SystemDeps!(PhysicsSystem, CameraSystem);
 
 impl ControlsSystem<GameInput> {
   pub fn handle_input<
-    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<GameControlsSystemDeps, HNil> + 'static,
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<GameControlsSystemDeps, Indices>
+      + 'static,
+    Indices,
   >(
     gilrs: Rc<RefCell<Gilrs>>,
     control_mode: ControlMode,
@@ -384,47 +382,47 @@ fn handle_button_input(gilrs: &Gilrs, button: Button) -> bool {
 impl System for ControlsSystem<Start> {
   type Input = Start;
   type Deps = HNil;
+  type LDeps = HNil;
 
-  fn start<ProcessSystems: Clone + frunk::prelude::HList + Sculptor<Self::Deps, HNil> + 'static>(
-    ctx: Rc<ProcessContext<Self::Input, ProcessSystems>>,
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self>
   where
     Self: Sized,
   {
     let gilrs = Gilrs::new().unwrap();
 
-    Self::handle_input(
-      Rc::new(RefCell::new(gilrs)),
-      ControlMode::Keyboard,
-      None,
-      ctx,
-    )
+    Self::handle_input(Rc::new(RefCell::new(gilrs)), ControlMode::Keyboard, None)
   }
 
   fn update<
-    ProcessSystems: Clone + frunk::prelude::HList + Sculptor<Self::Deps, HNil> + 'static,
-  >(
-    self: Rc<Self>,
-    ctx: Rc<ProcessContext<Self::Input, ProcessSystems>>,
-  ) -> Rc<Self> {
-    Self::handle_input(Rc::clone(&self.gilrs), self.control_mode, Some(self), ctx)
-  }
-
-  fn fixed_update<
-    ProcessSystems: Clone + frunk::prelude::HList + Sculptor<Self::Deps, HNil> + 'static,
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + Sculptor<Self::Deps, Indices>
+      + Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
   >(
     self: Rc<Self>,
     _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self> {
-    self
+    Self::handle_input(Rc::clone(&self.gilrs), self.control_mode, Some(self))
   }
 }
 
 impl System for ControlsSystem<GameInput> {
   type Input = GameInput;
   type Deps = GameControlsSystemDeps;
+  type LDeps = HNil;
 
-  fn start<ProcessSystems: Clone + frunk::prelude::HList + Sculptor<Self::Deps, HNil> + 'static>(
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
     ctx: Rc<ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self>
   where
@@ -441,20 +439,17 @@ impl System for ControlsSystem<GameInput> {
   }
 
   fn update<
-    ProcessSystems: Clone + frunk::prelude::HList + Sculptor<Self::Deps, HNil> + 'static,
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + Sculptor<Self::Deps, Indices>
+      + Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
   >(
     self: Rc<Self>,
     ctx: Rc<ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self> {
     Self::handle_input(Rc::clone(&self.gilrs), self.control_mode, Some(self), ctx)
-  }
-
-  fn fixed_update<
-    ProcessSystems: Clone + frunk::prelude::HList + Sculptor<Self::Deps, HNil> + 'static,
-  >(
-    self: Rc<Self>,
-    _: Rc<ProcessContext<Self::Input, ProcessSystems>>,
-  ) -> Rc<Self> {
-    self
   }
 }

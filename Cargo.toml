@@ -7,7 +7,6 @@ edition = "2024"
 archery = "1.2.2"
 chrono = { version = "0.4.42", features = ["serde"] }
 derive_more = { version = "2.0.1", features = ["add", "mul"	] }
-device_query = "4.0.1"
 frunk = "0.5.0"
 gilrs = "0.11.0"
 itertools = "0.14.0"

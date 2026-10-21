@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-  GameInput,
+  GameInput, SystemDeps,
   ability::{AbilitySystem, ManaTanksActiveInfo},
   balance::BALANCING,
   controls::{ControlsSystem, angle_from_vec},
@@ -15,6 +15,7 @@ use crate::{
   physics::PhysicsSystem,
   sprite,
   system::System,
+  system_deps,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
 use rapier2d::{
@@ -749,8 +750,20 @@ pub struct CombatSystem {
 
 impl System for CombatSystem {
   type Input = GameInput;
+  type LDeps = SystemDeps!(
+    MenuSystem<Self::Input>,
+    PhysicsSystem,
+    MapSystem,
+    ControlsSystem<Self::Input>,
+    AbilitySystem
+  );
 
-  fn start(ctx: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
   where
     Self: Sized,
   {
@@ -771,11 +784,19 @@ impl System for CombatSystem {
     })
   }
 
-  fn update(
+  fn update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let system_deps!(menu_system, _a) = ctx.get_deps::<Self::LDeps, LIndices>().into_tuple2();
 
     if let Some(inventory_update) = &menu_system.inventory_update {
       return Rc::new(Self {
@@ -793,13 +814,27 @@ impl System for CombatSystem {
     self
   }
 
-  fn fixed_update(
+  fn fixed_update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let system_deps!(
+      _a,
+      physics_system,
+      map_system,
+      controls_system,
+      ability_system
+    ) = ctx.get_deps::<Self::LDeps, LIndices>().into_tuple2();
+
     /* Add new unequipped modules from item pickups */
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-    let map_system = ctx.get::<MapSystem>().unwrap();
 
     let unequipped_modules = self
       .unequipped_modules
@@ -853,15 +888,11 @@ impl System for CombatSystem {
       .map(Weapon::reduce_cooldown)
       .collect();
 
-    let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
-
     let reticle_angle = if controls_system.right_stick.into_vec() == vector![0.0, 0.0] {
       self.reticle_angle
     } else {
       angle_from_vec(controls_system.right_stick)
     };
-
-    let ability_system = ctx.get::<AbilitySystem>().unwrap();
 
     let weapons_firing = if controls_system.firing {
       reduced_cooldown_weapons

@@ -84,6 +84,11 @@ pub struct MenuSystem<Input> {
   phantom: PhantomData<Input>,
 }
 
+impl System for MenuSystem<Start> {
+  type Input = Start;
+  type Deps = ;
+}
+
 impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
   type Input = Input;
   fn start(
@@ -198,13 +203,6 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
     }
 
     todo!("Expected to be in either a SaveData or ProcessStart GameState");
-  }
-
-  fn fixed_update(
-    self: Rc<Self>,
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    self
   }
 }
 

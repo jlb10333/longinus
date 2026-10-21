@@ -1,6 +1,9 @@
+#![feature(associated_type_defaults)]
+
 use std::rc::Rc;
 
 use balance::BALANCING;
+use frunk::HList;
 use macroquad::prelude::*;
 use system::{ProcessContext, ProcessContextOptions, new_process};
 
@@ -96,18 +99,19 @@ async fn main() {
           None,
         )
         .add_system(ControlsSystem::start)
-        // .add_system(SaveSystem::start)
-        // .add_system(MenuSystem::start)
-        // .add_system(GraphicsSystem::start)
-        // .start(None)
-        .run(|ctx| {
-          ctx
-            .get::<MenuSystem<_>>()
-            .unwrap()
-            .save_to_load
-            .as_ref()
-            .map(load_save)
-        })
+        .add_system(SaveSystem::<Start>::start)
+        .add_system(MenuSystem::start)
+        .add_system(GraphicsSystem::<Start>::start)
+        .run(
+          |ctx| {
+            ctx
+              .get::<MenuSystem<_>, _>()
+              .save_to_load
+              .as_ref()
+              .map(load_save)
+          },
+          None,
+        )
         .await;
         State::Game(save_data.expect("Failed to load save"))
       }
@@ -116,18 +120,18 @@ async fn main() {
           save_data,
           textures: Rc::clone(&textures),
         };
-
+        
         let quit_decision = new_process(&game_input, None)
-          // .add_system(SaveSystem::start)
-          // .add_system(CombatSystem::start)
+          .add_system(SaveSystem::<GameInput>::start)
+          .add_system(CombatSystem::start)
           // .add_system(MapSystem::start)
           // .add_system(CameraSystem::start)
           // .add_system(AbilitySystem::start)
           // .add_system(PhysicsSystem::start)
-          .add_system(ControlsSystem::<Start>::start);
-        // .add_system(MenuSystem::start)
+          .add_system(ControlsSystem::<GameInput>::start)
+        .add_system(MenuSystem::start)
         // .add_system(EnemySystem::start)
-        // .add_system(GraphicsSystem::start)
+         .add_system(GraphicsSystem::start)
         // .start(Some(ProcessContextOptions {
         //   should_freeze_fixed: Some(|ctx| {
         //     !ctx.get::<MenuSystem<_>>().unwrap().active_menus.is_empty()

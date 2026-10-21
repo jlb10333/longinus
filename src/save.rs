@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Result;
 
 use crate::{
-  GameInput,
+  GameInput, Start, SystemDeps,
   ability::{AbilitySystem, ManaTanksCapacityInfo},
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, UnequippedModules, WeaponModuleKind,
@@ -88,15 +88,8 @@ pub struct SaveSystem<Input> {
   phantom: PhantomData<Input>,
 }
 
-impl<Input: Clone + 'static> System for SaveSystem<Input> {
-  type Input = Input;
-
-  fn start(
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>>
-  where
-    Self: Sized,
-  {
+impl<Input> SaveSystem<Input> {
+  fn start() -> Rc<Self> {
     let mut available_save_data = fs::read_dir(save_dir_path())
       .unwrap()
       .flatten()
@@ -109,55 +102,92 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
       phantom: PhantomData,
     })
   }
+}
 
-  fn update(
+impl System for SaveSystem<Start> {
+  type Input = Start;
+
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    _: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
+  where
+    Self: Sized,
+  {
+    Self::start()
+  }
+}
+
+impl System for SaveSystem<GameInput> {
+  type Input = GameInput;
+  type LDeps = SystemDeps!(
+    MenuSystem<GameInput>,
+    MapSystem,
+    CombatSystem,
+    PhysicsSystem,
+    AbilitySystem
+  );
+
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    _: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
+  where
+    Self: Sized,
+  {
+    Self::start()
+  }
+
+  fn update<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
     self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    let new_save_data = ctx.downcast::<GameInput>().and_then(|ctx| {
-      let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
-      let map_system = ctx.get::<MapSystem>().unwrap();
-      let combat_system = ctx.get::<CombatSystem>().unwrap();
-      let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-      let ability_system = ctx.get::<AbilitySystem>().unwrap();
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let (menu_system, (map_system, (combat_system, (physics_system, ability_system)))) =
+      ctx.get_deps().into_tuple2();
 
-      /* MARK: Save current progress */
-      menu_system.save_point_confirmed_id.map(|player_spawn_id| {
-        let player_entity = physics_system
-          .entities
-          .get(&EntityHandle::RigidBody(physics_system.player_handle))
-          .unwrap();
-
-        let player_damageable = player_entity.components.get::<Damageable>().unwrap();
-
-        let sys_time: DateTime<Utc> = time::SystemTime::now().into();
-
-        let save_data = SaveData {
-          player_spawn_id,
-          map_name: map_system.current_map_name.clone(),
-          unequipped_modules: combat_system.unequipped_modules.clone(),
-          equipped_modules: combat_system.equipped_modules.data.0,
-          exhausted_entities: combat_system.exhausted_entities.clone(),
-          player_health: player_damageable.health,
-          player_max_health: player_damageable.max_health,
-          acquired_boost: ability_system.acquired_boost,
-          acquired_chain: ability_system.acquired_chain,
-          mana_tanks_capacity: ability_system.mana_tanks.capacity,
-          visited_maps: map_system.map_registry.keys().cloned().collect(),
-          frame_count: physics_system.frame_count,
-          saved_at: sys_time,
-        };
-
-        let new_save_path = save_data.canonical_name();
-
-        fs::write(
-          save_data_path(&new_save_path),
-          serde_json::to_string_pretty(&save_data).unwrap(),
-        )
+    /* MARK: Save current progress */
+    let new_save_data = menu_system.save_point_confirmed_id.map(|player_spawn_id| {
+      let player_entity = physics_system
+        .entities
+        .get(&EntityHandle::RigidBody(physics_system.player_handle))
         .unwrap();
 
-        save_data
-      })
+      let player_damageable = player_entity.components.get::<Damageable>().unwrap();
+
+      let sys_time: DateTime<Utc> = time::SystemTime::now().into();
+
+      let save_data = SaveData {
+        player_spawn_id,
+        map_name: map_system.current_map_name.clone(),
+        unequipped_modules: combat_system.unequipped_modules.clone(),
+        equipped_modules: combat_system.equipped_modules.data.0,
+        exhausted_entities: combat_system.exhausted_entities.clone(),
+        player_health: player_damageable.health,
+        player_max_health: player_damageable.max_health,
+        acquired_boost: ability_system.acquired_boost,
+        acquired_chain: ability_system.acquired_chain,
+        mana_tanks_capacity: ability_system.mana_tanks.capacity,
+        visited_maps: map_system.map_registry.keys().cloned().collect(),
+        frame_count: physics_system.frame_count,
+        saved_at: sys_time,
+      };
+
+      let new_save_path = save_data.canonical_name();
+
+      fs::write(
+        save_data_path(&new_save_path),
+        serde_json::to_string_pretty(&save_data).unwrap(),
+      )
+      .unwrap();
+
+      save_data
     });
 
     if let Some(new_save_data) = new_save_data {
@@ -172,12 +202,5 @@ impl<Input: Clone + 'static> System for SaveSystem<Input> {
     } else {
       self
     }
-  }
-
-  fn fixed_update(
-    self: Rc<Self>,
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    self
   }
 }
