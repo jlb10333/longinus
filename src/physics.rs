@@ -8,7 +8,7 @@ use rpds::{HashTrieMap, HashTrieSet, List, ht_map, list};
 use std::{cell::RefCell, collections::HashMap, f32::consts::PI, rc::Rc};
 
 use crate::{
-  GameInput,
+  GameInput, SystemDeps,
   ability::AbilitySystem,
   balance::BALANCING,
   camera::CameraSystem,
@@ -39,6 +39,7 @@ use crate::{
   },
   sprite,
   system::System,
+  system_deps,
   units::{PhysicsVector, ScreenVector, UnitConvert2, vec_zero},
 };
 
@@ -931,14 +932,27 @@ fn load_new_map(
 
 impl System for PhysicsSystem {
   type Input = GameInput;
-  fn start(ctx: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
+  type Deps = SystemDeps!(MapSystem, CombatSystem);
+  type LDeps = SystemDeps!(
+    AbilitySystem,
+    EnemySystem,
+    CameraSystem,
+    ControlsSystem<Self::Input>
+  );
+
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
   where
     Self: Sized,
   {
-    let map_system = ctx.get::<MapSystem>().unwrap();
-    let map = &map_system.map;
+    let system_deps!(map_system, combat_system) =
+      ctx.get_deps::<Self::Deps, Indices>().into_tuple2();
 
-    let combat_system = ctx.get::<CombatSystem>().unwrap();
+    let map = &map_system.map;
 
     let save_data = &ctx.input.save_data;
 
@@ -954,23 +968,22 @@ impl System for PhysicsSystem {
     )
   }
 
-  fn update(
+  fn fixed_update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    self
-  }
-
-  fn fixed_update(
-    self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    let map_system = ctx.get::<MapSystem>().unwrap();
-
-    let combat_system = ctx.get::<CombatSystem>().unwrap();
-    let ability_system = ctx.get::<AbilitySystem>().unwrap();
-    let enemy_system = ctx.get::<EnemySystem>().unwrap();
-    let camera_system = ctx.get::<CameraSystem>().unwrap();
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let system_deps!(map_system, combat_system) =
+      ctx.get_deps::<Self::Deps, Indices>().into_tuple2();
+    let system_deps!(ability_system, enemy_system, camera_system, controls_system) =
+      ctx.get_deps::<Self::LDeps, LIndices>().into_tuple2();
 
     let rng = rand::RandGenerator::new();
     rng.srand(self.frame_count as u64);
@@ -1058,7 +1071,6 @@ impl System for PhysicsSystem {
       .collect::<HashTrieMap<_, _>>();
 
     /* MARK: Move the player */
-    let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
 
     let next_player_impulse =
       player_movement_impulse(controls_system, &rigid_body_set[self.player_handle]);

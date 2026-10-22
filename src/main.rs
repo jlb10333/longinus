@@ -100,15 +100,15 @@ async fn main() {
         )
         .add_system(ControlsSystem::start)
         .add_system(SaveSystem::<Start>::start)
-        .add_system(MenuSystem::start)
+        .add_system(MenuSystem::<Start>::start)
         .add_system(GraphicsSystem::<Start>::start)
-        .run(
+          .run(            
           |ctx| {
             ctx
               .get::<MenuSystem<_>, _>()
               .save_to_load
               .as_ref()
-              .map(load_save)
+              .map(load_save)          
           },
           None,
         )
@@ -124,10 +124,10 @@ async fn main() {
         let quit_decision = new_process(&game_input, None)
           .add_system(SaveSystem::<GameInput>::start)
           .add_system(CombatSystem::start)
-          // .add_system(MapSystem::start)
-          // .add_system(CameraSystem::start)
-          // .add_system(AbilitySystem::start)
-          // .add_system(PhysicsSystem::start)
+          .add_system(MapSystem::start)
+          .add_system(CameraSystem::start)
+          .add_system(AbilitySystem::start)
+         .add_system(PhysicsSystem::start)          
           .add_system(ControlsSystem::<GameInput>::start)
         .add_system(MenuSystem::start)
         // .add_system(EnemySystem::start)
@@ -155,3 +155,4 @@ async fn main() {
     };
   }
 }
+

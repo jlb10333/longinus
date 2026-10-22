@@ -9,7 +9,7 @@ use serde::Deserialize;
 use serde_literals::lit_str;
 
 use crate::{
-  GameInput,
+  GameInput, SystemDeps,
   balance::BALANCING,
   combat::{WeaponModuleKind, distance_projection_physics},
   ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Id, OnDestroyEffect, SimpleSprite},
@@ -2715,9 +2715,14 @@ fn map_read_path(map_name: &String) -> String {
 
 impl System for MapSystem {
   type Input = GameInput;
-  fn start(
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>>
+  type LDeps = SystemDeps!(PhysicsSystem);
+
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
   where
     Self: Sized,
   {
@@ -2763,11 +2768,19 @@ impl System for MapSystem {
     })
   }
 
-  fn update(
+  fn update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let (physics_system, _) = ctx.get_deps::<Self::LDeps, LIndices>().pop();
 
     if let Some((map_name, id)) = physics_system.load_new_map.as_ref() {
       let map_data = fs::read_to_string(map_read_path(map_name)).unwrap();
@@ -2808,12 +2821,5 @@ impl System for MapSystem {
         world: Rc::clone(&self.world),
       })
     }
-  }
-
-  fn fixed_update(
-    self: Rc<Self>,
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    self
   }
 }

@@ -6,7 +6,11 @@ use std::{
   time::{Duration, Instant},
 };
 
-use frunk::{HCons, HList, hlist, hlist::*};
+use frunk::{
+  HCons, HList,
+  hlist::{self, *},
+  indices::Here,
+};
 use macroquad::window::next_frame;
 
 pub trait System: Any {
@@ -59,13 +63,17 @@ impl Default for ProcessContextOptions {
   }
 }
 
-trait RunSystemHList<Input: Clone + 'static, Systems: HList>: Sized {
+trait RunSystemHList<Input: Clone + 'static, Indices, LIndices, Systems: HList + 'static>:
+  Sized
+{
   fn update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self;
 
   fn fixed_update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self;
 }
 
-impl<Input: Clone + 'static, Systems: HList> RunSystemHList<Input, Systems> for HNil {
+impl<Input: Clone + 'static, Indices, LIndices, Systems: HList + 'static>
+  RunSystemHList<Input, Indices, LIndices, Systems> for HNil
+{
   fn update(self, _: Rc<ProcessContext<Input, Systems>>) -> Self {
     self
   }
@@ -79,10 +87,15 @@ impl<
   Input: Clone + 'static,
   Deps: HList,
   LDeps: HList,
-  Systems: Clone + HList + Sculptor<Deps, HNil> + Sculptor<LDeps, HNil> + 'static,
+  FirstIndices,
+  RestIndices,
+  FirstLIndices,
+  RestLIndices,
+  Systems: HList + Sculptor<Deps, FirstIndices> + Sculptor<LDeps, FirstLIndices> + Clone + 'static,
   H: System<Input = Input, Deps = Deps, LDeps = LDeps>,
-  T: HList + RunSystemHList<Input, Systems>,
-> RunSystemHList<Input, Systems> for HCons<Rc<H>, T>
+  T: HList + RunSystemHList<Input, RestIndices, RestLIndices, Systems>,
+> RunSystemHList<Input, (FirstIndices, RestIndices), (FirstLIndices, RestLIndices), Systems>
+  for HCons<Rc<H>, T>
 {
   fn update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self {
     let (h, t) = self.pop();
@@ -126,26 +139,26 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
     (self as &dyn Any).downcast_ref::<ProcessContext<Target, Systems>>()
   }
 
-  pub fn get_deps<'a, Deps: HList, Index>(self: Rc<Self>) -> Deps
+  pub fn get_deps<'a, Deps: HList, Index>(self: &Rc<Self>) -> Deps
   where
     Systems: Sculptor<Deps, Index> + Clone,
   {
     self.systems.clone().sculpt().0
   }
 
-  pub fn get<'a, SingleDep, Index>(self: Rc<Self>) -> Rc<SingleDep>
+  pub fn get<'a, SingleDep, Index>(self: &Rc<Self>) -> Rc<SingleDep>
   where
     Systems: Plucker<Rc<SingleDep>, Index> + Clone,
   {
     self.systems.clone().pluck().0
   }
 
-  pub fn add_system<Deps: HList, NewSystem: System<Input = Input, Deps = Deps>>(
+  pub fn add_system<NewSystem: System<Input = Input>, Indices>(
     self: Rc<Self>,
     new_system_initializer: fn(Rc<Self>) -> Rc<NewSystem>,
   ) -> Rc<ProcessContext<Input, HCons<Rc<NewSystem>, Systems>>>
   where
-    Systems: Sculptor<Deps, HNil> + Clone,
+    Systems: Sculptor<NewSystem::Deps, Indices> + Clone,
   {
     let new_system = new_system_initializer(self.clone());
 
@@ -156,11 +169,7 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
     }
     .into()
   }
-}
 
-impl<Input: Clone + 'static, Systems: HList + RunSystemHList<Input, Systems> + Clone + 'static>
-  ProcessContext<Input, Systems>
-{
   fn with_systems(&self, new_systems: Systems) -> Self {
     Self {
       systems: new_systems,
@@ -169,7 +178,7 @@ impl<Input: Clone + 'static, Systems: HList + RunSystemHList<Input, Systems> + C
     }
   }
 
-  pub async fn run<'a, Output, Terminator, ShouldFreeze>(
+  pub async fn run<'a, Output, Terminator, ShouldFreeze, Indices, LIndices>(
     self: Rc<Self>,
     terminator: Terminator,
     should_freeze_fixed: Option<ShouldFreeze>,
@@ -177,6 +186,7 @@ impl<Input: Clone + 'static, Systems: HList + RunSystemHList<Input, Systems> + C
   where
     Terminator: Fn(Rc<ProcessContext<Input, Systems>>) -> Option<Output>,
     ShouldFreeze: Fn(Rc<ProcessContext<Input, Systems>>) -> bool,
+    Systems: RunSystemHList<Input, Indices, LIndices, Systems> + Clone,
   {
     let mut game_state = self.clone();
     let mut acc_time = 0.0;
@@ -238,6 +248,45 @@ pub fn new_process<Input: Clone + 'static>(
     options: options.unwrap_or_default(),
   }
   .into()
+}
+
+trait HConsMarker {}
+impl<H, T> HConsMarker for HCons<H, T> {}
+
+pub trait GetDeps<Input: Clone + 'static>: HList {
+  type Output;
+
+  fn get_deps<Indices, Systems: HList + Sculptor<Self, Indices> + Clone + 'static>(
+    ctx: Rc<ProcessContext<Input, Systems>>,
+  ) -> Self::Output
+  where
+    Self: Sized;
+}
+
+impl<Input: Clone + 'static, H> GetDeps<Input> for HCons<H, HNil> {
+  type Output = H;
+
+  fn get_deps<Indices, Systems: HList + Sculptor<Self, Indices> + Clone + 'static>(
+    ctx: Rc<ProcessContext<Input, Systems>>,
+  ) -> Self::Output
+  where
+    Self: Sized,
+  {
+    ctx.get_deps::<Self, Indices>().pop().0
+  }
+}
+
+impl<Input: Clone + 'static, H, T: GetDeps<Input> + HConsMarker> GetDeps<Input> for HCons<H, T> {
+  type Output = (H, <T as GetDeps<Input>>::Output);
+
+  fn get_deps<Indices, Systems: HList + Sculptor<Self, Indices> + Clone + 'static>(
+    ctx: Rc<ProcessContext<Input, Systems>>,
+  ) -> Self::Output
+  where
+    Self: Sized,
+  {
+    (ctx.get_deps::<Self, Indices>().pop().0, T::get_deps(ctx))
+  }
 }
 
 #[macro_export]

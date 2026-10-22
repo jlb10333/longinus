@@ -10,7 +10,8 @@ use crate::ecs::{Destroyed, EntityHandle, Terminal};
 use crate::load_map::MapAbilityType;
 use crate::physics::PhysicsSystem;
 use crate::save::{SaveData, SaveSystem};
-use crate::{GameInput, Start};
+use crate::system::GetDeps;
+use crate::{GameInput, Start, SystemDeps, system_deps};
 use crate::{
   combat::{
     CombatSystem, EQUIP_SLOTS_HEIGHT, EQUIP_SLOTS_WIDTH, EquippedModules, UnequippedModules,
@@ -86,7 +87,27 @@ pub struct MenuSystem<Input> {
 
 impl System for MenuSystem<Start> {
   type Input = Start;
-  type Deps = ;
+  type Deps = SystemDeps!(SaveSystem<Self::Input>);
+
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
+  where
+    Self: Sized,
+  {
+    let system_deps!(save_system) = Self::Deps::get_deps(ctx);
+
+    return Rc::new(Self {
+      active_main_menus: vec![MainMenu {
+        cursor_position: vector![0, 0],
+        kind: MainMenuKind::Main(!save_system.available_save_data.is_empty()),
+      }],
+      ..Default::default()
+    });
+  }
 }
 
 impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
@@ -97,17 +118,7 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
   where
     Self: Sized,
   {
-    if ctx.downcast::<Start>().is_some() {
-      let save_system = ctx.get::<SaveSystem<_>>().unwrap();
-
-      return Rc::new(Self {
-        active_main_menus: vec![MainMenu {
-          cursor_position: vector![0, 0],
-          kind: MainMenuKind::Main(!save_system.available_save_data.is_empty()),
-        }],
-        ..Default::default()
-      });
-    }
+    if ctx.downcast::<Start>().is_some() {}
 
     Rc::new(Self {
       active_menus: vec![],

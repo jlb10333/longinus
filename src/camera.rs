@@ -4,7 +4,7 @@ use macroquad::math::Rect;
 use rapier2d::{na::Vector2, prelude::*};
 
 use crate::{
-  GameInput,
+  GameInput, SystemDeps,
   balance::BALANCING,
   graphics::{
     VIRTUAL_GAME_VIEWPORT_HEIGHT, VIRTUAL_GAME_VIEWPORT_WIDTH, VIRTUAL_PIXEL_FACTOR,
@@ -66,11 +66,19 @@ pub struct CameraSystem {
 
 impl System for CameraSystem {
   type Input = GameInput;
-  fn start(ctx: &crate::system::ProcessContext<Self::Input>) -> Rc<dyn System<Input = Self::Input>>
+  type Deps = SystemDeps!(MapSystem);
+  type LDeps = SystemDeps!(PhysicsSystem);
+
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
   where
     Self: Sized,
   {
-    let map_system = ctx.get::<MapSystem>().unwrap();
+    let (map_system, _) = ctx.get_deps::<Self::Deps, Indices>().pop();
     let map = &map_system.map;
 
     Rc::new(Self {
@@ -95,11 +103,20 @@ impl System for CameraSystem {
     })
   }
 
-  fn update(
+  fn update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    let map_system = ctx.get::<MapSystem>().unwrap();
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let (map_system, _) = ctx.get_deps::<Self::Deps, Indices>().pop();
+    let (physics_system, _) = ctx.get_deps::<Self::LDeps, LIndices>().pop();
 
     if map_system.new_map {
       let map = &map_system.map;
@@ -125,8 +142,6 @@ impl System for CameraSystem {
         map_bottom_right: map.bottom_right,
       });
     }
-
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
 
     let player_translation = PhysicsVector::from_vec(
       *physics_system.rigid_body_set[physics_system.player_handle].translation(),
@@ -170,12 +185,5 @@ impl System for CameraSystem {
       map_top_left: self.map_top_left,
       map_bottom_right: self.map_bottom_right,
     })
-  }
-
-  fn fixed_update(
-    self: Rc<Self>,
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    self
   }
 }

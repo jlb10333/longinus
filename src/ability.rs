@@ -4,14 +4,15 @@ use rapier2d::{na::Vector2, prelude::RigidBodyHandle};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  GameInput,
+  GameInput, SystemDeps,
   balance::BALANCING,
   combat::CombatSystem,
   controls::ControlsSystem,
   load_map::MapAbilityType,
   menu::MenuSystem,
   physics::PhysicsSystem,
-  system::System,
+  system::{GetDeps, System},
+  system_deps,
   units::{PhysicsVector, UnitConvert, UnitConvert2},
 };
 
@@ -133,10 +134,19 @@ pub struct AbilitySystem {
 
 impl System for AbilitySystem {
   type Input = GameInput;
+  type LDeps = SystemDeps!(
+    PhysicsSystem,
+    ControlsSystem<Self::Input>,
+    CombatSystem,
+    MenuSystem<Self::Input>
+  );
 
-  fn start(
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>>
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
   where
     Self: Sized,
   {
@@ -161,21 +171,20 @@ impl System for AbilitySystem {
     })
   }
 
-  fn update(
+  fn fixed_update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
-    self
-  }
-
-  fn fixed_update(
-    self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-    let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
-    let combat_system = ctx.get::<CombatSystem>().unwrap();
-    let menu_system = ctx.get::<MenuSystem<_>>().unwrap();
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let system_deps!(physics_system, controls_system, combat_system, menu_system) =
+      Self::LDeps::get_deps(ctx);
 
     let (boost_force, current_boost_cooldown, mana_tanks) = if controls_system.boost
       && !controls_system
