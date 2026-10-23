@@ -15,7 +15,8 @@ use crate::{
   load_map::MapSystem,
   menu::{MenuSystem, SaveToLoad},
   physics::PhysicsSystem,
-  system::System,
+  system::{GetDeps, System},
+  system_deps,
 };
 
 #[derive(Serialize, Deserialize, Clone, Default)]
@@ -143,14 +144,24 @@ impl System for SaveSystem<GameInput> {
   }
 
   fn update<
-    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
     Indices,
+    LIndices,
   >(
     self: Rc<Self>,
     ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self> {
-    let (menu_system, (map_system, (combat_system, (physics_system, ability_system)))) =
-      ctx.get_deps().into_tuple2();
+    let system_deps!(
+      menu_system,
+      map_system,
+      combat_system,
+      physics_system,
+      ability_system
+    ) = Self::LDeps::get_deps(&ctx);
 
     /* MARK: Save current progress */
     let new_save_data = menu_system.save_point_confirmed_id.map(|player_spawn_id| {

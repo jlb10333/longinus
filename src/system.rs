@@ -71,8 +71,8 @@ trait RunSystemHList<Input: Clone + 'static, Indices, LIndices, Systems: HList +
   fn fixed_update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self;
 }
 
-impl<Input: Clone + 'static, Indices, LIndices, Systems: HList + 'static>
-  RunSystemHList<Input, Indices, LIndices, Systems> for HNil
+impl<Input: Clone + 'static, Systems: HList + 'static> RunSystemHList<Input, HNil, HNil, Systems>
+  for HNil
 {
   fn update(self, _: Rc<ProcessContext<Input, Systems>>) -> Self {
     self
@@ -181,7 +181,7 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
   pub async fn run<'a, Output, Terminator, ShouldFreeze, Indices, LIndices>(
     self: Rc<Self>,
     terminator: Terminator,
-    should_freeze_fixed: Option<ShouldFreeze>,
+    should_freeze_fixed: ShouldFreeze,
   ) -> Output
   where
     Terminator: Fn(Rc<ProcessContext<Input, Systems>>) -> Option<Output>,
@@ -205,10 +205,7 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
 
       next_frame().await;
 
-      let skipping_fixed = should_freeze_fixed
-        .as_ref()
-        .map(|should_freeze_fixed| should_freeze_fixed(game_state.clone()))
-        .unwrap_or(false);
+      let skipping_fixed = should_freeze_fixed(game_state.clone());
 
       if !skipping_fixed {
         let fixed_update_count =
@@ -257,7 +254,7 @@ pub trait GetDeps<Input: Clone + 'static>: HList {
   type Output;
 
   fn get_deps<Indices, Systems: HList + Sculptor<Self, Indices> + Clone + 'static>(
-    ctx: Rc<ProcessContext<Input, Systems>>,
+    ctx: &Rc<ProcessContext<Input, Systems>>,
   ) -> Self::Output
   where
     Self: Sized;
@@ -267,7 +264,7 @@ impl<Input: Clone + 'static, H> GetDeps<Input> for HCons<H, HNil> {
   type Output = H;
 
   fn get_deps<Indices, Systems: HList + Sculptor<Self, Indices> + Clone + 'static>(
-    ctx: Rc<ProcessContext<Input, Systems>>,
+    ctx: &Rc<ProcessContext<Input, Systems>>,
   ) -> Self::Output
   where
     Self: Sized,
@@ -276,16 +273,22 @@ impl<Input: Clone + 'static, H> GetDeps<Input> for HCons<H, HNil> {
   }
 }
 
-impl<Input: Clone + 'static, H, T: GetDeps<Input> + HConsMarker> GetDeps<Input> for HCons<H, T> {
-  type Output = (H, <T as GetDeps<Input>>::Output);
+impl<Input: Clone + 'static, H, T: HList + HConsMarker> GetDeps<Input> for HCons<H, T>
+where
+  Self: IntoTuple2,
+{
+  type Output = (
+    <Self as IntoTuple2>::HeadType,
+    <Self as IntoTuple2>::TailOutput,
+  );
 
   fn get_deps<Indices, Systems: HList + Sculptor<Self, Indices> + Clone + 'static>(
-    ctx: Rc<ProcessContext<Input, Systems>>,
+    ctx: &Rc<ProcessContext<Input, Systems>>,
   ) -> Self::Output
   where
     Self: Sized,
   {
-    (ctx.get_deps::<Self, Indices>().pop().0, T::get_deps(ctx))
+    ctx.get_deps().into_tuple2()
   }
 }
 

@@ -12,7 +12,8 @@ use crate::{
   },
   load_map::MapSystem,
   physics::PhysicsSystem,
-  system::System,
+  system::{GetDeps, System},
+  system_deps,
   units::{PhysicsVector, ScreenVector, UnitConvert2, vec_zero},
 };
 
@@ -78,7 +79,7 @@ impl System for CameraSystem {
   where
     Self: Sized,
   {
-    let (map_system, _) = ctx.get_deps::<Self::Deps, Indices>().pop();
+    let system_deps!(map_system) = Self::Deps::get_deps(&ctx);
     let map = &map_system.map;
 
     Rc::new(Self {
@@ -115,8 +116,8 @@ impl System for CameraSystem {
     self: Rc<Self>,
     ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self> {
-    let (map_system, _) = ctx.get_deps::<Self::Deps, Indices>().pop();
-    let (physics_system, _) = ctx.get_deps::<Self::LDeps, LIndices>().pop();
+    let system_deps!(map_system) = Self::Deps::get_deps(&ctx);
+    let system_deps!(physics_system) = Self::LDeps::get_deps(&ctx);
 
     if map_system.new_map {
       let map = &map_system.map;

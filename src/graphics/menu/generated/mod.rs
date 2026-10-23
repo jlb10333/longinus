@@ -1,4 +1,4 @@
-//310096d783601bcd8d399092cc48966df74555f70c3373ffc722cfb75d6dc9e1  -
+//55bea0e5355ca524718ce27e68522edb790513b5b168ad6efef6c35c20d8c14c  -
 use std::sync::LazyLock;
 use super::{dynamic::DynamicMenu, dynamic_load::load_dynamic_menu};
 pub struct GameMenus {

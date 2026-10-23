@@ -14,7 +14,7 @@ use crate::{
   menu::MenuSystem,
   physics::PhysicsSystem,
   sprite,
-  system::System,
+  system::{GetDeps, System},
   system_deps,
   units::{PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -796,7 +796,7 @@ impl System for CombatSystem {
     self: Rc<Self>,
     ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self> {
-    let system_deps!(menu_system, _a) = ctx.get_deps::<Self::LDeps, LIndices>().into_tuple2();
+    let system_deps!(menu_system, _a) = Self::LDeps::get_deps(&ctx);
 
     if let Some(inventory_update) = &menu_system.inventory_update {
       return Rc::new(Self {
@@ -832,7 +832,7 @@ impl System for CombatSystem {
       map_system,
       controls_system,
       ability_system
-    ) = ctx.get_deps::<Self::LDeps, LIndices>().into_tuple2();
+    ) = Self::LDeps::get_deps(&ctx);
 
     /* Add new unequipped modules from item pickups */
 

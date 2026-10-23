@@ -6,7 +6,7 @@ use rapier2d::{na::Vector2, prelude::*};
 use rpds::{List, list};
 
 use crate::{
-  GameInput,
+  GameInput, SystemDeps,
   balance::BALANCING,
   combat::{Beam, Projectile, WeaponOutput, WeaponOutputKind, distance_projection_physics},
   controls::angle_from_vec,
@@ -17,7 +17,8 @@ use crate::{
   },
   physics::{PhysicsSystem, absolute_angle},
   sprite,
-  system::System,
+  system::{GetDeps, System},
+  system_deps,
   units::{PhysicsVector, UnitConvert2, vec_zero},
 };
 
@@ -64,9 +65,14 @@ pub struct EnemySystem {
 
 impl System for EnemySystem {
   type Input = GameInput;
-  fn start(
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>>
+  type LDeps = SystemDeps!(PhysicsSystem);
+
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    _ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
   where
     Self: Sized,
   {
@@ -75,18 +81,19 @@ impl System for EnemySystem {
     })
   }
 
-  fn update(
+  fn fixed_update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    _: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>> {
-    self
-  }
-
-  fn fixed_update(
-    self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    let physics_system = ctx.get::<PhysicsSystem>().unwrap();
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let system_deps!(physics_system) = Self::LDeps::get_deps(&ctx);
 
     let rng = rand::RandGenerator::new();
     rng.srand(physics_system.frame_count as u64);

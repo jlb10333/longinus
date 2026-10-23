@@ -38,7 +38,7 @@ use crate::{
     PLAYER_INTERACTION_GROUPS,
   },
   sprite,
-  system::System,
+  system::{GetDeps, System},
   system_deps,
   units::{PhysicsVector, ScreenVector, UnitConvert2, vec_zero},
 };
@@ -949,8 +949,7 @@ impl System for PhysicsSystem {
   where
     Self: Sized,
   {
-    let system_deps!(map_system, combat_system) =
-      ctx.get_deps::<Self::Deps, Indices>().into_tuple2();
+    let system_deps!(map_system, combat_system) = Self::Deps::get_deps(&ctx);
 
     let map = &map_system.map;
 
@@ -980,10 +979,9 @@ impl System for PhysicsSystem {
     self: Rc<Self>,
     ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self> {
-    let system_deps!(map_system, combat_system) =
-      ctx.get_deps::<Self::Deps, Indices>().into_tuple2();
+    let system_deps!(map_system, combat_system) = Self::Deps::get_deps(&ctx);
     let system_deps!(ability_system, enemy_system, camera_system, controls_system) =
-      ctx.get_deps::<Self::LDeps, LIndices>().into_tuple2();
+      Self::LDeps::get_deps(&ctx);
 
     let rng = rand::RandGenerator::new();
     rng.srand(self.frame_count as u64);

@@ -1,11 +1,11 @@
 #!/bin/bash
 
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-SPRITES_FOLDER="$PROJECT_ROOT/assets/sprite"
+SPRITES_FOLDER="$1/assets/sprite"
 OUTPUT_FILE="$PROJECT_ROOT/src/generated/load_sprites.rs"
 
 OLD_HASH=$(head -1 "$OUTPUT_FILE")
-NEW_HASH="//$(find "$SPRITES_FOLDER" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
+NEW_HASH="//$(echo "$(find "$SPRITES_FOLDER" -type f -print0 | sort -z | xargs -0 sha256sum)$(git rev-parse --show-toplevel)" | sha256sum)"
 
 if [[ "$OLD_HASH" == "$NEW_HASH" ]] ; then
     echo "codegen_textures: Hit cache, exiting"

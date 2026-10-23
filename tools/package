@@ -7,7 +7,7 @@ windows_only=""
 while getopts d:v:ruw flag
 do
     case "${flag}" in
-        d) directory=${OPTARG};;
+        d) directory=$(realpath ${OPTARG});;
         v) version=${OPTARG};;
         r) release="true";;
         u) ubuntu_only="true";;
@@ -20,18 +20,19 @@ if [ ! -d "${directory}" ]; then
     exit 1;
 fi
 
-echo "Generating textures: starting";
-codegen_textures
-echo "Generating textures: done";
 
 echo "Generating dynamic menus: starting";
-codegen_dynamic_menus
+tools/codegen_dynamic_menus
 echo "Generating dynamic menus: done";
 
 # windows x86 build
 
 if [[ "$windows_only" == "true" || ("$windows_only" == "" && "$ubuntu_only" == "") ]]; then
     win_x86_dir="${directory}/longinus-v${version}-win-x86";
+
+    echo "Generating textures: starting";
+    tools/codegen_textures "$win_x86_dir";
+    echo "Generating textures: done";
 
     if [ ! -d "${win_x86_dir}" ]; then
         mkdir ${win_x86_dir};
@@ -70,6 +71,10 @@ fi
 
 if [[ "$ubuntu_only" == "true" || ("$ubuntu_only" == "" && "$windows_only" == "") ]]; then
     ubuntu_x86_dir="${directory}/longinus-v${version}-ubuntu-x86";
+
+    echo "Generating textures: starting";
+    tools/codegen_textures "$ubuntu_x86_dir";
+    echo "Generating textures: done";
 
     if [ ! -d "${ubuntu_x86_dir}" ]; then
         mkdir ${ubuntu_x86_dir};

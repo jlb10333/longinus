@@ -36,7 +36,7 @@ use crate::{
   save::{SaveData, SaveSystem},
   shaders::{COLOR_MAP_FRAGMENT_SHADER, DISSOLVE_FRAGMENT_SHADER, IDENTITY_VERTEX_SHADER},
   sprite::{self, BarCellStatus, SpriteToDraw, get_sprites_to_draw},
-  system::System,
+  system::{GetDeps, System},
   system_deps,
   units::{PhysicsScalar, PhysicsVector, ScreenVector, UnitConvert, UnitConvert2},
 };
@@ -211,7 +211,7 @@ impl System for GraphicsSystem<GameInput> {
       ability_system,
       menu_system,
       save_system
-    ) = ctx.get_deps::<Self::LDeps, LIndices>().into_tuple2();
+    ) = Self::LDeps::get_deps(&ctx);
 
     let tiles_texture = &ctx.input.textures.tileset_textures.tiles_texture;
 
@@ -934,7 +934,7 @@ impl System for GraphicsSystem<GameInput> {
         if let EntityHandle::RigidBody(rigid_body_handle) = handle {
           draw_label(
             PhysicsVector::from_vec(
-              *physics_system.rigid_body_set[rigid_body_handle].translation(),
+              *physics_system.rigid_body_set[*rigid_body_handle].translation(),
             ),
             camera_system.translation,
             entity.label.clone(),

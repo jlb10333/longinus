@@ -184,7 +184,7 @@ impl System for AbilitySystem {
     ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
   ) -> Rc<Self> {
     let system_deps!(physics_system, controls_system, combat_system, menu_system) =
-      Self::LDeps::get_deps(ctx);
+      Self::LDeps::get_deps(&ctx);
 
     let (boost_force, current_boost_cooldown, mana_tanks) = if controls_system.boost
       && !controls_system

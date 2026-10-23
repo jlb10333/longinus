@@ -88,6 +88,7 @@ pub struct MenuSystem<Input> {
 impl System for MenuSystem<Start> {
   type Input = Start;
   type Deps = SystemDeps!(SaveSystem<Self::Input>);
+  type LDeps = SystemDeps!(ControlsSystem<Self::Input>, SaveSystem<Self::Input>);
 
   fn start<
     ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
@@ -98,39 +99,30 @@ impl System for MenuSystem<Start> {
   where
     Self: Sized,
   {
-    let system_deps!(save_system) = Self::Deps::get_deps(ctx);
+    let system_deps!(save_system) = Self::Deps::get_deps(&ctx);
 
-    return Rc::new(Self {
+    Rc::new(Self {
       active_main_menus: vec![MainMenu {
         cursor_position: vector![0, 0],
         kind: MainMenuKind::Main(!save_system.available_save_data.is_empty()),
       }],
       ..Default::default()
-    });
-  }
-}
-
-impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
-  type Input = Input;
-  fn start(
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> std::rc::Rc<dyn System<Input = Self::Input>>
-  where
-    Self: Sized,
-  {
-    if ctx.downcast::<Start>().is_some() {}
-
-    Rc::new(Self {
-      active_menus: vec![],
-      ..Default::default()
     })
   }
 
-  fn update(
+  fn update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
     self: Rc<Self>,
-    ctx: &crate::system::ProcessContext<Self::Input>,
-  ) -> Rc<dyn System<Input = Self::Input>> {
-    let controls_system = ctx.get::<ControlsSystem<_>>().unwrap();
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let system_deps!(controls_system, save_system) = Self::LDeps::get_deps(&ctx);
 
     if controls_system.last_frame.is_none() {
       return self;
@@ -150,70 +142,116 @@ impl<Input: Clone + Default + 'static> System for MenuSystem<Input> {
       inventory: controls_system.inventory && !(last_frame.inventory),
     };
 
-    let save_system = ctx.get::<SaveSystem<_>>().unwrap();
+    let NextMainMenuUpdate {
+      menus: next_menus,
+      save_to_load,
+    } = next_main_menus(
+      &self.active_main_menus[0],
+      &input,
+      &save_system.available_save_data,
+    );
 
-    if let Some(ctx) = ctx.downcast::<GameInput>() {
-      let combat_system = ctx.get::<CombatSystem>().unwrap();
+    Rc::new(Self {
+      active_main_menus: next_menus
+        .iter()
+        .chain(self.active_main_menus.clone()[1..].iter())
+        .cloned()
+        .collect(),
+      save_to_load,
+      ..Default::default()
+    })
+  }
+}
 
-      if !self.active_menus.is_empty() {
-        let NextMenuUpdate {
-          menus: next_menus,
-          inventory_update,
-          save_point_confirmed_id,
-          save_to_load,
-          quit_decision,
-        } = next_menus(
-          &self.active_menus[0],
-          &input,
-          &combat_system.unequipped_modules,
-          &combat_system.equipped_modules,
-          &save_system.available_save_data,
-        );
-        return Rc::new(Self {
-          active_menus: next_menus
-            .iter()
-            .chain(self.active_menus.clone()[1..].iter())
-            .cloned()
-            .collect(),
-          inventory_update,
-          save_point_confirmed_id,
-          save_to_load,
-          quit_decision,
-          ..Default::default()
-        });
-      }
+impl System for MenuSystem<GameInput> {
+  type Input = GameInput;
+  type LDeps = SystemDeps!(
+    ControlsSystem<Self::Input>,
+    SaveSystem<Self::Input>,
+    PhysicsSystem,
+    CombatSystem
+  );
 
-      let physics_system = ctx.get::<PhysicsSystem>().unwrap();
-      let combat_system = ctx.get::<CombatSystem>().unwrap();
+  fn start<
+    ProcessSystems: Clone + frunk::prelude::HList + frunk::hlist::Sculptor<Self::Deps, Indices> + 'static,
+    Indices,
+  >(
+    _ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self>
+  where
+    Self: Sized,
+  {
+    Rc::new(Self {
+      active_menus: vec![],
+      ..Default::default()
+    })
+  }
 
-      return Rc::new(Self {
-        active_menus: open_menu(&input, physics_system, combat_system),
-        ..Default::default()
-      });
+  fn update<
+    ProcessSystems: Clone
+      + frunk::prelude::HList
+      + frunk::hlist::Sculptor<Self::Deps, Indices>
+      + frunk::hlist::Sculptor<Self::LDeps, LIndices>
+      + 'static,
+    Indices,
+    LIndices,
+  >(
+    self: Rc<Self>,
+    ctx: Rc<crate::system::ProcessContext<Self::Input, ProcessSystems>>,
+  ) -> Rc<Self> {
+    let system_deps!(controls_system, save_system, physics_system, combat_system) =
+      Self::LDeps::get_deps(&ctx);
+
+    if controls_system.last_frame.is_none() {
+      return self;
     }
+    let last_frame = controls_system.last_frame.clone().unwrap();
 
-    if ctx.downcast::<Start>().is_some() {
-      let NextMainMenuUpdate {
+    let input = MenuInput {
+      up: controls_system.menu_up && !(last_frame.menu_up),
+      down: controls_system.menu_down && !(last_frame.menu_down),
+      right: controls_system.menu_right && !(last_frame.menu_right),
+      left: controls_system.menu_left && !(last_frame.menu_left),
+      cancel: controls_system.inventory && !(last_frame.inventory)
+        || (controls_system.menu_cancel && !(last_frame.menu_cancel)),
+      confirm: (controls_system.firing && !(last_frame.firing))
+        || (controls_system.menu_confirm && !(last_frame.menu_confirm)),
+      pause: controls_system.pause && !(last_frame.pause),
+      inventory: controls_system.inventory && !(last_frame.inventory),
+    };
+
+    if !self.active_menus.is_empty() {
+      let NextMenuUpdate {
         menus: next_menus,
+        inventory_update,
+        save_point_confirmed_id,
         save_to_load,
-      } = next_main_menus(
-        &self.active_main_menus[0],
+        quit_decision,
+      } = next_menus(
+        &self.active_menus[0],
         &input,
+        &combat_system.unequipped_modules,
+        &combat_system.equipped_modules,
         &save_system.available_save_data,
       );
-
       return Rc::new(Self {
-        active_main_menus: next_menus
+        active_menus: next_menus
           .iter()
-          .chain(self.active_main_menus.clone()[1..].iter())
+          .chain(self.active_menus.clone()[1..].iter())
           .cloned()
           .collect(),
+        inventory_update,
+        save_point_confirmed_id,
         save_to_load,
+        quit_decision,
         ..Default::default()
       });
     }
 
-    todo!("Expected to be in either a SaveData or ProcessStart GameState");
+    Rc::new(Self {
+      active_menus: open_menu(&input, physics_system, combat_system),
+      ..Default::default()
+    })
   }
 }
 

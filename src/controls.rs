@@ -13,7 +13,8 @@ use crate::{
   camera::CameraSystem,
   graphics::{VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
   physics::PhysicsSystem,
-  system::{ProcessContext, System},
+  system::{GetDeps, ProcessContext, System},
+  system_deps,
   units::{PhysicsVector, UnitConvert, UnitConvert2, vec_zero},
 };
 
@@ -271,7 +272,7 @@ impl ControlsSystem<GameInput> {
           if kbd_w_pressed { 1.0 } else { 0.0 } + if kbd_s_pressed { -1.0 } else { 0.0 }
         ];
 
-        let (physics_system, camera_system) = ctx.get_deps().into_tuple2();
+        let system_deps!(physics_system, camera_system) = <Self as System>::Deps::get_deps(&ctx);
 
         let mouse_pos = mouse_position();
 

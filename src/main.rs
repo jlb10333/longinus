@@ -3,9 +3,9 @@
 use std::rc::Rc;
 
 use balance::BALANCING;
-use frunk::HList;
+
 use macroquad::prelude::*;
-use system::{ProcessContext, ProcessContextOptions, new_process};
+use system::{ProcessContext, new_process};
 
 use crate::ability::AbilitySystem;
 use crate::camera::CameraSystem;
@@ -98,19 +98,19 @@ async fn main() {
           },
           None,
         )
-        .add_system(ControlsSystem::start)
+        .add_system(ControlsSystem::<Start>::start)
         .add_system(SaveSystem::<Start>::start)
         .add_system(MenuSystem::<Start>::start)
         .add_system(GraphicsSystem::<Start>::start)
-          .run(            
+        .run(
           |ctx| {
             ctx
               .get::<MenuSystem<_>, _>()
               .save_to_load
               .as_ref()
-              .map(load_save)          
+              .map(load_save)
           },
-          None,
+          |_| false,
         )
         .await;
         State::Game(save_data.expect("Failed to load save"))
@@ -120,28 +120,27 @@ async fn main() {
           save_data,
           textures: Rc::clone(&textures),
         };
-        
+
         let quit_decision = new_process(&game_input, None)
           .add_system(SaveSystem::<GameInput>::start)
           .add_system(CombatSystem::start)
           .add_system(MapSystem::start)
           .add_system(CameraSystem::start)
           .add_system(AbilitySystem::start)
-         .add_system(PhysicsSystem::start)          
+          .add_system(PhysicsSystem::start)
           .add_system(ControlsSystem::<GameInput>::start)
-        .add_system(MenuSystem::start)
-        // .add_system(EnemySystem::start)
-         .add_system(GraphicsSystem::start)
-        // .start(Some(ProcessContextOptions {
-        //   should_freeze_fixed: Some(|ctx| {
-        //     !ctx.get::<MenuSystem<_>>().unwrap().active_menus.is_empty()
-        //       || (BALANCING.graphics_config.hitstop_enabled
-        //         && ctx.get::<PhysicsSystem>().unwrap().hitstop_frames_left > 0)
-        //   }),
-        //   ..Default::default()
-        // }))
-        // .run(|ctx| ctx.get::<MenuSystem<_>>().unwrap().quit_decision.clone())
-        // .await;
+          .add_system(MenuSystem::<GameInput>::start)
+          .add_system(EnemySystem::start)
+          .add_system(GraphicsSystem::<GameInput>::start)
+          .run(
+            |ctx| ctx.get::<MenuSystem<_>, _>().quit_decision.clone(),
+            |ctx: Rc<ProcessContext<_, _>>| {
+              !ctx.get::<MenuSystem<_>, _>().active_menus.is_empty()
+                || (BALANCING.graphics_config.hitstop_enabled
+                  && ctx.get::<PhysicsSystem, _>().hitstop_frames_left > 0)
+            },
+          )
+          .await;
         match quit_decision {
           QuitDecision::LoadSave(save_to_load) => State::Game(
             load_save(&menu::SaveToLoad::SaveData(save_to_load.clone()))
@@ -155,4 +154,3 @@ async fn main() {
     };
   }
 }
-
