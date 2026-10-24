@@ -7,7 +7,7 @@ windows_only=""
 while getopts d:v:ruw flag
 do
     case "${flag}" in
-        d) directory=$(realpath ${OPTARG});;
+        d) directory=${OPTARG};;
         v) version=${OPTARG};;
         r) release="true";;
         u) ubuntu_only="true";;
@@ -20,19 +20,18 @@ if [ ! -d "${directory}" ]; then
     exit 1;
 fi
 
+echo "Generating textures: starting";
+codegen_textures
+echo "Generating textures: done";
 
 echo "Generating dynamic menus: starting";
-tools/codegen_dynamic_menus
+codegen_dynamic_menus
 echo "Generating dynamic menus: done";
 
 # windows x86 build
 
 if [[ "$windows_only" == "true" || ("$windows_only" == "" && "$ubuntu_only" == "") ]]; then
     win_x86_dir="${directory}/longinus-v${version}-win-x86";
-
-    echo "Generating textures: starting";
-    tools/codegen_textures "$win_x86_dir";
-    echo "Generating textures: done";
 
     if [ ! -d "${win_x86_dir}" ]; then
         mkdir ${win_x86_dir};
@@ -56,9 +55,11 @@ if [[ "$windows_only" == "true" || ("$windows_only" == "" && "$ubuntu_only" == "
     if [ "$release" == "true" ]; then
         cp ./README.md ${win_x86_dir}/README.md;
         echo "Copied from ./README.md to ${win_x86_dir}/README.md";
-    fi
 
-    cargo build --release --target x86_64-pc-windows-gnu -q;
+        cargo build --release --target x86_64-pc-windows-gnu -q;
+    else 
+        cargo build --target x86_64-pc-windows-gnu -q;
+    fi
 
     echo "Built to ./target/x86_64-pc-windows-gnu/release";
 
@@ -71,10 +72,6 @@ fi
 
 if [[ "$ubuntu_only" == "true" || ("$ubuntu_only" == "" && "$windows_only" == "") ]]; then
     ubuntu_x86_dir="${directory}/longinus-v${version}-ubuntu-x86";
-
-    echo "Generating textures: starting";
-    tools/codegen_textures "$ubuntu_x86_dir";
-    echo "Generating textures: done";
 
     if [ ! -d "${ubuntu_x86_dir}" ]; then
         mkdir ${ubuntu_x86_dir};
@@ -98,9 +95,12 @@ if [[ "$ubuntu_only" == "true" || ("$ubuntu_only" == "" && "$windows_only" == ""
     if [ "$release" == "true" ]; then
         cp ./README.md ${ubuntu_x86_dir}/README.md;
         echo "Copied from ./README.md to ${ubuntu_x86_dir}/README.md";
+
+        cargo build --release -q;
+    else
+        cargo build -q;
     fi
 
-    cargo build --release -q;
 
     echo "Built to ./target/release";
 

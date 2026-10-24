@@ -47,7 +47,7 @@ mod units;
 
 pub use generated::*;
 
-pub const EXE_PATH: LazyLock<PathBuf> =
+pub static EXE_PATH: LazyLock<PathBuf> =
   LazyLock::new(|| env::current_dir().expect("Failed to read current dir"));
 
 #[derive(Clone)]
@@ -90,6 +90,8 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+  println!("booting");
+
   // Load textures async
   let textures = Rc::new(load_game_textures().await);
 

@@ -1,11 +1,11 @@
 #!/bin/bash
 
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-SPRITES_FOLDER="$1/assets/sprite"
+SPRITES_FOLDER="$PROJECT_ROOT/assets/sprite"
 OUTPUT_FILE="$PROJECT_ROOT/src/generated/load_sprites.rs"
 
 OLD_HASH=$(head -1 "$OUTPUT_FILE")
-NEW_HASH="//$(echo "$(find "$SPRITES_FOLDER" -type f -print0 | sort -z | xargs -0 sha256sum)$(git rev-parse --show-toplevel)" | sha256sum)"
+NEW_HASH="//$(find "$SPRITES_FOLDER" -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum)"
 
 if [[ "$OLD_HASH" == "$NEW_HASH" ]] ; then
     echo "codegen_textures: Hit cache, exiting"
@@ -13,7 +13,7 @@ if [[ "$OLD_HASH" == "$NEW_HASH" ]] ; then
 fi
 
 echo "$NEW_HASH" > $OUTPUT_FILE
-echo "use crate::load_sprites_utils::load_texture_with_filter;" >> $OUTPUT_FILE
+echo "use crate::{EXE_PATH, load_sprites_utils::load_texture_with_filter};" >> $OUTPUT_FILE
 echo "use macroquad::prelude::Texture2D;" >> $OUTPUT_FILE
 
 type_gen () {
@@ -52,7 +52,8 @@ echo "pub async fn load_game_textures() -> ${SPRITES_FOLDER_NAME}Textures {" >> 
 for f in $FILE_NAMES ; do
     item_name=$(basename "$f")
     texture_name="${item_name%.*}"
-    echo "  let ${texture_name}_texture = load_texture_with_filter(\"$f\").await;" >> $OUTPUT_FILE
+    relative_path=$(realpath --relative-to="$PROJECT_ROOT" "$f")
+    echo "  let ${texture_name}_texture = load_texture_with_filter(EXE_PATH.join(\"$relative_path\")).await;" >> $OUTPUT_FILE
 done
 
 assignment_gen () {
