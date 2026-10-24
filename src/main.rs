@@ -1,6 +1,9 @@
 #![feature(associated_type_defaults)]
 
+use std::env;
+use std::path::PathBuf;
 use std::rc::Rc;
+use std::sync::LazyLock;
 
 use balance::BALANCING;
 
@@ -43,6 +46,9 @@ mod system;
 mod units;
 
 pub use generated::*;
+
+pub const EXE_PATH: LazyLock<PathBuf> =
+  LazyLock::new(|| env::current_dir().expect("Failed to read current dir"));
 
 #[derive(Clone)]
 pub struct Start {
