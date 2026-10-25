@@ -1,5 +1,5 @@
 use std::{
-  any::Any,
+  any::{Any, TypeId},
   marker::PhantomData,
   rc::Rc,
   thread::sleep,
@@ -66,20 +66,32 @@ impl Default for ProcessContextOptions {
 trait RunSystemHList<Input: Clone + 'static, Indices, LIndices, Systems: HList + 'static>:
   Sized
 {
-  fn update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self;
+  fn update(
+    self,
+    ctx: Rc<ProcessContext<Input, Systems>>,
+  ) -> (Self, Rc<ProcessContext<Input, Systems>>);
 
-  fn fixed_update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self;
+  fn fixed_update(
+    self,
+    ctx: Rc<ProcessContext<Input, Systems>>,
+  ) -> (Self, Rc<ProcessContext<Input, Systems>>);
 }
 
 impl<Input: Clone + 'static, Systems: HList + 'static> RunSystemHList<Input, HNil, HNil, Systems>
   for HNil
 {
-  fn update(self, _: Rc<ProcessContext<Input, Systems>>) -> Self {
-    self
+  fn update(
+    self,
+    ctx: Rc<ProcessContext<Input, Systems>>,
+  ) -> (Self, Rc<ProcessContext<Input, Systems>>) {
+    (self, ctx)
   }
 
-  fn fixed_update(self, _: Rc<ProcessContext<Input, Systems>>) -> Self {
-    self
+  fn fixed_update(
+    self,
+    ctx: Rc<ProcessContext<Input, Systems>>,
+  ) -> (Self, Rc<ProcessContext<Input, Systems>>) {
+    (self, ctx)
   }
 }
 
@@ -91,30 +103,79 @@ impl<
   RestIndices,
   FirstLIndices,
   RestLIndices,
-  Systems: HList + Sculptor<Deps, FirstIndices> + Sculptor<LDeps, FirstLIndices> + Clone + 'static,
+  Systems: HList
+    + Sculptor<Deps, FirstIndices>
+    + Sculptor<LDeps, FirstLIndices>
+    + ReplaceSystemHList<Input, Rc<H>>
+    + Clone
+    + 'static,
   H: System<Input = Input, Deps = Deps, LDeps = LDeps>,
-  T: HList + RunSystemHList<Input, RestIndices, RestLIndices, Systems>,
+  T: HList + RunSystemHList<Input, RestIndices, RestLIndices, Systems> + Clone + 'static,
 > RunSystemHList<Input, (FirstIndices, RestIndices), (FirstLIndices, RestLIndices), Systems>
   for HCons<Rc<H>, T>
 {
-  fn update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self {
+  fn update(
+    self,
+    ctx: Rc<ProcessContext<Input, Systems>>,
+  ) -> (Self, Rc<ProcessContext<Input, Systems>>) {
     let (h, t) = self.pop();
+
+    let (new_t, ctx) = t.update(ctx);
 
     let new_h = h.update(ctx.clone());
 
-    let new_t = t.update(ctx);
+    let new_ctx = ctx.with_system(new_h.clone());
 
-    h_cons(new_h, new_t)
+    (h_cons(new_h, new_t), new_ctx.into())
   }
 
-  fn fixed_update(self, ctx: Rc<ProcessContext<Input, Systems>>) -> Self {
+  fn fixed_update(
+    self,
+    ctx: Rc<ProcessContext<Input, Systems>>,
+  ) -> (Self, Rc<ProcessContext<Input, Systems>>) {
     let (h, t) = self.pop();
+
+    let (new_t, ctx) = t.fixed_update(ctx);
 
     let new_h = h.fixed_update(ctx.clone());
 
-    let new_t = t.fixed_update(ctx);
+    let new_ctx = ctx.with_system(new_h.clone());
 
-    h_cons(new_h, new_t)
+    (h_cons(new_h, new_t), new_ctx.into())
+  }
+}
+
+trait ReplaceSystemHList<Input: Clone + 'static, Target> {
+  fn maybe_replace(self, target: Target) -> Self;
+}
+
+impl<Input: Clone + 'static, Target> ReplaceSystemHList<Input, Target> for HNil {
+  fn maybe_replace(self, _target: Target) -> Self {
+    self
+  }
+}
+
+impl<
+  Input: Clone + 'static,
+  Target: Any,
+  Head: Any,
+  Remainder: HList + ReplaceSystemHList<Input, Target>,
+> ReplaceSystemHList<Input, Target> for HCons<Head, Remainder>
+{
+  fn maybe_replace(self, target: Target) -> Self {
+    if target.type_id() == TypeId::of::<Head>() {
+      let (_, tail) = self.pop();
+
+      let casted_target = (Box::new(target) as Box<dyn Any>)
+        .downcast::<Head>()
+        .expect("Unable to downcast target to head (even though type ids match?)");
+
+      h_cons(*casted_target, tail)
+    } else {
+      let (head, tail) = self.pop();
+
+      h_cons(head, tail.maybe_replace(target))
+    }
   }
 }
 
@@ -170,9 +231,20 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
     .into()
   }
 
-  fn with_systems(&self, new_systems: Systems) -> Self {
+  fn with_systems(&self, systems: Systems) -> Self {
     Self {
-      systems: new_systems,
+      systems,
+      input: self.input.clone(),
+      options: self.options.clone(),
+    }
+  }
+
+  fn with_system<Target>(&self, target: Target) -> Self
+  where
+    Systems: Clone + ReplaceSystemHList<Input, Target>,
+  {
+    Self {
+      systems: self.systems.clone().maybe_replace(target),
       input: self.input.clone(),
       options: self.options.clone(),
     }
@@ -200,8 +272,8 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
 
       let now = Instant::now();
 
-      let new_systems = game_state.systems.clone().update(game_state.clone());
-      game_state = game_state.with_systems(new_systems.into()).into();
+      let (new_systems, new_game_state) = game_state.systems.clone().update(game_state.clone());
+      game_state = new_game_state;
 
       next_frame().await;
 
@@ -214,8 +286,9 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
         acc_time -=
           game_state.options.fixed_time_interval * 1_000_000.0 * fixed_update_count as f32;
 
-        let new_systems = game_state.systems.clone().fixed_update(game_state.clone());
-        game_state = game_state.with_systems(new_systems.into()).into();
+        let (new_systems, new_game_state) =
+          game_state.systems.clone().fixed_update(game_state.clone());
+        game_state = new_game_state;
       }
 
       let frame_time = now.elapsed().as_millis() as f32;

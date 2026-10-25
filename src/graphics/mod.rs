@@ -200,8 +200,6 @@ impl System for GraphicsSystem<GameInput> {
     /* Background */
     clear_background(COLOR_1);
 
-    draw_fps();
-
     let system_deps!(
       camera_system,
       combat_system,
@@ -1210,6 +1208,8 @@ impl System for GraphicsSystem<GameInput> {
     });
 
     draw_render_target(&self.materials, &self.camera);
+
+    draw_fps();
     Rc::new(Self {
       effects,
       materials: Rc::clone(&self.materials),
