@@ -533,6 +533,7 @@ pub fn save_point(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDra
 pub fn gravity_particle(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw {
     z_position: Some(-5.0),
+    offset: Some(Vec2 { x: 0.5, y: 0.5 }),
     ..SpriteToDraw::default(
       &game_textures.effect_textures.gravity_particle_texture,
       Rect {
