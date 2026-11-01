@@ -1384,6 +1384,43 @@ impl EnemyAraneaQueen {
   }
 }
 
+pub mod crawler {
+  use rapier2d::na::Vector2;
+
+  #[derive(Clone)]
+  pub enum Direction {
+    Left,
+    Right,
+  }
+
+  #[derive(Clone)]
+  pub enum State {
+    Crawling,
+    Turning(Vector2<f32>),
+  }
+
+  #[derive(Clone)]
+  pub struct EnemyCrawler {
+    pub state: State,
+    pub direction: Direction,
+    pub gun_angle: f32,
+  }
+
+  // new finds nearest wall (query for wall collider layer) and saves vector to wall in Crawling() tuple
+  // behavior for Crawling returns force towards currently holding wall (to stick to wall) + forward movement force (based on direction)
+  //   if query finds wall immediately ahead, or query slightly ahead and down finds no wall, transition to Turning() with the next angle (+- 90 deg) in the tuple
+  // behavior for Turning transitions until collider points to the next angle, then transitions back to Crawling()
+  impl EnemyCrawler {
+    pub fn new(direction: Direction) -> Self {
+      Self {
+        state: State::Crawling,
+        direction,
+        gun_angle: 0.0,
+      }
+    }
+  }
+}
+
 #[derive(Clone)]
 pub enum EnemyDefenderState {
   Idle,
@@ -1398,7 +1435,7 @@ pub struct EnemyDefender {
 }
 
 impl EnemyDefender {
-  pub fn new() -> EnemyDefender {
+  pub fn new() -> Self {
     Self {
       state: EnemyDefenderState::Idle,
     }

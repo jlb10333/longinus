@@ -41,6 +41,13 @@ impl SpriteToDraw {
       ..self.clone()
     }
   }
+
+  pub fn with_rotation(&self, rotation: f32) -> Self {
+    Self {
+      rotation: Some(rotation),
+      ..self.clone()
+    }
+  }
 }
 
 #[derive(Clone)]
@@ -461,6 +468,33 @@ pub fn aranea_queen(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToD
 pub fn aranea_egg(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
   vec![SpriteToDraw::default(
     &game_textures.enemy_textures.aranea_egg_texture,
+    Rect {
+      x: 0.0,
+      y: 0.0,
+      w: 16.0,
+      h: 16.0,
+    },
+  )]
+}
+
+pub fn crawler(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
+  draw_from_sprite_sheet(
+    index,
+    SpriteSheetArgs {
+      num_sprites: 4,
+      num_columns: 2,
+      width: 16,
+      height: 16,
+      offset: None,
+      z_position: None,
+    },
+    &game_textures.enemy_textures.crawler_texture,
+  )
+}
+
+pub fn crawler_gun(game_textures: &SpriteTextures) -> Vec<SpriteToDraw> {
+  vec![SpriteToDraw::default(
+    &game_textures.enemy_textures.crawler_gun_texture,
     Rect {
       x: 0.0,
       y: 0.0,

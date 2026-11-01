@@ -60,6 +60,7 @@ Message queue idea
   - Playtest them
   - Come up with a strategy for how to make the rest of the game
 - Activation
+  - Explosive block/object
   - Cannon thing
     - Explodes, damages player and enemies
     - Triggers when reaching > 0.5 activation

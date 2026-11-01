@@ -63,6 +63,7 @@ impl Default for ProcessContextOptions {
   }
 }
 
+#[diagnostic::on_unimplemented(message = "Can't run, missing post-start deps")]
 trait RunSystemHList<Input: Clone + 'static, Indices, LIndices, Systems: HList + 'static>:
   Sized
 {
@@ -196,18 +197,14 @@ impl<Input: Clone + 'static, Systems: HList + Clone> Clone for ProcessContext<In
 }
 
 impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Systems> {
-  pub fn downcast<Target: Clone + 'static>(&self) -> Option<&ProcessContext<Target, Systems>> {
-    (self as &dyn Any).downcast_ref::<ProcessContext<Target, Systems>>()
-  }
-
-  pub fn get_deps<'a, Deps: HList, Index>(self: &Rc<Self>) -> Deps
+  pub fn get_deps<Deps: HList, Index>(self: &Rc<Self>) -> Deps
   where
     Systems: Sculptor<Deps, Index> + Clone,
   {
     self.systems.clone().sculpt().0
   }
 
-  pub fn get<'a, SingleDep, Index>(self: &Rc<Self>) -> Rc<SingleDep>
+  pub fn get<SingleDep, Index>(self: &Rc<Self>) -> Rc<SingleDep>
   where
     Systems: Plucker<Rc<SingleDep>, Index> + Clone,
   {
@@ -231,14 +228,6 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
     .into()
   }
 
-  fn with_systems(&self, systems: Systems) -> Self {
-    Self {
-      systems,
-      input: self.input.clone(),
-      options: self.options.clone(),
-    }
-  }
-
   fn with_system<Target>(&self, target: Target) -> Self
   where
     Systems: Clone + ReplaceSystemHList<Input, Target>,
@@ -250,7 +239,7 @@ impl<Input: Clone + 'static, Systems: HList + 'static> ProcessContext<Input, Sys
     }
   }
 
-  pub async fn run<'a, Output, Terminator, ShouldFreeze, Indices, LIndices>(
+  pub async fn run<Output, Terminator, ShouldFreeze, Indices, LIndices>(
     self: Rc<Self>,
     terminator: Terminator,
     should_freeze_fixed: ShouldFreeze,

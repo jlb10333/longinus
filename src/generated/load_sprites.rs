@@ -1,4 +1,4 @@
-//cddfe1bd79f705368b3d88252a450abd0c58859974552149451fc5b3dc05a480  -
+//7501c485ac27654d93fd923a1e0792e9212eda7f6d4606732672b28938d8f25b  -
 use crate::{EXE_PATH, load_sprites_utils::load_texture_with_filter};
 use macroquad::prelude::Texture2D;
 pub struct SpriteTextures {
@@ -36,6 +36,8 @@ pub struct EnemyTextures {
   pub aranea_texture: Texture2D,
   pub aranea_egg_texture: Texture2D,
   pub aranea_queen_texture: Texture2D,
+  pub crawler_texture: Texture2D,
+  pub crawler_gun_texture: Texture2D,
   pub defender_texture: Texture2D,
   pub defender_prime_texture: Texture2D,
   pub goblin_texture: Texture2D,
@@ -112,7 +114,9 @@ pub async fn load_game_textures() -> SpriteTextures {
   let aranea_queen_texture = load_texture_with_filter(EXE_PATH.join("assets/sprite/enemy/aranea_queen.png")).await;
   let defender_texture = load_texture_with_filter(EXE_PATH.join("assets/sprite/enemy/defender.png")).await;
   let seeker_texture = load_texture_with_filter(EXE_PATH.join("assets/sprite/enemy/seeker.png")).await;
+  let crawler_gun_texture = load_texture_with_filter(EXE_PATH.join("assets/sprite/enemy/crawler_gun.png")).await;
   let sniper_texture = load_texture_with_filter(EXE_PATH.join("assets/sprite/enemy/sniper.png")).await;
+  let crawler_texture = load_texture_with_filter(EXE_PATH.join("assets/sprite/enemy/crawler.png")).await;
   let chain_mount_point_selection_texture = load_texture_with_filter(EXE_PATH.join("assets/sprite/ability/chain_mount_point_selection.png")).await;
   let chain_texture = load_texture_with_filter(EXE_PATH.join("assets/sprite/ability/chain.png")).await;
   let text_font_texture = load_texture_with_filter(EXE_PATH.join("assets/sprite/ui/text_font.png")).await;
@@ -163,6 +167,8 @@ pub async fn load_game_textures() -> SpriteTextures {
       aranea_texture,
       aranea_egg_texture,
       aranea_queen_texture,
+      crawler_texture,
+      crawler_gun_texture,
       defender_texture,
       defender_prime_texture,
       goblin_texture,
