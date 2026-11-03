@@ -502,6 +502,10 @@ impl System for GraphicsSystem<GameInput> {
                 game_textures,
               )))
             }
+            Enemy::Crawler(crawler) => Some(sprite::crawler(
+              (physics_system.frame_count / 20) as i32,
+              game_textures,
+            )),
             Enemy::Sniper(sniper) => {
               if let EnemySniperState::Cooldown(frames_left) = sniper.state {
                 Some(sprite::sniper(

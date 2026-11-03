@@ -179,6 +179,7 @@ fn enemy_behavior_generator(
               query_pipeline,
             )
           }
+          Enemy::Crawler(crawler) => crawler.behavior(handle, rigid_body_set),
           Enemy::Defender(defender) => defender.behavior(
             handle,
             player_handle,
@@ -1385,7 +1386,16 @@ impl EnemyAraneaQueen {
 }
 
 pub mod crawler {
-  use rapier2d::na::Vector2;
+  use std::f32::consts::PI;
+
+  use rapier2d::{
+    dynamics::{RigidBodyHandle, RigidBodySet},
+    na::Vector2,
+  };
+
+  use crate::{combat::distance_projection_physics, ecs::Enemy, units::UnitConvert2};
+
+  use super::EnemyDecision;
 
   #[derive(Clone)]
   pub enum Direction {
@@ -1416,6 +1426,31 @@ pub mod crawler {
         state: State::Crawling,
         direction,
         gun_angle: 0.0,
+      }
+    }
+
+    pub fn behavior(
+      &self,
+      handle: RigidBodyHandle,
+      rigid_body_set: &RigidBodySet,
+    ) -> EnemyDecision {
+      let self_rigid_body = &rigid_body_set[handle];
+
+      match self.state {
+        State::Crawling => {
+          let self_angle = self_rigid_body.rotation().angle();
+          let vector_down = distance_projection_physics(self_angle + (PI / 2.0), 5.0);
+          let vector_forward = distance_projection_physics(self_angle, 1.0);
+          let movement_force = vector_down.into_vec() + vector_forward.into_vec();
+
+          EnemyDecision {
+            movement_force,
+            ..EnemyDecision::default(handle, Enemy::Crawler(self.clone()))
+          }
+        }
+        State::Turning(next_angle) => {
+          todo!("")
+        }
       }
     }
   }

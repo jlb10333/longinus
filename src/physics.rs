@@ -26,9 +26,9 @@ use crate::{
   },
   effects,
   enemy::{
-    EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyDefenderPrime, EnemyGoblin,
+    self, EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyDefenderPrime, EnemyGoblin,
     EnemyGoblinState, EnemyImp, EnemyImpState, EnemyLaserGate, EnemySeeker, EnemySeekerGenerator,
-    EnemySniper, EnemySniperGenerator, EnemySystem,
+    EnemySniper, EnemySniperGenerator, EnemySystem, crawler::EnemyCrawler,
   },
   graphics::{VIRTUAL_SCREEN_HEIGHT, VIRTUAL_SCREEN_WIDTH},
   load_map::{
@@ -194,6 +194,9 @@ fn load_new_map(
           let aranea_egg = map.aranea_eggs.get(&egg_id).unwrap().collider.clone();
           let egg_handle = collider_set.insert(aranea_egg);
           Enemy::AraneaQueen(EnemyAraneaQueen::new(egg_handle))
+        }
+        EnemySpawnEnemy::Crawler => {
+          Enemy::Crawler(EnemyCrawler::new(enemy::crawler::Direction::Right))
         }
         EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
         EnemySpawnEnemy::DefenderPrime => Enemy::DefenderPrime(EnemyDefenderPrime::new()),
@@ -1559,6 +1562,9 @@ impl System for PhysicsSystem {
                 }
                 EnemySpawnEnemy::AraneaQueen(_) => {
                   panic!("Cannot spawn aranea child")
+                }
+                EnemySpawnEnemy::Crawler => {
+                  Enemy::Crawler(EnemyCrawler::new(enemy::crawler::Direction::Right))
                 }
                 EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
                 EnemySpawnEnemy::DefenderPrime => Enemy::DefenderPrime(EnemyDefenderPrime::new()),

@@ -79,9 +79,10 @@
                          "type":"string",
                          "value":"Left"
                         }],
+                 "rotation":90,
                  "template":"templates\/EnemySpawn.tx",
-                 "x":136,
-                 "y":184
+                 "x":32,
+                 "y":160
                 }],
          "opacity":1,
          "type":"objectgroup",

@@ -45,6 +45,7 @@ pub enum MapEnemyName {
   Imp,
   Aranea,
   AraneaQueen,
+  Crawler,
   /* Angelic Constructs */
   Defender,
   DefenderPrime,
@@ -137,6 +138,7 @@ impl MapEnemySpawn {
             })
             .unwrap(),
         }),
+        MapEnemyName::Crawler => EnemySpawnEnemy::Crawler,
         MapEnemyName::Defender => EnemySpawnEnemy::Defender,
         MapEnemyName::DefenderPrime => EnemySpawnEnemy::DefenderPrime,
         MapEnemyName::Seeker => EnemySpawnEnemy::Seeker,
@@ -1053,6 +1055,7 @@ pub enum EnemySpawnEnemy {
   Imp,
   Aranea(Id),
   AraneaQueen(Id),
+  Crawler,
   /* Angelic Constructs */
   Defender,
   DefenderPrime,
@@ -1205,6 +1208,30 @@ impl EnemySpawn {
         .insert(OnDestroyEffect {
           duration: BALANCING.enemies.aranea_queen.destroy_effect_duration,
           effect_kind: effects::NoiseDissolve,
+        }),
+      EnemySpawnEnemy::Crawler => ComponentSet::new()
+        .insert(Damageable {
+          status_effect_threshold: 20.0,
+          hurtboxes,
+          health: 60.0,
+          max_health: 60.0,
+          destroy_on_zero_health: true,
+          ..Default::default()
+        })
+        .insert(Damager {
+          hitboxes,
+          damage: 10.0,
+          ..Default::default()
+        })
+        .insert(DropOnDestroy {
+          health_amount: 20.0,
+          chance_health: 0.3,
+          mana_amount: 1.0,
+          chance_mana: 0.2,
+        })
+        .insert(OnDestroyEffect {
+          effect_kind: effects::NoiseDissolve,
+          duration: BALANCING.enemies.goblin.destroy_effect_duration,
         }),
       EnemySpawnEnemy::Defender => ComponentSet::new()
         .insert(Damageable {
@@ -1553,6 +1580,7 @@ fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
       BALANCING.enemies.aranea_queen.colliders_side_length,
       BALANCING.enemies.aranea_queen.colliders_side_length,
     )],
+    EnemySpawnEnemy::Crawler => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::DefenderPrime => vec![ColliderBuilder::ball(2.5)],
     EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(
@@ -1599,6 +1627,7 @@ fn hitboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
       BALANCING.enemies.aranea_queen.colliders_side_length,
       BALANCING.enemies.aranea_queen.colliders_side_length,
     )],
+    EnemySpawnEnemy::Crawler => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::DefenderPrime => vec![ColliderBuilder::ball(2.5)],
     EnemySpawnEnemy::Seeker => {

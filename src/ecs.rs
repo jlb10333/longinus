@@ -21,6 +21,7 @@ use crate::{
   enemy::{
     EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyDefenderPrime, EnemyGoblin, EnemyImp,
     EnemyLaserGate, EnemySeeker, EnemySeekerGenerator, EnemySniper, EnemySniperGenerator,
+    crawler::EnemyCrawler,
   },
   load_map::MapAbilityType,
   sprite::SimpleSpriteTextureKind,
