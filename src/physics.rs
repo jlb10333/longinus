@@ -26,7 +26,7 @@ use crate::{
   },
   effects,
   enemy::{
-    self, EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyDefenderPrime, EnemyGoblin,
+    EnemyAranea, EnemyAraneaQueen, EnemyDefender, EnemyDefenderPrime, EnemyGoblin,
     EnemyGoblinState, EnemyImp, EnemyImpState, EnemyLaserGate, EnemySeeker, EnemySeekerGenerator,
     EnemySniper, EnemySniperGenerator, EnemySystem, crawler::EnemyCrawler,
   },
@@ -195,9 +195,7 @@ fn load_new_map(
           let egg_handle = collider_set.insert(aranea_egg);
           Enemy::AraneaQueen(EnemyAraneaQueen::new(egg_handle))
         }
-        EnemySpawnEnemy::Crawler => {
-          Enemy::Crawler(EnemyCrawler::new(enemy::crawler::Direction::Right))
-        }
+        EnemySpawnEnemy::Crawler(direction) => Enemy::Crawler(EnemyCrawler::new(direction.into())),
         EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
         EnemySpawnEnemy::DefenderPrime => Enemy::DefenderPrime(EnemyDefenderPrime::new()),
         EnemySpawnEnemy::Seeker => Enemy::Seeker(EnemySeeker),
@@ -1415,6 +1413,9 @@ impl System for PhysicsSystem {
             collider_set[collider_handle].set_sensor(relevant_decision.colliders_sensor);
           });
 
+        if let Some(movement_vel) = relevant_decision.movement_vel {
+          rigid_body_set[rigid_body_handle].set_linvel(movement_vel, true);
+        }
         rigid_body_set[rigid_body_handle].apply_impulse(relevant_decision.movement_force, true);
         if let Some(angvel) = relevant_decision.angvel {
           rigid_body_set[rigid_body_handle].set_angvel(angvel, true);
@@ -1563,8 +1564,8 @@ impl System for PhysicsSystem {
                 EnemySpawnEnemy::AraneaQueen(_) => {
                   panic!("Cannot spawn aranea child")
                 }
-                EnemySpawnEnemy::Crawler => {
-                  Enemy::Crawler(EnemyCrawler::new(enemy::crawler::Direction::Right))
+                EnemySpawnEnemy::Crawler(direction) => {
+                  Enemy::Crawler(EnemyCrawler::new(direction.into()))
                 }
                 EnemySpawnEnemy::Defender => Enemy::Defender(EnemyDefender::new()),
                 EnemySpawnEnemy::DefenderPrime => Enemy::DefenderPrime(EnemyDefenderPrime::new()),

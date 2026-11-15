@@ -33,6 +33,7 @@ pub struct EnemyDecision {
   pub handle: RigidBodyHandle,
   pub weapon_outputs: Vec<WeaponOutput>,
   pub movement_force: Vector2<f32>,
+  pub movement_vel: Option<Vector2<f32>>,
   pub angvel: Option<f32>,
   pub enemy: Enemy,
   pub enemies_to_spawn: Vec<EnemyDecisionEnemySpawn>,
@@ -51,6 +52,7 @@ impl EnemyDecision {
       angvel: None,
       enemies_to_spawn: vec![],
       movement_force: vec_zero(),
+      movement_vel: None,
       weapon_outputs: vec![],
       colliders_sensor: false,
       hitboxes_disabled: false,
@@ -1390,6 +1392,7 @@ pub mod crawler {
 
   use rapier2d::{
     dynamics::{RigidBodyHandle, RigidBodySet},
+    geometry::NarrowPhase,
     na::Vector2,
   };
 
@@ -1433,18 +1436,25 @@ pub mod crawler {
       &self,
       handle: RigidBodyHandle,
       rigid_body_set: &RigidBodySet,
+      narrow_phase: &NarrowPhase,
     ) -> EnemyDecision {
       let self_rigid_body = &rigid_body_set[handle];
 
       match self.state {
         State::Crawling => {
           let self_angle = self_rigid_body.rotation().angle();
-          let vector_down = distance_projection_physics(self_angle + (PI / 2.0), 5.0);
-          let vector_forward = distance_projection_physics(self_angle, 1.0);
-          let movement_force = vector_down.into_vec() + vector_forward.into_vec();
+          let movement_force = distance_projection_physics(self_angle - (PI / 2.0), 1.5).into_vec();
+
+          let contact_pairs = self_rigid_body
+            .colliders()
+            .iter()
+            .flat_map(|collider_handle| narrow_phase.contact_pairs_with(*collider_handle));
+
+          let movement_vel = distance_projection_physics(self_angle, 1.5).into_vec();
 
           EnemyDecision {
             movement_force,
+            movement_vel: Some(movement_vel),
             ..EnemyDecision::default(handle, Enemy::Crawler(self.clone()))
           }
         }

@@ -481,7 +481,7 @@ pub fn crawler(index: i32, game_textures: &SpriteTextures) -> Vec<SpriteToDraw> 
   draw_from_sprite_sheet(
     index,
     SpriteSheetArgs {
-      num_sprites: 4,
+      num_sprites: 3,
       num_columns: 2,
       width: 16,
       height: 16,

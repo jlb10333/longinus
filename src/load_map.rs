@@ -13,7 +13,7 @@ use crate::{
   balance::BALANCING,
   combat::{WeaponModuleKind, distance_projection_physics},
   ecs::{ComponentSet, Damageable, Damager, DropOnDestroy, Id, OnDestroyEffect, SimpleSprite},
-  effects,
+  effects, enemy,
   physics::PhysicsSystem,
   sprite,
   system::{GetDeps, System},
@@ -80,10 +80,38 @@ struct MapEnemySpawnPersistDestruction {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+enum MapEnemySpawnCrawlerDirectionClass {
+  CrawlerDirection,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
+pub enum MapCrawlerDirection {
+  Left,
+  Right,
+}
+
+impl Into<enemy::crawler::Direction> for MapCrawlerDirection {
+  fn into(self) -> enemy::crawler::Direction {
+    match self {
+      MapCrawlerDirection::Left => enemy::crawler::Direction::Left,
+      MapCrawlerDirection::Right => enemy::crawler::Direction::Right,
+    }
+  }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct MapEnemySpawnCrawlerDirection {
+  #[serde(rename = "name")]
+  _name: MapEnemySpawnCrawlerDirectionClass,
+  value: MapCrawlerDirection,
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(untagged)]
 enum MapEnemySpawnProperties {
   AraneaEggId(MapEnemySpawnAraneaEggId),
   PersistDestruction(MapEnemySpawnPersistDestruction),
+  CrawlerDirection(MapEnemySpawnCrawlerDirection),
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -138,7 +166,21 @@ impl MapEnemySpawn {
             })
             .unwrap(),
         }),
-        MapEnemyName::Crawler => EnemySpawnEnemy::Crawler,
+        MapEnemyName::Crawler => EnemySpawnEnemy::Crawler({
+          self
+            .properties
+            .as_ref()
+            .and_then(|properties| {
+              properties.iter().find_map(|property| {
+                if let MapEnemySpawnProperties::CrawlerDirection(crawler_direction) = property {
+                  Some(crawler_direction.value.clone())
+                } else {
+                  None
+                }
+              })
+            })
+            .expect("Crawler enemy found without crawler direction property")
+        }),
         MapEnemyName::Defender => EnemySpawnEnemy::Defender,
         MapEnemyName::DefenderPrime => EnemySpawnEnemy::DefenderPrime,
         MapEnemyName::Seeker => EnemySpawnEnemy::Seeker,
@@ -867,9 +909,11 @@ struct ObjectLayer {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 pub enum Layer {
+  #[serde(rename = "tilelayer")]
   ColliderLayer(ColliderLayer),
+  #[serde(rename = "objectgroup")]
   ObjectLayer(ObjectLayer),
 }
 
@@ -978,7 +1022,8 @@ pub struct WorldMapWithTiles {
 }
 
 fn deser_map(raw: &str) -> RawMap {
-  serde_json::from_str(raw).expect("JSON was not well-formatted")
+  serde_path_to_error::deserialize(&mut serde_json::Deserializer::from_str(raw))
+    .expect("JSON was not well-formatted")
 }
 
 pub const COLLISION_GROUP_WALL: Group = Group::GROUP_1;
@@ -1055,7 +1100,7 @@ pub enum EnemySpawnEnemy {
   Imp,
   Aranea(Id),
   AraneaQueen(Id),
-  Crawler,
+  Crawler(MapCrawlerDirection),
   /* Angelic Constructs */
   Defender,
   DefenderPrime,
@@ -1209,7 +1254,7 @@ impl EnemySpawn {
           duration: BALANCING.enemies.aranea_queen.destroy_effect_duration,
           effect_kind: effects::NoiseDissolve,
         }),
-      EnemySpawnEnemy::Crawler => ComponentSet::new()
+      EnemySpawnEnemy::Crawler(_) => ComponentSet::new()
         .insert(Damageable {
           status_effect_threshold: 20.0,
           hurtboxes,
@@ -1580,7 +1625,7 @@ fn hurtboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
       BALANCING.enemies.aranea_queen.colliders_side_length,
       BALANCING.enemies.aranea_queen.colliders_side_length,
     )],
-    EnemySpawnEnemy::Crawler => vec![ColliderBuilder::cuboid(0.5, 0.5)],
+    EnemySpawnEnemy::Crawler(_) => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::DefenderPrime => vec![ColliderBuilder::ball(2.5)],
     EnemySpawnEnemy::Seeker => vec![ColliderBuilder::cuboid(
@@ -1627,7 +1672,7 @@ fn hitboxes_from_enemy_name(name: &EnemySpawnEnemy) -> Vec<Collider> {
       BALANCING.enemies.aranea_queen.colliders_side_length,
       BALANCING.enemies.aranea_queen.colliders_side_length,
     )],
-    EnemySpawnEnemy::Crawler => vec![ColliderBuilder::cuboid(0.5, 0.5)],
+    EnemySpawnEnemy::Crawler(_) => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::Defender => vec![ColliderBuilder::cuboid(0.5, 0.5)],
     EnemySpawnEnemy::DefenderPrime => vec![ColliderBuilder::ball(2.5)],
     EnemySpawnEnemy::Seeker => {
