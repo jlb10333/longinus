@@ -181,7 +181,7 @@ fn enemy_behavior_generator(
               query_pipeline,
             )
           }
-          Enemy::Crawler(crawler) => crawler.behavior(handle, rigid_body_set),
+          Enemy::Crawler(crawler) => crawler.behavior(handle, rigid_body_set, narrow_phase),
           Enemy::Defender(defender) => defender.behavior(
             handle,
             player_handle,
@@ -1390,6 +1390,7 @@ impl EnemyAraneaQueen {
 pub mod crawler {
   use std::f32::consts::PI;
 
+  use itertools::Itertools;
   use rapier2d::{
     dynamics::{RigidBodyHandle, RigidBodySet},
     geometry::NarrowPhase,
@@ -1419,9 +1420,8 @@ pub mod crawler {
     pub gun_angle: f32,
   }
 
-  // new finds nearest wall (query for wall collider layer) and saves vector to wall in Crawling() tuple
   // behavior for Crawling returns force towards currently holding wall (to stick to wall) + forward movement force (based on direction)
-  //   if query finds wall immediately ahead, or query slightly ahead and down finds no wall, transition to Turning() with the next angle (+- 90 deg) in the tuple
+  //   if shape query finds wall immediately ahead, or shape query slightly ahead and down finds no wall, transition to Turning() with the next angle (+- 90 deg) in the tuple
   // behavior for Turning transitions until collider points to the next angle, then transitions back to Crawling()
   impl EnemyCrawler {
     pub fn new(direction: Direction) -> Self {
@@ -1448,13 +1448,40 @@ pub mod crawler {
           let contact_pairs = self_rigid_body
             .colliders()
             .iter()
-            .flat_map(|collider_handle| narrow_phase.contact_pairs_with(*collider_handle));
+            .flat_map(|collider_handle| narrow_phase.contact_pairs_with(*collider_handle))
+            .filter(|pair| pair.has_any_active_contact)
+            .collect_vec();
 
-          let movement_vel = distance_projection_physics(self_angle, 1.5).into_vec();
+          contact_pairs.iter().for_each(|pair| {
+            pair.manifolds.iter().for_each(|manifold| {
+              let self_local = if self_rigid_body.colliders().contains(&pair.collider1) {
+                manifold.local_n1
+              } else {
+                manifold.local_n2
+              };
+
+              println!("world {} self_local {}", manifold.data.normal, self_local);
+            });
+          });
+
+          let grounded = !contact_pairs.is_empty();
+
+          let movement_vel = if grounded {
+            let movement_vel = distance_projection_physics(self_angle, 2.5).into_vec();
+
+            println!(
+              "movement_force {} movement_vel {} self_angle {} \n",
+              movement_force, movement_vel, self_angle
+            );
+            Some(movement_vel)
+          } else {
+            None
+          };
 
           EnemyDecision {
             movement_force,
-            movement_vel: Some(movement_vel),
+            movement_vel,
+            angvel: Some(0.0),
             ..EnemyDecision::default(handle, Enemy::Crawler(self.clone()))
           }
         }
